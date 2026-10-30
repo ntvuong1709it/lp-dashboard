@@ -12,7 +12,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { usePosition, useSnapshots } from "../api/client";
+import {
+  usePosition,
+  usePositionDailyEarnings,
+  useSnapshots,
+} from "../api/client";
 import type {
   PositionDto,
   PositionEventDto,
@@ -394,35 +398,23 @@ function ValueChart({ id }: { id: number }) {
   );
 }
 
-/** Daily change in cumulative fees + rewards (claimed and unclaimed), bucketed by local day. */
-function dailyEarnings(points: SnapshotPointDto[]) {
-  const lastByDay = new Map<string, number>();
-  for (const s of points) {
-    const day = new Date(s.timestamp).toLocaleDateString("en-CA");
-    lastByDay.set(day, s.valueWithFeesUsd - s.valueUsd);
-  }
-  let prev = 0;
-  return [...lastByDay].map(([day, cumulative]) => {
-    const earned = cumulative - prev;
-    prev = cumulative;
-    return { day, earned };
-  });
-}
+const EARNINGS_DAYS = 60;
 
 function EarningsPerDayPanel({ id }: { id: number }) {
-  const { data } = useSnapshots(id);
-  const days = dailyEarnings(data ?? []);
-  const total = days.reduce((sum, d) => sum + d.earned, 0);
+  const { data } = usePositionDailyEarnings(id);
+  // The API returns newest first; the chart reads oldest to newest.
+  const days = (data ?? []).slice(0, EARNINGS_DAYS).reverse();
+  const total = days.reduce((sum, d) => sum + d.totalUsd, 0);
   const avg = days.length ? total / days.length : 0;
 
   return (
     <Panel
-      title="Earnings per day"
+      title="Earnings per day (incl. unclaimed)"
       actions={
         days.length > 0 && (
           <span className="text-xs text-slate-400">
             avg <span className="num text-slate-200">{formatUsd(avg)}</span>
-            /day
+            /day over {days.length} days
           </span>
         )
       }
@@ -434,7 +426,7 @@ function EarningsPerDayPanel({ id }: { id: number }) {
           <ResponsiveContainer>
             <BarChart data={days}>
               <CartesianGrid stroke="#1e293b" vertical={false} />
-              <XAxis dataKey="day" stroke="#64748b" fontSize={11} />
+              <XAxis dataKey="date" stroke="#64748b" fontSize={11} />
               <YAxis
                 stroke="#64748b"
                 fontSize={11}
@@ -449,7 +441,19 @@ function EarningsPerDayPanel({ id }: { id: number }) {
                 }}
                 formatter={(v) => formatUsd(v as number)}
               />
-              <Bar dataKey="earned" name="Earned" fill="#34d399" />
+              <Legend />
+              <Bar
+                dataKey="feesUsd"
+                name="Swap fees"
+                stackId="a"
+                fill="#34d399"
+              />
+              <Bar
+                dataKey="rewardsUsd"
+                name="Rewards"
+                stackId="a"
+                fill="#38bdf8"
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>

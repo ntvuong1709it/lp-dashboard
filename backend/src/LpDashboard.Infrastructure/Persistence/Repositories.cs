@@ -98,6 +98,12 @@ internal sealed class SnapshotRepository(AppDbContext db) : ISnapshotRepository
         return query.OrderBy(s => s.Timestamp).ToListAsync(ct);
     }
 
+    public Task<List<PositionSnapshot>> ListForPositionsAsync(IReadOnlyCollection<int> positionIds, CancellationToken ct) =>
+        db.PositionSnapshots.AsNoTracking()
+            .Where(s => positionIds.Contains(s.PositionId))
+            .OrderBy(s => s.Timestamp)
+            .ToListAsync(ct);
+
     public void Add(PositionSnapshot snapshot) => db.PositionSnapshots.Add(snapshot);
 }
 

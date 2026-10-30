@@ -33,6 +33,21 @@ public sealed class PositionsController(PositionQueryService queries) : Controll
     public async Task<IActionResult> Snapshots(int id, [FromQuery] DateTime? from, [FromQuery] DateTime? to, CancellationToken ct) =>
         await queries.GetSnapshotsAsync(id, from?.ToUniversalTime(), to?.ToUniversalTime(), ct) is { } points ? Ok(points) : NotFound();
 
+    [HttpGet("positions/{id:int}/earnings/daily")]
+    [ProducesResponseType<IReadOnlyList<DailyEarningsDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> PositionDailyEarnings(int id, [FromQuery] string? timeZone, CancellationToken ct)
+    {
+        var zone = TimeZoneInfo.Utc;
+        if (!string.IsNullOrWhiteSpace(timeZone) && !TimeZoneInfo.TryFindSystemTimeZoneById(timeZone, out zone))
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, title: "Unknown time zone");
+        }
+
+        return await queries.GetPositionDailyEarningsAsync(id, zone!, ct) is { } days ? Ok(days) : NotFound();
+    }
+
     [HttpGet("portfolio/summary")]
     [ProducesResponseType<PortfolioSummaryDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -60,6 +75,23 @@ public sealed class PositionsController(PositionQueryService queries) : Controll
 
         var owners = await queries.ResolveOwnersAsync(normalized, ct);
         return Ok(await queries.GetWeeklyClaimsAsync(new ClaimFilter(owners, from?.ToUniversalTime(), to?.ToUniversalTime()), zone!, ct));
+    }
+
+    [HttpGet("fees/daily")]
+    [ProducesResponseType<IReadOnlyList<DailyEarningsDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> DailyEarnings([FromQuery] string? owner, [FromQuery] string? timeZone, CancellationToken ct)
+    {
+        if (!TryOwner(owner, out var normalized)) return InvalidOwner();
+
+        var zone = TimeZoneInfo.Utc;
+        if (!string.IsNullOrWhiteSpace(timeZone) && !TimeZoneInfo.TryFindSystemTimeZoneById(timeZone, out zone))
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, title: "Unknown time zone");
+        }
+
+        var owners = await queries.ResolveOwnersAsync(normalized, ct);
+        return Ok(await queries.GetDailyEarningsAsync(new PositionFilter(owners), zone!, ct));
     }
 
     private static bool TryOwner(string? owner, out string? normalized)

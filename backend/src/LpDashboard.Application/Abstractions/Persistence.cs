@@ -56,6 +56,7 @@ public interface ISnapshotRepository
 {
     Task<PositionSnapshot?> GetLatestAsync(int positionId, CancellationToken ct);
     Task<List<PositionSnapshot>> ListAsync(int positionId, DateTime? from, DateTime? to, CancellationToken ct);
+    Task<List<PositionSnapshot>> ListForPositionsAsync(IReadOnlyCollection<int> positionIds, CancellationToken ct);
     void Add(PositionSnapshot snapshot);
 }
 

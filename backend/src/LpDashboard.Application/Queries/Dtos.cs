@@ -107,6 +107,14 @@ public sealed record FeeClaimItemDto(
     decimal TotalUsd,
     bool HasMissingPrices);
 
+/// <summary>Earned on a local day, whether or not it has been claimed yet.</summary>
+public sealed record DailyEarningsDto(
+    DateOnly Date,
+    decimal FeesUsd,
+    decimal RewardsUsd,
+    decimal TotalUsd,
+    bool HasMissingPrices);
+
 public sealed record WeeklyClaimsDto(
     DateOnly WeekStart,
     decimal FeesUsd,

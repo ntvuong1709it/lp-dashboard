@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
+  DailyEarningsDto,
   PortfolioSummaryDto,
   PositionDetailDto,
   PositionDto,
@@ -119,6 +120,24 @@ export const useWeeklyClaims = (owner: string | null) =>
     queryFn: () =>
       request<WeeklyClaimsDto[]>(
         `/api/fees/claims${query({ owner, timeZone })}`,
+      ),
+  });
+
+export const usePositionDailyEarnings = (id: number) =>
+  useQuery({
+    queryKey: ["position-daily-earnings", id, timeZone],
+    queryFn: () =>
+      request<DailyEarningsDto[]>(
+        `/api/positions/${id}/earnings/daily${query({ timeZone })}`,
+      ),
+  });
+
+export const useDailyEarnings = (owner: string | null) =>
+  useQuery({
+    queryKey: ["daily-earnings", owner, timeZone],
+    queryFn: () =>
+      request<DailyEarningsDto[]>(
+        `/api/fees/daily${query({ owner, timeZone })}`,
       ),
   });
 

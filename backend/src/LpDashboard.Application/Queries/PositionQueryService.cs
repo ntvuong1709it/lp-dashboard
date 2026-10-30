@@ -178,6 +178,63 @@ public sealed class PositionQueryService(
             .ToList();
     }
 
+    public async Task<IReadOnlyList<DailyEarningsDto>> GetDailyEarningsAsync(PositionFilter filter, TimeZoneInfo timeZone, CancellationToken ct)
+    {
+        var list = await positions.QueryAsync(filter, ct);
+        var snapshotsByPosition = (await snapshots.ListForPositionsAsync(list.Select(p => p.Id).ToList(), ct))
+            .ToLookup(s => s.PositionId);
+        return SumDailyEarnings(list, snapshotsByPosition, timeZone);
+    }
+
+    public async Task<IReadOnlyList<DailyEarningsDto>?> GetPositionDailyEarningsAsync(int id, TimeZoneInfo timeZone, CancellationToken ct)
+    {
+        var position = await positions.GetAsync(id, ct);
+        if (position is null) return null;
+
+        var points = await snapshots.ListAsync(id, null, null, ct);
+        return SumDailyEarnings([position], points.ToLookup(s => s.PositionId), timeZone);
+    }
+
+    private IReadOnlyList<DailyEarningsDto> SumDailyEarnings(
+        IEnumerable<Position> list, ILookup<int, PositionSnapshot> snapshotsByPosition, TimeZoneInfo timeZone)
+    {
+        var now = time.GetUtcNow().UtcDateTime;
+        var totals = new Dictionary<DateOnly, (decimal Fees, decimal Rewards, bool Missing)>();
+        foreach (var p in list)
+        {
+            var points = snapshotsByPosition[p.Id]
+                .Select(s => new EarningsPoint(s.Timestamp, s.Uncollected0, s.Uncollected1, s.PendingReward, s.Price0Usd, s.Price1Usd, s.RewardPriceUsd))
+                .ToList();
+
+            // Snapshots are hourly; add the latest synced state so today is current (closed positions end at their close).
+            var liveAt = p.Status == PositionStatus.Open ? p.ValuedAt : p.ClosedAt;
+            if (liveAt is { } at && (points.Count == 0 || at > points[^1].Timestamp))
+            {
+                points.Add(new EarningsPoint(at, p.Uncollected0, p.Uncollected1, p.PendingReward, p.Price0Usd, p.Price1Usd, p.RewardPriceUsd));
+            }
+
+            foreach (var d in EarningsCalculator.Calculate(p.Events, points, timeZone))
+            {
+                var existing = totals.GetValueOrDefault(d.Date);
+                totals[d.Date] = (existing.Fees + d.FeesUsd, existing.Rewards + d.RewardsUsd, existing.Missing || d.HasMissingPrices);
+            }
+        }
+
+        if (totals.Count == 0) return [];
+
+        // Fill quiet days so the series is continuous up to today.
+        var today = EarningsCalculator.LocalDate(now, timeZone);
+        var first = totals.Keys.Min();
+        var last = totals.Keys.Max() > today ? totals.Keys.Max() : today;
+        var result = new List<DailyEarningsDto>();
+        for (var day = last; day >= first; day = day.AddDays(-1))
+        {
+            var t = totals.GetValueOrDefault(day);
+            result.Add(new DailyEarningsDto(day, t.Fees, t.Rewards, t.Fees + t.Rewards, t.Missing));
+        }
+        return result;
+    }
+
     private static DateOnly WeekStart(DateTime local)
     {
         var date = DateOnly.FromDateTime(local);

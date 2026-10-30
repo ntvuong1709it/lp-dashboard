@@ -164,6 +164,14 @@ export interface FeeClaimItemDto {
   hasMissingPrices: boolean;
 }
 
+export interface DailyEarningsDto {
+  date: string;
+  feesUsd: number;
+  rewardsUsd: number;
+  totalUsd: number;
+  hasMissingPrices: boolean;
+}
+
 export interface WeeklyClaimsDto {
   weekStart: string;
   feesUsd: number;
