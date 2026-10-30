@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/LpDashboard.Api/LpDashboard.Api.csproj" />
+    <Project Path="src/LpDashboard.Application/LpDashboard.Application.csproj" />
+    <Project Path="src/LpDashboard.Domain/LpDashboard.Domain.csproj" />
+    <Project Path="src/LpDashboard.Infrastructure.Migrations.Sqlite/LpDashboard.Infrastructure.Migrations.Sqlite.csproj" />
+    <Project Path="src/LpDashboard.Infrastructure/LpDashboard.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/LpDashboard.Domain.Tests/LpDashboard.Domain.Tests.csproj" />
+  </Folder>
+</Solution>

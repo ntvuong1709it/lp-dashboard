@@ -1,0 +1,32 @@
+@host = http://localhost:5080
+
+GET {{host}}/api/addresses
+
+###
+
+POST {{host}}/api/addresses
+Content-Type: application/json
+
+{ "address": "0x0000000000000000000000000000000000000000", "label": "main" }
+
+###
+
+GET {{host}}/api/portfolio/summary
+
+###
+
+GET {{host}}/api/positions?status=Open
+
+###
+
+GET {{host}}/api/fees/claims?timeZone=UTC
+
+###
+
+POST {{host}}/api/sync
+
+###
+
+GET {{host}}/api/sync/status
+
+###

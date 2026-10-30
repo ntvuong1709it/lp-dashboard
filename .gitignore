@@ -1,0 +1,13 @@
+bin/
+obj/
+node_modules/
+dist/
+*.db
+*.db-shm
+*.db-wal
+.vs/
+*.user
+.env
+.env.local
+*.tsbuildinfo
+package-lock.json
