@@ -86,6 +86,52 @@ public class PositionMetricsCalculatorTests
     }
 
     [Fact]
+    public void UnpricedRewardClaim_UsesNextKnownPrice_AndIsMarkedEstimated()
+    {
+        var early = Ev(PositionEventType.RewardClaim, T0.AddDays(1), 1, 0m, 0m, 2000m);
+        early.RewardAmount = 10m;
+        var later = Ev(PositionEventType.RewardClaim, T0.AddDays(2), 2, 0m, 0m, 2000m);
+        later.RewardAmount = 10m;
+        later.RewardPriceUsd = 0.5m;
+
+        var m = PositionMetricsCalculator.Calculate([early, later], null, T0, T0.AddDays(2), T0.AddDays(2));
+
+        Assert.Equal(10m, m.ClaimedRewardsUsd);
+        Assert.True(m.HasEstimatedPrices);
+        Assert.False(m.HasMissingPrices);
+    }
+
+    [Fact]
+    public void UnpricedRewardClaim_DoesNotBorrowPriceOfAnotherRewardToken()
+    {
+        var unpriced = Ev(PositionEventType.RewardClaim, T0.AddDays(1), 1, 0m, 0m, 2000m);
+        unpriced.RewardAmount = 10m;
+        unpriced.RewardTokenAddress = "0xaaa";
+        var other = Ev(PositionEventType.RewardClaim, T0.AddDays(2), 2, 0m, 0m, 2000m);
+        other.RewardAmount = 10m;
+        other.RewardTokenAddress = "0xbbb";
+        other.RewardPriceUsd = 0.5m;
+
+        var m = PositionMetricsCalculator.Calculate([unpriced, other], null, T0, T0.AddDays(2), T0.AddDays(2));
+
+        Assert.Equal(5m, m.ClaimedRewardsUsd);
+        Assert.True(m.HasMissingPrices);
+    }
+
+    [Fact]
+    public void UnpricedRewardClaim_WithNoKnownPrice_IsMissing()
+    {
+        var claim = Ev(PositionEventType.RewardClaim, T0, 1, 0m, 0m, 2000m);
+        claim.RewardAmount = 10m;
+
+        var m = PositionMetricsCalculator.Calculate([claim], null, T0, T0, T0);
+
+        Assert.Equal(0m, m.ClaimedRewardsUsd);
+        Assert.True(m.HasMissingPrices);
+        Assert.False(m.HasEstimatedPrices);
+    }
+
+    [Fact]
     public void FeeApr_IsAnnualizedOnAverageCapital()
     {
         var events = new List<PositionEvent> { Deposit(T0, 0m, 1000m, 2000m) };

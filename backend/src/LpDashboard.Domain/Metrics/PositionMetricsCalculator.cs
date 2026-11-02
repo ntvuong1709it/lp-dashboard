@@ -40,6 +40,9 @@ public sealed record PositionMetrics
     public decimal? FeeAprPercent { get; init; }
     public double? AgeDays { get; init; }
     public bool HasMissingPrices { get; init; }
+
+    /// <summary>Some reward claims had no historical price and were valued at the nearest later known price.</summary>
+    public bool HasEstimatedPrices { get; init; }
 }
 
 /// <summary>
@@ -61,6 +64,7 @@ public static class PositionMetricsCalculator
     {
         var ordered = CollectSplitter.Order(events).ToList();
         var missing = false;
+        var estimated = false;
 
         decimal Usd(decimal amount, decimal? price)
         {
@@ -111,7 +115,19 @@ public static class PositionMetricsCalculator
                     collectedUsd += Usd(e.Fee0, e.Price0Usd) + Usd(e.Fee1, e.Price1Usd);
                     break;
                 case PositionEventType.RewardClaim:
-                    rewardsUsd += Usd(e.RewardAmount, e.RewardPriceUsd);
+                    var rewardPrice = e.RewardPriceUsd;
+                    if (rewardPrice is null && e.RewardAmount > 0)
+                    {
+                        // Reward tokens can be unpriced at claim time (e.g. a freshly launched token); use the next known price.
+                        // Only another event for the same reward token counts; the current price is the fallback of last resort.
+                        rewardPrice = ordered
+                            .Where(o => o.Timestamp >= e.Timestamp && o.RewardPriceUsd is not null
+                                && string.Equals(o.RewardTokenAddress, e.RewardTokenAddress, StringComparison.OrdinalIgnoreCase))
+                            .Select(o => o.RewardPriceUsd).FirstOrDefault()
+                            ?? current?.RewardPriceUsd;
+                        estimated |= rewardPrice is not null;
+                    }
+                    rewardsUsd += Usd(e.RewardAmount, rewardPrice);
                     break;
             }
         }
@@ -169,7 +185,8 @@ public static class PositionMetricsCalculator
             PnlVsHodlUsd = pnlVsHodl,
             FeeAprPercent = apr,
             AgeDays = ageDays,
-            HasMissingPrices = missing
+            HasMissingPrices = missing,
+            HasEstimatedPrices = estimated
         };
     }
 }
