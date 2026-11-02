@@ -26,7 +26,16 @@ public sealed class SyncService(
     private readonly Dictionary<string, Token> _tokens = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Pool> _pools = new(StringComparer.OrdinalIgnoreCase);
 
-    public async Task<IReadOnlyList<string>> SyncAsync(Chain chain, Protocol protocol, string owner, CancellationToken ct, ISyncProgress? progress = null)
+    /// <param name="onlyTokenId">Sync just this position. The cursor is left alone so other positions still fetch their events next run.</param>
+    /// <param name="rescanFromBlock">Fetch events from this block even if the cursor is further ahead (stored events are not duplicated).</param>
+    public async Task<IReadOnlyList<string>> SyncAsync(
+        Chain chain,
+        Protocol protocol,
+        string owner,
+        CancellationToken ct,
+        ISyncProgress? progress = null,
+        string? onlyTokenId = null,
+        long? rescanFromBlock = null)
     {
         var provider = providers.First(p => p.Chain == chain && p.Protocol == protocol);
         owner = owner.ToLowerInvariant();
@@ -41,13 +50,21 @@ public sealed class SyncService(
         RepairRewardClaims(discovered, existing.Values);
         var cursor = await cursors.GetAsync(chain, protocol, owner, ct);
 
+        // Events are always fetched for every discovered position (gauge claims are split across them); only the
+        // per-position sync below is limited to onlyTokenId.
+        var toSync = onlyTokenId is null ? discovered : discovered.Where(d => d.TokenId == onlyTokenId).ToList();
+
         var fromBlock = cursor is null ? long.MaxValue : cursor.LastSyncedBlock + 1;
-        foreach (var d in discovered.Where(d => cursor is null || !existing.ContainsKey(Key(d.PositionManager, d.TokenId))))
+        foreach (var d in toSync.Where(d => cursor is null || !existing.ContainsKey(Key(d.PositionManager, d.TokenId))))
         {
             fromBlock = Math.Min(fromBlock, d.FirstBlock);
         }
+        if (rescanFromBlock is { } rescan)
+        {
+            fromBlock = Math.Min(fromBlock, rescan);
+        }
 
-        progress?.Report(SyncStage.FetchingEvents, 0, discovered.Count);
+        progress?.Report(SyncStage.FetchingEvents, 0, toSync.Count);
         IReadOnlyList<RawPositionEvent> raw = discovered.Count > 0 && fromBlock <= latest
             ? await provider.GetEventsAsync(owner, discovered, fromBlock, latest, ct, progress)
             : [];
@@ -57,10 +74,10 @@ public sealed class SyncService(
             .ToDictionary(g => g.Key, g => g.Select(e => Key(e.PositionManager, e.TokenId)).Distinct().Count(), StringComparer.OrdinalIgnoreCase);
         var rawByPosition = raw.ToLookup(e => Key(e.PositionManager, e.TokenId));
 
-        for (var i = 0; i < discovered.Count; i++)
+        for (var i = 0; i < toSync.Count; i++)
         {
-            progress?.Report(SyncStage.SyncingPositions, i, discovered.Count);
-            var d = discovered[i];
+            progress?.Report(SyncStage.SyncingPositions, i, toSync.Count);
+            var d = toSync[i];
             var key = Key(d.PositionManager, d.TokenId);
             try
             {
@@ -75,10 +92,10 @@ public sealed class SyncService(
             }
         }
 
-        progress?.Report(SyncStage.Saving, discovered.Count, discovered.Count);
+        progress?.Report(SyncStage.Saving, toSync.Count, toSync.Count);
 
-        // A failed position must be retried from the same block next time.
-        if (errors.Count == 0)
+        // A failed position must be retried from the same block next time; a single-position run did not cover the others.
+        if (errors.Count == 0 && onlyTokenId is null)
         {
             if (cursor is null)
             {
