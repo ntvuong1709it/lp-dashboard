@@ -1,0 +1,17 @@
+# Usage: put your RPC URL in a .env file next to this one (it is git-ignored):
+#   BASE_RPC_URL=https://base-mainnet.g.alchemy.com/v2/<key>
+# then: docker compose up --build   ->   http://localhost:5080
+services:
+  lp-dashboard:
+    build: .
+    ports:
+      # Bound to localhost only: the app has no authentication.
+      - "127.0.0.1:5080:8080"
+    environment:
+      Evm__Chains__0__RpcUrl: ${BASE_RPC_URL:-}
+      # WAL does not work on a Windows bind mount; DELETE journaling does.
+      Database__SqliteJournalMode: DELETE
+    volumes:
+      # The database is lpdashboard.db in ./data (override the folder with DATA_DIR in .env).
+      - ${DATA_DIR:-./data}:/data
+    restart: unless-stopped
