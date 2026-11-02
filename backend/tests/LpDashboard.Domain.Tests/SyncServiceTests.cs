@@ -134,11 +134,51 @@ public sealed class SyncServiceTests : IDisposable
         Assert.Equal(0, await db.PositionSnapshots.CountAsync());
     }
 
-    private async Task<IReadOnlyList<string>> SyncAsync()
+    [Fact]
+    public async Task SinglePositionSync_DoesNotAdvanceCursor()
+    {
+        await SyncAsync();
+        _provider.LatestBlock = 2000;
+
+        Assert.Empty(await SyncAsync(onlyTokenId: "1"));
+
+        await using var db = NewDb();
+        Assert.Equal(1000, (await db.SyncCursors.SingleAsync()).LastSyncedBlock);
+        Assert.Equal(1001, _provider.LastFromBlock);
+    }
+
+    [Fact]
+    public async Task SinglePositionSync_ForUnknownTokenId_TouchesNothing()
+    {
+        await SyncAsync();
+        _provider.LatestBlock = 2000;
+
+        Assert.Empty(await SyncAsync(onlyTokenId: "99"));
+
+        await using var db = NewDb();
+        Assert.Equal(1, await db.Positions.CountAsync());
+        Assert.Equal(1000, (await db.SyncCursors.SingleAsync()).LastSyncedBlock);
+    }
+
+    [Fact]
+    public async Task Rescan_FetchesEventsFromRequestedBlockAndDoesNotDuplicate()
+    {
+        await SyncAsync();
+        _provider.LatestBlock = 2000;
+
+        Assert.Empty(await SyncAsync(rescanFromBlock: 500));
+
+        Assert.Equal(500, _provider.LastFromBlock);
+        await using var db = NewDb();
+        Assert.Equal(1, await db.PositionEvents.CountAsync());
+        Assert.Equal(2000, (await db.SyncCursors.SingleAsync()).LastSyncedBlock);
+    }
+
+    private async Task<IReadOnlyList<string>> SyncAsync(string? onlyTokenId = null, long? rescanFromBlock = null)
     {
         using var scope = _services.CreateScope();
         return await scope.ServiceProvider.GetRequiredService<SyncService>()
-            .SyncAsync(Chain.Base, Protocol.UniswapV3, Owner, CancellationToken.None);
+            .SyncAsync(Chain.Base, Protocol.UniswapV3, Owner, CancellationToken.None, null, onlyTokenId, rescanFromBlock);
     }
 
     private AppDbContext NewDb() => new(new DbContextOptionsBuilder<AppDbContext>().UseSqlite($"Data Source={_dbPath}").Options);
@@ -190,6 +230,7 @@ public sealed class SyncServiceTests : IDisposable
         public long LatestBlock { get; set; } = 1000;
         public bool ThrowOnState { get; set; }
         public bool Burned { get; set; }
+        public long? LastFromBlock { get; private set; }
         public List<RawPositionEvent> Events { get; } = [Event("0xabc", 0, 900, PositionEventType.IncreaseLiquidity, 1m, 2m)];
 
         public Task<long> GetLatestBlockAsync(CancellationToken ct) => Task.FromResult(LatestBlock);
@@ -200,7 +241,13 @@ public sealed class SyncServiceTests : IDisposable
         // Deliberately ignores the block range: SyncService must de-duplicate by (tx, log index).
         public Task<IReadOnlyList<RawPositionEvent>> GetEventsAsync(
             string owner, IReadOnlyList<DiscoveredPosition> positions, long fromBlock, long toBlock, CancellationToken ct, IProgress<ProviderProgress>? progress = null) =>
-            Task.FromResult<IReadOnlyList<RawPositionEvent>>(Events.ToList());
+            Record(fromBlock);
+
+        private Task<IReadOnlyList<RawPositionEvent>> Record(long fromBlock)
+        {
+            LastFromBlock = fromBlock;
+            return Task.FromResult<IReadOnlyList<RawPositionEvent>>(Events.ToList());
+        }
 
         public Task<PositionChainState> GetStateAsync(string owner, DiscoveredPosition position, IReadOnlyCollection<string> knownTxHashes, CancellationToken ct)
         {

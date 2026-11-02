@@ -8,6 +8,8 @@ namespace LpDashboard.Api.Controllers;
 
 public sealed record AddAddressRequest(string Address, string? Label);
 
+public sealed record UpdateLabelRequest(string? Label);
+
 public sealed record WatchedAddressDto(int Id, string Address, string? Label, string ChainFamily, DateTime CreatedAt);
 
 [ApiController]
@@ -53,6 +55,26 @@ public sealed class AddressesController(IWatchedAddressRepository addresses, IUn
         sync.RequestSync();
 
         return CreatedAtAction(nameof(List), null, ToDto(entity));
+    }
+
+    [HttpPatch("{id:int}")]
+    [ProducesResponseType<WatchedAddressDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateLabel(int id, UpdateLabelRequest request, CancellationToken ct)
+    {
+        var label = request.Label?.Trim();
+        if (label is { Length: > 100 })
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, title: "Label too long", detail: "Max 100 characters.");
+        }
+
+        var entity = await addresses.GetAsync(id, ct);
+        if (entity is null) return NotFound();
+
+        entity.Label = string.IsNullOrEmpty(label) ? null : label;
+        await unitOfWork.SaveChangesAsync(ct);
+        return Ok(ToDto(entity));
     }
 
     [HttpDelete("{id:int}")]

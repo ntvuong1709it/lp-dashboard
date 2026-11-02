@@ -21,6 +21,8 @@ public sealed record SyncTaskStatus
     public Chain Chain { get; init; }
     public Protocol Protocol { get; init; }
     public string Owner { get; init; } = string.Empty;
+    /// <summary>Set for partial runs (one wallet, one position, rescan); null for a full sync.</summary>
+    public string? Scope { get; init; }
     public SyncTaskState State { get; init; }
     public SyncStage? Stage { get; init; }
     /// <summary>Sub-step of the current stage, e.g. "Fetching transaction receipts".</summary>
@@ -36,6 +38,8 @@ public sealed record SyncTaskStatus
     public IReadOnlyList<string> Errors { get; init; } = [];
 }
 
+public sealed record RecentSyncError(DateTime At, string Message);
+
 public sealed record SyncStatus
 {
     public bool IsRunning { get; init; }
@@ -50,6 +54,8 @@ public sealed record SyncStatus
     public IReadOnlyList<SyncTaskStatus> Tasks { get; init; } = [];
     /// <summary>Errors of the current run so far, or of the last finished run when idle.</summary>
     public IReadOnlyList<string> LastErrors { get; init; } = [];
+    /// <summary>Errors across runs since the app started (newest last, capped); not persisted.</summary>
+    public IReadOnlyList<RecentSyncError> RecentErrors { get; init; } = [];
 }
 
 /// <summary>Singleton that serializes sync runs and accepts manual triggers.</summary>
@@ -60,16 +66,31 @@ public sealed class SyncCoordinator(IServiceScopeFactory scopeFactory, TimeProvi
     private readonly Channel<bool> _trigger = Channel.CreateBounded<bool>(
         new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropWrite });
 
+    private readonly System.Collections.Concurrent.ConcurrentQueue<SyncRequest> _requests = new();
+
     private volatile SyncStatus _status = new();
 
     public SyncStatus Status => _status;
 
     public ChannelReader<bool> Triggers => _trigger.Reader;
 
-    public void RequestSync()
+    /// <summary>Queues a sync; null means a full sync of every watched wallet.</summary>
+    public void RequestSync(SyncRequest? request = null)
     {
+        var req = request ?? SyncRequest.Full;
+        if (!_requests.Contains(req)) _requests.Enqueue(req);
         _trigger.Writer.TryWrite(true);
         Update(s => s with { IsQueued = true });
+    }
+
+    private List<SyncRequest> DrainRequests()
+    {
+        var drained = new List<SyncRequest>();
+        while (_requests.TryDequeue(out var r))
+        {
+            if (!drained.Contains(r)) drained.Add(r);
+        }
+        return drained;
     }
 
     public async Task RunAsync(CancellationToken ct)
@@ -78,6 +99,10 @@ public sealed class SyncCoordinator(IServiceScopeFactory scopeFactory, TimeProvi
 
         try
         {
+            // No pending requests (startup / interval) means a full sync.
+            var requests = DrainRequests();
+            if (requests.Count == 0 || requests.Any(r => r.IsFull)) requests = [SyncRequest.Full];
+
             Update(s => s with
             {
                 IsRunning = true,
@@ -99,9 +124,25 @@ public sealed class SyncCoordinator(IServiceScopeFactory scopeFactory, TimeProvi
                     .ToList();
             }
 
-            var tasks = owners
-                .SelectMany(owner => targets.Select(t => new SyncTaskStatus { Chain = t.Chain, Protocol = t.Protocol, Owner = owner }))
-                .ToList();
+            var tasks = new List<SyncTaskStatus>();
+            var taskRequests = new List<SyncRequest>();
+            foreach (var request in requests)
+            {
+                var requestOwners = request.Owner is null
+                    ? owners
+                    : owners.Where(o => o.Equals(request.Owner, StringComparison.OrdinalIgnoreCase)).ToList();
+                var requestTargets = targets
+                    .Where(t => (request.Chain is null || t.Chain == request.Chain) && (request.Protocol is null || t.Protocol == request.Protocol))
+                    .ToList();
+                foreach (var owner in requestOwners)
+                {
+                    foreach (var t in requestTargets)
+                    {
+                        tasks.Add(new SyncTaskStatus { Chain = t.Chain, Protocol = t.Protocol, Owner = owner, Scope = request.Describe() });
+                        taskRequests.Add(request);
+                    }
+                }
+            }
             Update(s => s with
             {
                 ConfiguredProviders = targets.Select(t => $"{t.Chain}/{t.Protocol}").ToList(),
@@ -110,6 +151,11 @@ public sealed class SyncCoordinator(IServiceScopeFactory scopeFactory, TimeProvi
             if (targets.Count == 0)
             {
                 AddError("No chain providers configured. Set Evm:Chains:<n>:RpcUrl (e.g. via user-secrets).");
+            }
+
+            if (tasks.Count == 0 && targets.Count > 0)
+            {
+                AddError("Nothing to sync: the requested wallet is not watched or has no matching chain provider.");
             }
 
             for (var i = 0; i < tasks.Count; i++)
@@ -122,7 +168,7 @@ public sealed class SyncCoordinator(IServiceScopeFactory scopeFactory, TimeProvi
                 var sync = scope.ServiceProvider.GetRequiredService<SyncService>();
                 try
                 {
-                    var errors = await sync.SyncAsync(chain, protocol, owner, ct, progress);
+                    var errors = await sync.SyncAsync(chain, protocol, owner, ct, progress, taskRequests[i].TokenId, taskRequests[i].FromBlock);
                     UpdateTask(i, t => t with
                     {
                         State = errors.Count == 0 ? SyncTaskState.Succeeded : SyncTaskState.CompletedWithErrors,
@@ -175,7 +221,16 @@ public sealed class SyncCoordinator(IServiceScopeFactory scopeFactory, TimeProvi
         return s with { Tasks = tasks, Percent = Math.Round(tasks.Average(t => t.Percent), 1) };
     });
 
-    private void AddError(string error) => Update(s => s with { LastErrors = [.. s.LastErrors, error] });
+    private const int MaxRecentErrors = 50;
+
+    private IReadOnlyList<RecentSyncError> AppendRecent(SyncStatus s, string error) =>
+        [.. s.RecentErrors.TakeLast(MaxRecentErrors - 1), new RecentSyncError(time.GetUtcNow().UtcDateTime, error)];
+
+    private void AddError(string error) => Update(s => s with
+    {
+        LastErrors = [.. s.LastErrors, error],
+        RecentErrors = AppendRecent(s, error)
+    });
 
     private sealed class TaskProgress(SyncCoordinator coordinator, int index) : ISyncProgress
     {
@@ -208,7 +263,7 @@ public sealed class SyncCoordinator(IServiceScopeFactory scopeFactory, TimeProvi
         {
             var tasks = s.Tasks.ToArray();
             tasks[index] = tasks[index] with { Errors = [.. tasks[index].Errors, error] };
-            return s with { Tasks = tasks, LastErrors = [.. s.LastErrors, error] };
+            return s with { Tasks = tasks, LastErrors = [.. s.LastErrors, error], RecentErrors = coordinator.AppendRecent(s, error) };
         });
 
         // Rough weights: event fetching (receipts at a paced RPC rate) dominates first syncs, then each position costs about the same.

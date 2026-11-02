@@ -20,7 +20,7 @@ builder.Services.AddInfrastructure(builder.Configuration, builder.Environment.Co
 builder.Services.AddHostedService<SyncBackgroundService>();
 
 var corsOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? ["http://localhost:5173"];
-builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins(corsOrigins).AllowAnyHeader().WithMethods("GET", "POST", "DELETE")));
+builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins(corsOrigins).AllowAnyHeader().WithMethods("GET", "POST", "PATCH", "DELETE")));
 
 var app = builder.Build();
 

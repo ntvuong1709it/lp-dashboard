@@ -8,7 +8,15 @@ import type {
   Protocol,
 } from "../api/types";
 import { RangeBadge, RangeBar } from "../components/RangeBar";
-import { Empty, ErrorText, StatCard } from "../components/ui";
+import { UpdatedAgo } from "../components/UpdatedAgo";
+import {
+  CopyButton,
+  Empty,
+  ErrorText,
+  ExternalLink,
+  StatCard,
+  TableSkeleton,
+} from "../components/ui";
 import {
   formatAge,
   formatDate,
@@ -17,9 +25,11 @@ import {
   formatUsd,
   invertRange,
   pnlClass,
+  poolLinks,
   protocolLabels,
 } from "../lib/format";
 import { useOwner } from "../lib/owner";
+import { useHideBalances } from "../lib/privacy";
 import {
   filterPositions,
   sortPositions,
@@ -39,6 +49,7 @@ const statusTabs: {
 ];
 
 export function PortfolioPage() {
+  useHideBalances(); // re-render when the toggle changes; formatters read the flag
   const { owner } = useOwner();
   const [status, setStatus] = usePersistentState<PositionStatus | null>(
     "lpdash.portfolio.status",
@@ -92,6 +103,7 @@ export function PortfolioPage() {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
         <StatCard
           label="Value"
+          loading={summary.isLoading}
           value={formatUsd(s?.currentValueUsd)}
           hint={
             totals && `${totals.openCount} open · ${totals.closedCount} closed`
@@ -99,28 +111,33 @@ export function PortfolioPage() {
         />
         <StatCard
           label="Fees earned"
+          loading={summary.isLoading}
           value={formatUsd(s?.feesEarnedUsd)}
           hint={s && `${formatUsd(s.uncollectedFeesUsd)} unclaimed`}
         />
         <StatCard
           label="P/L"
+          loading={summary.isLoading}
           value={formatUsd(s?.pnlUsd, true)}
           valueClass={pnlClass(s?.pnlUsd)}
           hint={s && `deposited ${formatUsd(s.depositedUsd)}`}
         />
         <StatCard
           label="P/L vs HODL"
+          loading={summary.isLoading}
           value={formatUsd(s?.pnlVsHodlUsd, true)}
           valueClass={pnlClass(s?.pnlVsHodlUsd)}
         />
         <StatCard
           label="Impermanent loss"
+          loading={summary.isLoading}
           value={formatUsd(s?.impermanentLossUsd, true)}
           valueClass={pnlClass(s?.impermanentLossUsd)}
           hint="excl. fees"
         />
         <StatCard
           label="Gas"
+          loading={summary.isLoading}
           value={formatUsd(s?.gasUsd)}
           hint={s?.hasMissingPrices ? "some prices missing" : undefined}
         />
@@ -146,6 +163,7 @@ export function PortfolioPage() {
           ))}
         </div>
         <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
+          <UpdatedAgo />
           <input
             type="search"
             value={search}
@@ -189,7 +207,7 @@ export function PortfolioPage() {
       {positions.error ? (
         <ErrorText error={positions.error} />
       ) : positions.isLoading ? (
-        <Empty>Loading…</Empty>
+        <TableSkeleton />
       ) : !visible.length ? (
         filtered && positions.data?.length ? (
           <Empty>No positions match the filters.</Empty>
@@ -263,6 +281,8 @@ function PositionsTable({
   onSort: (key: SortKey) => void;
 }) {
   const navigate = useNavigate();
+  const sum = (pick: (m: PositionDto["metrics"]) => number) =>
+    positions.reduce((total, p) => total + pick(p.metrics), 0);
 
   return (
     <div className="overflow-x-auto rounded-lg border border-slate-800">
@@ -310,7 +330,18 @@ function PositionsTable({
                   <div className="flex items-center gap-2 text-xs text-slate-500">
                     <span>{protocolLabels[p.protocol]}</span>
                     <span>#{p.tokenId}</span>
+                    <CopyButton text={p.tokenId} title="Copy token ID" />
                     {p.isStaked && <span className="text-sky-400">staked</span>}
+                    {p.poolAddress &&
+                      poolLinks(p.chain, p.protocol, p.poolAddress).map((l) => (
+                        <ExternalLink
+                          key={l.label}
+                          href={l.url}
+                          title={`Open the pool on ${l.label}`}
+                        >
+                          {l.label}
+                        </ExternalLink>
+                      ))}
                   </div>
                 </td>
                 <td className="px-3 py-2">
@@ -389,6 +420,42 @@ function PositionsTable({
             );
           })}
         </tbody>
+        <tfoot className="border-t border-slate-700 bg-slate-900 font-medium">
+          <tr>
+            <td colSpan={6} className="px-3 py-2 text-slate-400">
+              Total · {positions.length}{" "}
+              {positions.length === 1 ? "position" : "positions"}
+            </td>
+            <td className="px-3 py-2 text-right num">
+              {formatUsd(sum((m) => m.currentValueUsd))}
+            </td>
+            <td className="px-3 py-2 text-right num">
+              <div>{formatUsd(sum((m) => m.feesEarnedUsd))}</div>
+              <div className="text-xs font-normal text-slate-500">
+                {formatUsd(
+                  sum((m) => m.uncollectedFeesUsd + m.pendingRewardsUsd),
+                )}{" "}
+                unclaimed
+              </div>
+            </td>
+            <td
+              className={`px-3 py-2 text-right num ${pnlClass(sum((m) => m.pnlUsd))}`}
+            >
+              {formatUsd(sum((m) => m.pnlUsd), true)}
+            </td>
+            <td
+              className={`px-3 py-2 text-right num ${pnlClass(sum((m) => m.impermanentLossUsd))}`}
+            >
+              {formatUsd(sum((m) => m.impermanentLossUsd), true)}
+            </td>
+            <td
+              className={`px-3 py-2 text-right num ${pnlClass(sum((m) => m.pnlVsHodlUsd))}`}
+            >
+              {formatUsd(sum((m) => m.pnlVsHodlUsd), true)}
+            </td>
+            <td className="px-3 py-2" />
+          </tr>
+        </tfoot>
       </table>
     </div>
   );
