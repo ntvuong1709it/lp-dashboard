@@ -154,6 +154,20 @@ export function AddressesPage() {
           </div>
         )}
       </Panel>
+
+      <Panel title="Backup">
+        <p className="mb-3 text-sm text-slate-400">
+          Download a copy of the database. Price history and position snapshots
+          cannot be rebuilt from chain data, so keep a backup before upgrades.
+        </p>
+        <a
+          href="/api/backup"
+          download
+          className="inline-block rounded-md border border-slate-700 px-3 py-1.5 text-sm hover:bg-slate-800"
+        >
+          Download database backup
+        </a>
+      </Panel>
     </div>
   );
 }

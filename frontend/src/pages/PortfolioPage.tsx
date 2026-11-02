@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { usePositions, useSummary } from "../api/client";
 import type {
   PortfolioSummaryDto,
   PositionDto,
   PositionStatus,
+  Protocol,
 } from "../api/types";
 import { RangeBadge, RangeBar } from "../components/RangeBar";
 import { Empty, ErrorText, StatCard } from "../components/ui";
@@ -19,6 +20,13 @@ import {
   protocolLabels,
 } from "../lib/format";
 import { useOwner } from "../lib/owner";
+import {
+  filterPositions,
+  sortPositions,
+  type SortKey,
+  type SortState,
+} from "../lib/positionTable";
+import { usePersistentState } from "../lib/usePersistentState";
 
 const statusTabs: {
   label: string;
@@ -32,13 +40,52 @@ const statusTabs: {
 
 export function PortfolioPage() {
   const { owner } = useOwner();
-  const [status, setStatus] = useState<PositionStatus | null>("Open");
-  const [inverted, setInverted] = useState(false);
+  const [status, setStatus] = usePersistentState<PositionStatus | null>(
+    "lpdash.portfolio.status",
+    "Open",
+  );
+  const [inverted, setInverted] = usePersistentState(
+    "lpdash.portfolio.inverted",
+    false,
+  );
+  const [search, setSearch] = usePersistentState("lpdash.portfolio.search", "");
+  const [protocol, setProtocol] = usePersistentState<Protocol | "">(
+    "lpdash.portfolio.protocol",
+    "",
+  );
+  const [inRangeOnly, setInRangeOnly] = usePersistentState(
+    "lpdash.portfolio.inRangeOnly",
+    false,
+  );
+  const [sort, setSort] = usePersistentState<SortState>(
+    "lpdash.portfolio.sort",
+    { key: "created", dir: "desc" },
+  );
   const summary = useSummary(owner, status);
   // Unfiltered totals so tab counts don't depend on the selected tab.
   const totals = useSummary(owner, null).data;
   const positions = usePositions(owner, status);
   const s = summary.data;
+
+  const protocols = useMemo(
+    () => [...new Set((positions.data ?? []).map((p) => p.protocol))],
+    [positions.data],
+  );
+  const visible = useMemo(
+    () =>
+      sortPositions(
+        filterPositions(positions.data ?? [], search, protocol, inRangeOnly),
+        sort,
+      ),
+    [positions.data, search, protocol, inRangeOnly, sort],
+  );
+  const filtered = !!search.trim() || !!protocol || inRangeOnly;
+  const toggleSort = (key: SortKey) =>
+    setSort(
+      sort.key === key
+        ? { key, dir: sort.dir === "asc" ? "desc" : "asc" }
+        : { key, dir: key === "position" ? "asc" : "desc" },
+    );
 
   return (
     <div className="space-y-6">
@@ -98,22 +145,55 @@ export function PortfolioPage() {
             </button>
           ))}
         </div>
-        <label className="flex items-center gap-2 text-sm text-slate-400">
+        <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
           <input
-            type="checkbox"
-            checked={inverted}
-            onChange={(e) => setInverted(e.target.checked)}
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search token, pool, #id…"
+            className="w-52 rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-slate-200 placeholder:text-slate-500"
           />
-          Invert prices
-        </label>
+          {(protocols.length > 1 || protocol !== "") && (
+            <select
+              value={protocol}
+              onChange={(e) => setProtocol(e.target.value as Protocol | "")}
+              className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-slate-200"
+            >
+              <option value="">All protocols</option>
+              {protocols.map((p) => (
+                <option key={p} value={p}>
+                  {protocolLabels[p]}
+                </option>
+              ))}
+            </select>
+          )}
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={inRangeOnly}
+              onChange={(e) => setInRangeOnly(e.target.checked)}
+            />
+            In range only
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={inverted}
+              onChange={(e) => setInverted(e.target.checked)}
+            />
+            Invert prices
+          </label>
+        </div>
       </div>
 
       {positions.error ? (
         <ErrorText error={positions.error} />
       ) : positions.isLoading ? (
         <Empty>Loading…</Empty>
-      ) : !positions.data?.length ? (
-        totals && totals.openCount + totals.closedCount > 0 ? (
+      ) : !visible.length ? (
+        filtered && positions.data?.length ? (
+          <Empty>No positions match the filters.</Empty>
+        ) : totals && totals.openCount + totals.closedCount > 0 ? (
           <Empty>No {status?.toLowerCase()} positions.</Empty>
         ) : (
           <Empty>
@@ -125,18 +205,62 @@ export function PortfolioPage() {
           </Empty>
         )
       ) : (
-        <PositionsTable positions={positions.data} inverted={inverted} />
+        <PositionsTable
+          positions={visible}
+          inverted={inverted}
+          sort={sort}
+          onSort={toggleSort}
+        />
       )}
     </div>
+  );
+}
+
+function SortHeader({
+  label,
+  k,
+  sort,
+  onSort,
+  right,
+}: {
+  label: string;
+  k: SortKey;
+  sort: SortState;
+  onSort: (key: SortKey) => void;
+  right?: boolean;
+}) {
+  const active = sort.key === k;
+  return (
+    <th
+      className={`px-3 py-2 ${right ? "text-right" : ""}`}
+      aria-sort={
+        active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"
+      }
+    >
+      <button
+        type="button"
+        onClick={() => onSort(k)}
+        className={`uppercase hover:text-white ${active ? "text-white" : ""}`}
+      >
+        {label}
+        <span className="ml-1 inline-block w-2">
+          {active ? (sort.dir === "asc" ? "▲" : "▼") : ""}
+        </span>
+      </button>
+    </th>
   );
 }
 
 function PositionsTable({
   positions,
   inverted,
+  sort,
+  onSort,
 }: {
   positions: PositionDto[];
   inverted: boolean;
+  sort: SortState;
+  onSort: (key: SortKey) => void;
 }) {
   const navigate = useNavigate();
 
@@ -146,17 +270,17 @@ function PositionsTable({
         <thead className="bg-slate-900 text-left text-xs uppercase text-slate-400">
           <tr>
             <th className="px-3 py-2 w-10 text-right">#</th>
-            <th className="px-3 py-2">Position</th>
+            <SortHeader label="Position" k="position" sort={sort} onSort={onSort} />
             <th className="px-3 py-2 w-64">Range</th>
-            <th className="px-3 py-2">Age</th>
-            <th className="px-3 py-2">Created</th>
-            <th className="px-3 py-2">Withdrawn</th>
-            <th className="px-3 py-2 text-right">Value</th>
-            <th className="px-3 py-2 text-right">Fees</th>
-            <th className="px-3 py-2 text-right">P/L</th>
-            <th className="px-3 py-2 text-right">IL</th>
-            <th className="px-3 py-2 text-right">vs HODL</th>
-            <th className="px-3 py-2 text-right">Fee APR</th>
+            <SortHeader label="Age" k="age" sort={sort} onSort={onSort} />
+            <SortHeader label="Created" k="created" sort={sort} onSort={onSort} />
+            <SortHeader label="Withdrawn" k="closed" sort={sort} onSort={onSort} />
+            <SortHeader label="Value" k="value" right sort={sort} onSort={onSort} />
+            <SortHeader label="Fees" k="fees" right sort={sort} onSort={onSort} />
+            <SortHeader label="P/L" k="pnl" right sort={sort} onSort={onSort} />
+            <SortHeader label="IL" k="il" right sort={sort} onSort={onSort} />
+            <SortHeader label="vs HODL" k="vsHodl" right sort={sort} onSort={onSort} />
+            <SortHeader label="Fee APR" k="apr" right sort={sort} onSort={onSort} />
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-800">
@@ -247,9 +371,17 @@ function PositionsTable({
                   {m.hasMissingPrices && (
                     <div
                       className="text-[11px] text-amber-400"
-                      title="Some historical prices are missing"
+                      title="Some historical prices are unavailable and counted as $0, so these figures may be understated"
                     >
                       prices missing
+                    </div>
+                  )}
+                  {!m.hasMissingPrices && m.hasEstimatedPrices && (
+                    <div
+                      className="text-[11px] text-amber-400/80"
+                      title="Some reward claims had no historical price; the nearest later known price was used"
+                    >
+                      est. reward price
                     </div>
                   )}
                 </td>

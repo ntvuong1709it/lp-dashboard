@@ -61,6 +61,7 @@ export interface PositionMetrics {
   feeAprPercent: number | null;
   ageDays: number | null;
   hasMissingPrices: boolean;
+  hasEstimatedPrices: boolean;
 }
 
 export interface PositionDto {

@@ -15,6 +15,8 @@ public static class DependencyInjection
     public const string SqliteMigrationsAssembly = "LpDashboard.Infrastructure.Migrations.Sqlite";
     public const string PostgresMigrationsAssembly = "LpDashboard.Infrastructure.Migrations.Postgres";
 
+    private static readonly string[] AllowedJournalModes = ["DELETE", "TRUNCATE", "PERSIST", "MEMORY", "WAL"];
+
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration, string? contentRoot = null)
     {
         services.AddPersistence(configuration, contentRoot);
@@ -29,12 +31,20 @@ public static class DependencyInjection
         var provider = configuration["Database:Provider"] ?? "Sqlite";
         var connectionString = configuration.GetConnectionString("Default") ?? "Data Source=lpdashboard.db";
 
+        var journalMode = configuration["Database:SqliteJournalMode"]?.Trim().ToUpperInvariant();
+        if (string.IsNullOrEmpty(journalMode)) journalMode = null;
+        if (journalMode is not null && !AllowedJournalModes.Contains(journalMode))
+        {
+            throw new InvalidOperationException($"Unsupported Database:SqliteJournalMode '{journalMode}'. Use {string.Join(", ", AllowedJournalModes)}.");
+        }
+
         services.AddDbContext<AppDbContext>(options =>
         {
             switch (provider.ToLowerInvariant())
             {
                 case "sqlite":
                     options.UseSqlite(ResolveSqlitePath(connectionString, contentRoot), o => o.MigrationsAssembly(SqliteMigrationsAssembly));
+                    if (journalMode is not null) options.AddInterceptors(new SqliteJournalModeInterceptor(journalMode));
                     break;
                 case "postgres":
                 case "postgresql":

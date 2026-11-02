@@ -116,3 +116,4 @@ frontend/
 | GET      | `/api/fees/daily?owner=&timeZone=`               | earned per local day incl. unclaimed (from snapshots)             |
 | POST     | `/api/sync`                                      | 202, async                                                        |
 | GET      | `/api/sync/status`                               | running, last run, providers, errors                              |
+| GET      | `/api/backup`                                    | consistent SQLite copy (VACUUM INTO), download                    |

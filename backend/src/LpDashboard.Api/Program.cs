@@ -38,6 +38,21 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors();
+
+// Serve the built frontend (Docker image / `npm run build` copied into wwwroot) when present.
+var spa = app.Environment.WebRootFileProvider.GetFileInfo("index.html");
+if (spa.Exists)
+{
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+}
+
 app.MapControllers();
+
+if (spa.Exists)
+{
+    // Client-side routes fall back to index.html; unknown /api paths and missing files (anything with an extension) still 404.
+    app.MapFallbackToFile("{**path:regex(^(?!api(/|$))[^.]*$)}", "index.html");
+}
 
 await app.RunAsync();
