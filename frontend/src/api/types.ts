@@ -200,6 +200,8 @@ export interface SyncTaskStatus {
   chain: Chain;
   protocol: Protocol;
   owner: string;
+  /** Set for partial runs (one wallet, one position, rescan); null for a full sync. */
+  scope: string | null;
   state: SyncTaskState;
   stage: SyncStage | null;
   detail: string | null;
@@ -213,6 +215,29 @@ export interface SyncTaskStatus {
   errors: string[];
 }
 
+export interface RecentSyncError {
+  at: string;
+  message: string;
+}
+
+/** What a manual sync covers; omit everything for a full sync. */
+export interface SyncRequestBody {
+  owner?: string;
+  chain?: Chain;
+  protocol?: Protocol;
+  tokenId?: string;
+  fromBlock?: number;
+}
+
+export interface HealthDto {
+  status: "Healthy" | "Degraded" | "Unhealthy";
+  databaseOk: boolean;
+  providers: string[];
+  isSyncing: boolean;
+  lastSyncFinishedAt: string | null;
+  lastSyncErrorCount: number;
+}
+
 export interface SyncStatus {
   isRunning: boolean;
   isQueued: boolean;
@@ -222,6 +247,7 @@ export interface SyncStatus {
   configuredProviders: string[];
   tasks: SyncTaskStatus[];
   lastErrors: string[];
+  recentErrors: RecentSyncError[];
 }
 
 export interface ProblemDetails {

@@ -4,11 +4,81 @@ import {
   useAddresses,
   useRemoveAddress,
   useSyncStatus,
+  useUpdateAddressLabel,
 } from "../api/client";
-import { Empty, ErrorText, Panel, SyncErrorList } from "../components/ui";
+import { ResyncControls } from "../components/ResyncControls";
+import {
+  CopyButton,
+  Empty,
+  ErrorText,
+  ExternalLink,
+  Panel,
+  SyncErrorList,
+  TableSkeleton,
+} from "../components/ui";
 import { SyncProgressDetails } from "../components/SyncProgress";
-import { formatDate } from "../lib/format";
+import { formatDate, walletUrl } from "../lib/format";
 import { useOwner } from "../lib/owner";
+
+function LabelCell({ id, label }: { id: number; label: string | null }) {
+  const update = useUpdateAddressLabel();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(label ?? "");
+
+  const save = () => {
+    update.mutate(
+      { id, label: value },
+      { onSuccess: () => setEditing(false) },
+    );
+  };
+
+  if (!editing) {
+    return (
+      <span>
+        {label}{" "}
+        <button
+          className="text-xs text-sky-400 hover:underline"
+          onClick={() => {
+            setValue(label ?? "");
+            setEditing(true);
+          }}
+        >
+          {label ? "Edit" : "Add label"}
+        </button>
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-2">
+      <input
+        autoFocus
+        className="w-40 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-sm"
+        maxLength={100}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") save();
+          if (e.key === "Escape") setEditing(false);
+        }}
+      />
+      <button
+        className="text-xs text-sky-400 hover:underline disabled:opacity-50"
+        disabled={update.isPending}
+        onClick={save}
+      >
+        Save
+      </button>
+      <button
+        className="text-xs text-slate-400 hover:underline"
+        onClick={() => setEditing(false)}
+      >
+        Cancel
+      </button>
+      {update.error && <ErrorText error={update.error} />}
+    </span>
+  );
+}
 
 export function AddressesPage() {
   const { data: addresses, error, isLoading } = useAddresses();
@@ -72,7 +142,7 @@ export function AddressesPage() {
         {error ? (
           <ErrorText error={error} />
         ) : isLoading ? (
-          <Empty>Loading…</Empty>
+          <TableSkeleton rows={2} />
         ) : !addresses?.length ? (
           <Empty>No wallets yet.</Empty>
         ) : (
@@ -80,8 +150,16 @@ export function AddressesPage() {
             <tbody className="divide-y divide-slate-800">
               {addresses.map((a) => (
                 <tr key={a.id}>
-                  <td className="py-2 font-mono text-xs">{a.address}</td>
-                  <td className="py-2">{a.label}</td>
+                  <td className="py-2 font-mono text-xs">
+                    {a.address}{" "}
+                    <CopyButton text={a.address} title="Copy address" />{" "}
+                    <ExternalLink href={walletUrl(a.chainFamily, a.address)}>
+                      explorer
+                    </ExternalLink>
+                  </td>
+                  <td className="py-2">
+                    <LabelCell id={a.id} label={a.label} />
+                  </td>
                   <td className="py-2 text-xs text-slate-500">
                     {a.chainFamily}
                   </td>
@@ -89,6 +167,14 @@ export function AddressesPage() {
                     added {formatDate(a.createdAt)}
                   </td>
                   <td className="py-2 text-right">
+                    {a.chainFamily === "Evm" && (
+                      <span className="mr-4">
+                        <ResyncControls
+                          what="wallet"
+                          scope={{ owner: a.address }}
+                        />
+                      </span>
+                    )}
                     <button
                       className="text-xs text-rose-400 hover:underline disabled:opacity-50"
                       disabled={remove.isPending}
@@ -152,6 +238,31 @@ export function AddressesPage() {
             </div>
             <SyncErrorList errors={status.lastErrors} />
           </div>
+        )}
+      </Panel>
+
+      <Panel title="Recent errors">
+        {status?.recentErrors.length ? (
+          <ul className="max-h-72 space-y-2 overflow-y-auto">
+            {[...status.recentErrors].reverse().map((e, i) => (
+              <li
+                key={i}
+                className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200"
+              >
+                <div className="mb-1 text-[11px] text-amber-300/70">
+                  {formatDate(e.at)}
+                </div>
+                <div className="whitespace-pre-wrap break-words font-mono">
+                  {e.message}
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-slate-500">
+            No sync errors since the app started. (Kept in memory, so this
+            clears on restart.)
+          </p>
         )}
       </Panel>
 

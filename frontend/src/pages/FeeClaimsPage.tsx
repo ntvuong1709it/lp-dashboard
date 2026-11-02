@@ -11,18 +11,33 @@ import {
   YAxis,
 } from "recharts";
 import { useDailyEarnings, useWeeklyClaims } from "../api/client";
-import { Empty, ErrorText, Panel, StatCard } from "../components/ui";
+import { UpdatedAgo } from "../components/UpdatedAgo";
+import {
+  CopyButton,
+  Empty,
+  ErrorText,
+  ExternalLink,
+  PageSkeleton,
+  Panel,
+  StatCard,
+} from "../components/ui";
 import {
   formatAmount,
   formatDate,
   formatUsd,
   protocolLabels,
+  txUrl,
 } from "../lib/format";
 import { useOwner } from "../lib/owner";
+import { useHideBalances } from "../lib/privacy";
 
 export function FeeClaimsPage() {
+  useHideBalances(); // re-render when the toggle changes; formatters read the flag
   return (
     <div className="space-y-10">
+      <div className="-mb-6 text-right">
+        <UpdatedAgo />
+      </div>
       <DailyEarnings />
       <WeeklyClaims />
     </div>
@@ -34,7 +49,7 @@ function DailyEarnings() {
   const { data, error, isLoading } = useDailyEarnings(owner);
 
   if (error) return <ErrorText error={error} />;
-  if (isLoading) return <Empty>Loading…</Empty>;
+  if (isLoading) return <PageSkeleton cards={4} />;
   if (!data?.length) {
     return (
       <Empty>
@@ -146,7 +161,7 @@ function WeeklyClaims() {
   const [expanded, setExpanded] = useState<string | null>(null);
 
   if (error) return <ErrorText error={error} />;
-  if (isLoading) return <Empty>Loading…</Empty>;
+  if (isLoading) return <PageSkeleton cards={4} />;
   if (!data?.length) return <Empty>No fee claims yet.</Empty>;
 
   const chart = [...data].reverse().map((w) => ({
@@ -251,7 +266,15 @@ function WeeklyClaims() {
                       className="bg-slate-950/50 text-xs"
                     >
                       <td className="py-1 pl-6 text-slate-400">
-                        {formatDate(i.timestamp)}
+                        {formatDate(i.timestamp)}{" "}
+                        {/* Claims carry no chain yet; Base is the only synced chain. */}
+                        <ExternalLink href={txUrl("Base", i.txHash)}>
+                          tx
+                        </ExternalLink>
+                        <CopyButton
+                          text={i.txHash}
+                          title="Copy transaction hash"
+                        />
                       </td>
                       <td className="py-1" colSpan={2}>
                         <Link

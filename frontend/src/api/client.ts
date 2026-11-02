@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   DailyEarningsDto,
+  HealthDto,
+  SyncRequestBody,
   PortfolioSummaryDto,
   PositionDetailDto,
   PositionDto,
@@ -65,6 +67,18 @@ export function useAddAddress() {
       request<WatchedAddress>("/api/addresses", {
         method: "POST",
         body: JSON.stringify(body),
+      }),
+    onSuccess: () => client.invalidateQueries(),
+  });
+}
+
+export function useUpdateAddressLabel() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { id: number; label: string }) =>
+      request<WatchedAddress>(`/api/addresses/${body.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ label: body.label }),
       }),
     onSuccess: () => client.invalidateQueries(),
   });
@@ -141,6 +155,13 @@ export const useDailyEarnings = (owner: string | null) =>
       ),
   });
 
+export const useHealth = () =>
+  useQuery({
+    queryKey: ["health"],
+    queryFn: () => request<HealthDto>("/api/health"),
+    refetchInterval: 60000,
+  });
+
 export function useSyncStatus() {
   const client = useQueryClient();
   return useQuery({
@@ -163,7 +184,11 @@ export function useSyncStatus() {
 export function useTriggerSync() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: () => request<SyncStatus>("/api/sync", { method: "POST" }),
+    mutationFn: (scope?: SyncRequestBody) =>
+      request<SyncStatus>("/api/sync", {
+        method: "POST",
+        body: scope ? JSON.stringify(scope) : undefined,
+      }),
     onSuccess: (status) => {
       // Show the queued state immediately; polling picks up the run once it starts.
       client.setQueryData(["sync-status"], status);

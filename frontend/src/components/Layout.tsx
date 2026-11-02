@@ -1,10 +1,18 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, NavLink, Outlet } from "react-router-dom";
-import { useAddresses, useSyncStatus, useTriggerSync } from "../api/client";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import {
+  useAddresses,
+  useHealth,
+  useSyncStatus,
+  useTriggerSync,
+} from "../api/client";
+import { SetupScreen } from "./SetupScreen";
+import { UpdatedAgo } from "./UpdatedAgo";
 import { SyncErrorList } from "./ui";
 import { ProgressBar, SyncProgressDetails, describeSync } from "./SyncProgress";
-import { formatDate, shortAddress } from "../lib/format";
+import { shortAddress } from "../lib/format";
 import { useOwner } from "../lib/owner";
+import { setBalancesHidden, useHideBalances } from "../lib/privacy";
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   `px-3 py-1.5 rounded-md text-sm ${isActive ? "bg-slate-800 text-white" : "text-slate-400 hover:text-white"}`;
@@ -28,14 +36,39 @@ export function Layout() {
           </nav>
           <div className="ml-auto flex items-center gap-3">
             <OwnerSelect />
+            <HideBalancesToggle />
             <SyncIndicator />
           </div>
         </div>
       </header>
       <main className="mx-auto max-w-7xl px-4 py-6">
-        <Outlet />
+        <Content />
       </main>
     </div>
+  );
+}
+
+/** The routed page, or the setup screen when no chain provider is configured (wallets can still be managed). */
+function Content() {
+  const { data: health } = useHealth();
+  const { pathname } = useLocation();
+  const needsSetup = health?.providers.length === 0;
+
+  if (needsSetup && pathname !== "/addresses") return <SetupScreen />;
+  return <Outlet />;
+}
+
+function HideBalancesToggle() {
+  const hidden = useHideBalances();
+  return (
+    <button
+      className={`rounded-md border px-2 py-1.5 text-sm hover:bg-slate-800 ${hidden ? "border-sky-500 text-sky-300" : "border-slate-700 text-slate-300"}`}
+      aria-pressed={hidden}
+      title={hidden ? "Show balances" : "Hide balances"}
+      onClick={() => setBalancesHidden(!hidden)}
+    >
+      {hidden ? "Balances hidden" : "Hide balances"}
+    </button>
   );
 }
 
@@ -128,7 +161,7 @@ function SyncIndicator() {
             Starting sync…
           </span>
         ) : (
-          <span>Synced {formatDate(status?.lastFinishedAt)}</span>
+          <UpdatedAgo prefix="Synced" />
         )}
       </button>
       {errors.length > 0 && (

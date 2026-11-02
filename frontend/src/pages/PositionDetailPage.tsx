@@ -23,7 +23,17 @@ import type {
   SnapshotPointDto,
 } from "../api/types";
 import { RangeBadge, RangeBar } from "../components/RangeBar";
-import { Empty, ErrorText, Panel, StatCard } from "../components/ui";
+import { ResyncControls } from "../components/ResyncControls";
+import { UpdatedAgo } from "../components/UpdatedAgo";
+import {
+  CopyButton,
+  Empty,
+  ErrorText,
+  ExternalLink,
+  PageSkeleton,
+  Panel,
+  StatCard,
+} from "../components/ui";
 import {
   addressUrl,
   formatAge,
@@ -35,16 +45,20 @@ import {
   formatUsd,
   invertRange,
   pnlClass,
+  poolLinks,
   protocolLabels,
+  shortAddress,
   txUrl,
 } from "../lib/format";
+import { useHideBalances } from "../lib/privacy";
 
 export function PositionDetailPage() {
+  useHideBalances(); // re-render when the toggle changes; formatters read the flag
   const id = Number(useParams().id);
   const { data, error, isLoading } = usePosition(id);
 
   if (error) return <ErrorText error={error} />;
-  if (isLoading || !data) return <Empty>Loading…</Empty>;
+  if (isLoading || !data) return <PageSkeleton cards={7} />;
 
   const p = data.position;
   const m = p.metrics;
@@ -62,17 +76,41 @@ export function PositionDetailPage() {
         <span className="text-sm text-slate-400">
           {protocolLabels[p.protocol]} · {p.chain} · #{p.tokenId}
         </span>
+        <CopyButton text={p.tokenId} title="Copy token ID" />
         {p.isStaked && <span className="text-sm text-sky-400">staked</span>}
         {p.poolAddress && (
-          <a
-            className="text-sm text-sky-400 hover:underline"
-            href={addressUrl(p.chain, p.poolAddress)}
-            target="_blank"
-            rel="noreferrer"
-          >
-            pool
-          </a>
+          <span className="flex items-center gap-2 text-sm">
+            <ExternalLink href={addressUrl(p.chain, p.poolAddress)}>
+              pool
+            </ExternalLink>
+            <CopyButton text={p.poolAddress} title="Copy pool address" />
+            {poolLinks(p.chain, p.protocol, p.poolAddress).map((l) => (
+              <ExternalLink key={l.label} href={l.url}>
+                {l.label}
+              </ExternalLink>
+            ))}
+          </span>
         )}
+        <span className="flex items-center gap-2 text-sm text-slate-400">
+          wallet
+          <span className="font-mono text-xs" title={p.owner}>
+            {shortAddress(p.owner)}
+          </span>
+          <CopyButton text={p.owner} title="Copy wallet address" />
+          <ExternalLink href={addressUrl(p.chain, p.owner)}>explorer</ExternalLink>
+        </span>
+        <span className="ml-auto flex items-center gap-3">
+          <UpdatedAgo />
+          <ResyncControls
+            what="position"
+            scope={{
+              owner: p.owner,
+              chain: p.chain,
+              protocol: p.protocol,
+              tokenId: p.tokenId,
+            }}
+          />
+        </span>
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
@@ -528,14 +566,10 @@ function EventsPanel({
                   {e.gasUsd ? formatUsd(e.gasUsd) : "—"}
                 </td>
                 <td className="py-1.5 text-right">
-                  <a
-                    className="text-sky-400 hover:underline"
-                    href={txUrl(p.chain, e.txHash)}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
+                  <ExternalLink href={txUrl(p.chain, e.txHash)}>
                     {e.txHash.slice(0, 10)}…
-                  </a>
+                  </ExternalLink>{" "}
+                  <CopyButton text={e.txHash} title="Copy transaction hash" />
                 </td>
               </tr>
             ))}

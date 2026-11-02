@@ -1,4 +1,5 @@
 import type { Chain, Protocol, RangeDto } from "../api/types";
+import { balancesHidden, maskedBalance } from "./privacy";
 
 const usd = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -16,6 +17,7 @@ export function formatUsd(
   signed = false,
 ): string {
   if (value == null) return "—";
+  if (balancesHidden()) return maskedBalance;
   const abs = Math.abs(value);
   const text = abs > 0 && abs < 0.01 ? usdSmall.format(abs) : usd.format(abs);
   const sign = value < 0 ? "-" : signed && value > 0 ? "+" : "";
@@ -33,6 +35,7 @@ export function formatPercent(
 
 export function formatAmount(value: number | null | undefined): string {
   if (value == null) return "—";
+  if (balancesHidden()) return maskedBalance;
   if (value === 0) return "0";
   const abs = Math.abs(value);
   if (abs >= 1000)
@@ -65,6 +68,18 @@ export function formatDate(iso: string | null | undefined): string {
   });
 }
 
+/** "just now", "5 min ago", "3 h ago", "2 d ago". */
+export function formatAgo(iso: string | null | undefined, now = Date.now()): string {
+  if (!iso) return "never";
+  const seconds = Math.max(0, Math.round((now - new Date(iso).getTime()) / 1000));
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 48) return `${hours} h ago`;
+  return `${Math.floor(hours / 24)} d ago`;
+}
+
 export function formatFee(fee: number | null): string {
   return fee == null
     ? ""
@@ -85,6 +100,41 @@ export const txUrl = (chain: Chain, hash: string) =>
   `${explorers[chain]}/tx/${hash}`;
 export const addressUrl = (chain: Chain, address: string) =>
   `${explorers[chain]}/address/${address}`;
+
+/** Only Base is synced for EVM wallets today, so EVM wallets link to Basescan. */
+export const walletUrl = (family: "Evm" | "Solana", address: string) =>
+  family === "Solana"
+    ? addressUrl("Solana", address)
+    : addressUrl("Base", address);
+
+const dexScreenerChains: Partial<Record<Chain, string>> = {
+  Base: "base",
+  Ethereum: "ethereum",
+  Solana: "solana",
+};
+
+/** External pages for a pool: the Uniswap app (Uniswap v3 on Base) and DexScreener. */
+export function poolLinks(
+  chain: Chain,
+  protocol: Protocol,
+  pool: string,
+): { label: string; url: string }[] {
+  const links: { label: string; url: string }[] = [];
+  if (protocol === "UniswapV3" && chain === "Base") {
+    links.push({
+      label: "Uniswap",
+      url: `https://app.uniswap.org/explore/pools/base/${pool}`,
+    });
+  }
+  const slug = dexScreenerChains[chain];
+  if (slug) {
+    links.push({
+      label: "DexScreener",
+      url: `https://dexscreener.com/${slug}/${pool}`,
+    });
+  }
+  return links;
+}
 
 export const protocolLabels: Record<Protocol, string> = {
   UniswapV3: "Uniswap v3",

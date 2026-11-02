@@ -126,6 +126,11 @@ export function SyncProgressDetails({ status }: { status: SyncStatus }) {
                     {style.label}
                   </span>
                   <span className="text-slate-200">{taskName(t)}</span>
+                  {t.scope && (
+                    <span className="rounded bg-sky-500/10 px-1.5 py-0.5 text-sky-300">
+                      {t.scope}
+                    </span>
+                  )}
                   <span className="font-mono text-slate-500" title={t.owner}>
                     {shortAddress(t.owner)}
                   </span>
