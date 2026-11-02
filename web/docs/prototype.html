@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LP Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: top bar + 5 tabs; summary tiles first, detail below; position detail slides in from the right. */
+:root{
+  --bg:#f4f6f8; --surface:#ffffff; --ink:#0f1720; --muted:#5b6675; --line:#e2e7ec; --accent:#2a78d6;
+  --good:#0f7d57; --bad:#c23b36; --warn:#b36b00; --soft:#eef2f6;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
+  --font-display:'Bricolage Grotesque','IBM Plex Sans',system-ui,sans-serif;
+  --font-body:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0c1117; --surface:#141b24; --ink:#e8edf3; --muted:#97a3b3; --line:#263140; --accent:#3987e5;
+    --good:#3ec28f; --bad:#ef6b66; --warn:#e0a13a; --soft:#1b2430;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0c1117; --surface:#141b24; --ink:#e8edf3; --muted:#97a3b3; --line:#263140; --accent:#3987e5;
+  --good:#3ec28f; --bad:#ef6b66; --warn:#e0a13a; --soft:#1b2430;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--font-body);-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h2{font-size:15px;font-weight:600}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.good{color:var(--good)} .bad{color:var(--bad)} .muted{color:var(--muted)}
+
+/* top bar */
+header{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
+.bar{max-width:1240px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--font-display);font-weight:700;font-size:19px;display:flex;align-items:center;gap:8px}
+.logo i{width:20px;height:20px;border-radius:50% 50% 50% 4px;background:var(--accent);display:inline-block}
+nav{display:flex;gap:2px;overflow-x:auto;order:3;width:100%}
+nav a{padding:8px 12px;border-radius:6px;color:var(--muted);text-decoration:none;font-weight:500;white-space:nowrap}
+nav a:hover{background:var(--soft)}
+nav a[aria-current="page"]{color:var(--ink);background:var(--soft);box-shadow:inset 0 -2px 0 var(--accent)}
+.spacer{flex:1}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;background:var(--surface);font-size:13px;cursor:default}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--good)}
+.mock{background:var(--soft);color:var(--muted);font-size:12px;padding:3px 8px;border-radius:4px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:5px 10px;cursor:pointer}
+.btn:hover{background:var(--soft)}
+@media(min-width:900px){nav{order:0;width:auto;margin-left:12px}}
+
+main{max-width:1240px;margin:0 auto;padding:20px 16px 56px;display:flex;flex-direction:column;gap:16px}
+.page-head{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.page-head h1{font-size:24px}
+.page-head p{margin:2px 0 0;color:var(--muted)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.grid{display:grid;gap:16px}
+.g4{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.g2{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.g-main{grid-template-columns:minmax(0,2fr) minmax(300px,1fr)}
+@media(max-width:860px){.g-main{grid-template-columns:minmax(0,1fr)}}
+
+/* KPI tiles */
+.kpi .label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+.kpi .value{font-size:26px;font-family:var(--font-mono);font-weight:500;margin:4px 0 2px;letter-spacing:-.02em}
+.kpi .sub{font-size:13px}
+
+/* segmented control */
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{border:0;background:var(--surface);padding:4px 10px;cursor:pointer;color:var(--muted);border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--soft);color:var(--ink);font-weight:600}
+
+/* charts */
+.chart{position:relative}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.ax{fill:var(--muted);font:11px var(--font-mono)}
+.grid-l{stroke:var(--line);stroke-width:1}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);padding:6px 9px;border-radius:6px;font-size:12px;white-space:nowrap;transform:translate(-50%,-110%);z-index:5}
+.tip b{font-family:var(--font-mono);font-weight:500}
+
+/* tables */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:860px}
+th{font-weight:500;color:var(--muted);font-size:12px;text-align:right;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;cursor:pointer;user-select:none}
+th:first-child,td:first-child{text-align:left}
+th.l,td.l{text-align:left}
+td{padding:11px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--soft)}
+tbody tr:focus-visible{outline-offset:-2px}
+.pair{font-weight:600}
+.pair small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:500;border:1px solid currentColor}
+.pill.in{color:var(--good)} .pill.out{color:var(--bad)} .pill.closed{color:var(--muted)} .pill.edge{color:var(--warn)} .pill.full{color:var(--accent)}
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+select{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:5px 8px}
+
+/* range bar */
+.range{position:relative;height:6px;border-radius:3px;background:var(--soft);width:120px;display:inline-block;vertical-align:middle}
+.range .fill{position:absolute;top:0;bottom:0;border-radius:3px;background:var(--accent);opacity:.35}
+.range .mk{position:absolute;top:-4px;width:3px;height:14px;border-radius:2px;background:var(--ink);transform:translateX(-1px)}
+.range.big{width:100%;height:10px;border-radius:5px}
+.range.big .mk{top:-6px;height:22px;width:4px}
+.range.big .fill{border-radius:5px}
+.rng-lbl{display:flex;justify-content:space-between;font-size:12px;margin-top:10px;color:var(--muted)}
+
+/* lists */
+.rows{display:flex;flex-direction:column;gap:10px}
+.bar-row{display:grid;grid-template-columns:110px 1fr 90px;gap:10px;align-items:center;font-size:13px}
+.bar-row .track{height:8px;background:var(--soft);border-radius:4px;overflow:hidden}
+.bar-row .track i{display:block;height:100%;background:var(--accent);border-radius:0 4px 4px 0}
+.alert{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.alert:last-child{border-bottom:0}
+.alert .ic{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;flex:none;border:1.5px solid currentColor}
+.alert button{all:unset;cursor:pointer;color:var(--accent);font-weight:500}
+.ev{display:grid;grid-template-columns:130px 150px minmax(0,1fr) 110px 70px;gap:10px;padding:11px 0;border-bottom:1px solid var(--line);align-items:center}
+@media(max-width:760px){.ev{grid-template-columns:1fr auto}.ev>:nth-child(3){grid-column:1/-1;order:5}}
+.tag{font-size:12px;border-radius:4px;padding:1px 7px;background:var(--soft);display:inline-block}
+
+/* drawer */
+.scrim{position:fixed;inset:0;background:rgba(5,10,15,.45);z-index:40;display:none}
+.scrim.on{display:block}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);background:var(--bg);z-index:50;overflow-y:auto;border-left:1px solid var(--line);transform:translateX(100%);transition:transform .2s}
+.drawer.on{transform:none}
+@media(prefers-reduced-motion:reduce){.drawer{transition:none}}
+.drawer .in{padding:18px 16px 40px;display:flex;flex-direction:column;gap:14px}
+.mini{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.mini div{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.mini span{display:block;font-size:12px;color:var(--muted)}
+.mini b{font-family:var(--font-mono);font-weight:500;font-size:16px}
+.wf{display:flex;flex-direction:column;gap:6px}
+.wf-row{display:grid;grid-template-columns:120px 1fr 86px;gap:8px;align-items:center;font-size:13px}
+.wf svg{height:18px;width:100%}
+.toggle{display:flex;justify-content:space-between;align-items:center;gap:12px}
+
+.spec-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.spec{border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--surface)}
+.spec h3{font-size:14px;margin-bottom:4px;display:flex;justify-content:space-between;gap:8px}
+.spec p{margin:0;color:var(--muted);font-size:13px}
+.ph{font-size:11px;font-weight:600;padding:1px 7px;border-radius:4px;white-space:nowrap}
+.ph1{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}
+.ph2{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+.ph3{background:var(--soft);color:var(--muted)}
+.note{font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="logo"><i></i>LP Ledger</div>
+    <nav id="nav" aria-label="Sections">
+      <a href="#overview" data-p="overview">Overview</a>
+      <a href="#positions" data-p="positions">Positions</a>
+      <a href="#pnl" data-p="pnl">Profit &amp; loss</a>
+      <a href="#activity" data-p="activity">Activity</a>
+      <a href="#roadmap" data-p="roadmap">Features</a>
+    </nav>
+    <span class="spacer"></span>
+    <span class="mock">Mock data</span>
+    <select id="chain" aria-label="Chain filter"><option value="all">All chains</option></select>
+    <span class="chip num"><span class="dot"></span>0x7a3f…c91e</span>
+    <button class="btn" id="theme" aria-label="Toggle theme">Theme</button>
+  </div>
+</header>
+<main id="view"></main>
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Position detail"></aside>
+
+<script>
+/* ---------- mock data ---------- */
+const TODAY = new Date('2026-11-02');
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const R = rng(42);
+
+// price/range are token1 per token0. dep=deposited USD, hodl=value had tokens been held, val=current USD value
+const P = [
+ {id:1,pair:'ETH / USDC',proto:'Uniswap v3',chain:'Ethereum',fee:'0.05%',min:2900,max:3700,price:3412,entry:3150,dep:18000,hodl:20100,val:19650,claimed:640,unc:412,gas:46,age:74,apr:24.1,t0:'ETH',t1:'USDC',a0:2.91,a1:9720,status:'open'},
+ {id:2,pair:'WBTC / ETH',proto:'Uniswap v3',chain:'Arbitrum',fee:'0.30%',min:17.5,max:21.0,price:19.2,entry:18.8,dep:12000,hodl:12300,val:12150,claimed:210,unc:98,gas:6,age:41,apr:13.4,t0:'WBTC',t1:'ETH',a0:0.0612,a1:1.79,status:'open'},
+ {id:3,pair:'SOL / USDC',proto:'Orca',chain:'Solana',fee:'0.04%',min:150,max:190,price:214,entry:172,dep:6000,hodl:7400,val:6300,claimed:380,unc:61,gas:2,age:58,apr:0,t0:'SOL',t1:'USDC',a0:0,a1:6300,status:'open'},
+ {id:4,pair:'USDC / USDT',proto:'Curve',chain:'Ethereum',fee:'0.04%',min:null,max:null,price:1,entry:1,dep:25000,hodl:25000,val:25010,claimed:190,unc:44,gas:38,age:190,apr:4.1,t0:'USDC',t1:'USDT',a0:12480,a1:12530,status:'open'},
+ {id:5,pair:'ARB / ETH',proto:'Camelot',chain:'Arbitrum',fee:'0.25%',min:0.00028,max:0.00041,price:0.00024,entry:0.00034,dep:3500,hodl:2900,val:2780,claimed:120,unc:9,gas:5,age:67,apr:0,t0:'ARB',t1:'ETH',a0:7150,a1:0,status:'open'},
+ {id:6,pair:'AERO / USDC',proto:'Aerodrome',chain:'Base',fee:'0.30%',min:0.9,max:1.6,price:1.22,entry:1.1,dep:4200,hodl:4900,val:4750,claimed:510,unc:230,gas:3,age:33,apr:61.3,t0:'AERO',t1:'USDC',a0:1980,a1:2330,status:'open'},
+ {id:7,pair:'stETH / ETH',proto:'Curve',chain:'Ethereum',fee:'0.04%',min:null,max:null,price:0.9996,entry:0.9994,dep:15000,hodl:15310,val:15290,claimed:260,unc:71,gas:30,age:120,apr:3.8,t0:'stETH',t1:'ETH',a0:2.3,a1:2.2,status:'open'},
+ {id:8,pair:'LINK / ETH',proto:'Uniswap v3',chain:'Ethereum',fee:'0.30%',min:0.0035,max:0.0049,price:0.0041,entry:0.0042,dep:5000,hodl:5150,val:5240,claimed:310,unc:0,gas:52,age:63,apr:0,t0:'LINK',t1:'ETH',a0:0,a1:0,status:'closed',closed:'2026-10-03'},
+];
+P.forEach(p=>{
+  p.fees=p.claimed+p.unc;
+  p.priceFx=p.hodl-p.dep;          // token price move vs deposit
+  p.il=p.val-p.hodl;               // divergence vs just holding
+  p.pnl=p.val+p.unc+p.claimed-p.dep-p.gas;
+  p.pct=p.pnl/p.dep*100;
+  p.state=p.status==='closed'?'closed':(p.min==null?'full':(p.price<p.min||p.price>p.max?'out':'in'));
+  if(p.state==='in'){const w=p.max-p.min,pos=(p.price-p.min)/w;p.edge=pos<.08||pos>.92}
+});
+const open=()=>P.filter(p=>p.status==='open');
+const chainOK=p=>state.chain==='all'||p.chain===state.chain;
+
+// activity
+const EV=[];
+P.forEach(p=>{
+  const start=new Date(TODAY-p.age*864e5);
+  EV.push({d:start,pid:p.id,type:'Add liquidity',usd:p.dep,tx:'0x'+Math.floor(R()*1e15).toString(16).slice(0,8)});
+  const n=Math.max(1,Math.floor(p.age/18));
+  for(let i=1;i<=n;i++){EV.push({d:new Date(+start+(p.age*864e5)*i/(n+1)),pid:p.id,type:'Collect fees',usd:Math.round(p.claimed/n),tx:'0x'+Math.floor(R()*1e15).toString(16).slice(0,8)})}
+  if(p.status==='closed')EV.push({d:new Date(p.closed),pid:p.id,type:'Remove liquidity',usd:p.val,tx:'0x'+Math.floor(R()*1e15).toString(16).slice(0,8)});
+});
+EV.sort((a,b)=>b.d-a.d);
+
+// value history (daily, 365d), generated backwards from today's value
+const N=365;
+function series(end,drift,vol,seed){const r=rng(seed),a=new Array(N);a[N-1]=end;for(let i=N-2;i>=0;i--)a[i]=a[i+1]*(1-drift+(r()-.5)*vol);return a}
+const totalNow=open().reduce((s,p)=>s+p.val+p.unc,0);
+const VAL=series(totalNow,.0011,.018,7);
+const pnlNow=P.reduce((s,p)=>s+p.pnl,0);
+const PNL=VAL.map(v=>(v-VAL[0])*pnlNow/(VAL[N-1]-VAL[0]));
+const dayLabel=i=>{const d=new Date(+TODAY-(N-1-i)*864e5);return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'})};
+const MONTHS=['Dec','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov'];
+const MPNL=[-420,310,880,-260,1240,1960,-740,1350,2210,980,-310,1630]; // net monthly PnL
+const MFEES=[210,260,340,380,450,520,560,610,690,720,780,830];
+
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const usd=(n,d=0)=>(n<0?'-':'')+'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const sg=(n,d=0)=>(n>=0?'+':'-')+'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const pc=n=>(n>=0?'+':'-')+Math.abs(n).toFixed(1)+'%';
+const cls=n=>n>=0?'good':'bad';
+const arrow=n=>n>=0?'▲':'▼';
+const px=n=>n>=100?n.toLocaleString('en-US',{maximumFractionDigits:0}):n>=1?n.toFixed(2):n.toPrecision(3);
+const fmtD=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+const state={chain:'all',range:90,metric:'value',status:'all',proto:'all',sort:'val',dir:-1};
+const pillTxt={in:'In range',out:'Out of range',closed:'Closed',full:'Full range',edge:'Near edge'};
+const pillOf=p=>`<span class="pill ${p.state==='in'&&p.edge?'edge':p.state}">${p.state==='in'&&p.edge?pillTxt.edge:pillTxt[p.state]}</span>`;
+
+function rangeBar(p,big){
+  if(p.min==null)return `<span class="range ${big?'big':''}"><span class="fill" style="left:0;right:0"></span></span>`;
+  const lo=p.min-(p.max-p.min)*.35,hi=p.max+(p.max-p.min)*.35,f=v=>Math.max(0,Math.min(100,(v-lo)/(hi-lo)*100));
+  return `<span class="range ${big?'big':''}"><span class="fill" style="left:${f(p.min)}%;width:${f(p.max)-f(p.min)}%"></span><span class="mk" style="left:${f(p.price)}%"></span></span>`;
+}
+
+/* ---------- charts ---------- */
+function lineChart(el,pts,opt={}){
+  const W=el.clientWidth||600,H=opt.h||240,m={l:52,r:10,t:10,b:22};
+  const ys=pts.map(p=>p.y);let lo=Math.min(...ys),hi=Math.max(...ys);const pad=(hi-lo)*.08;lo-=pad;hi+=pad;if(opt.zero){lo=Math.min(lo,0);hi=Math.max(hi,0)}
+  const x=i=>m.l+(W-m.l-m.r)*i/(pts.length-1),y=v=>m.t+(H-m.t-m.b)*(1-(v-lo)/(hi-lo));
+  const d=pts.map((p,i)=>(i?'L':'M')+x(i).toFixed(1)+' '+y(p.y).toFixed(1)).join('');
+  let g='';for(let k=0;k<5;k++){const v=lo+(hi-lo)*k/4;g+=`<line class="grid-l" x1="${m.l}" x2="${W-m.r}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${m.l-8}" y="${y(v)+4}" text-anchor="end">${opt.axis(v)}</text>`}
+  const tix=[0,.25,.5,.75,1].map(f=>Math.round((pts.length-1)*f));
+  const xl=tix.map((i,k)=>`<text class="ax" x="${x(i)}" y="${H-4}" text-anchor="${k==0?'start':k==4?'end':'middle'}">${pts[i].x}</text>`).join('');
+  const zero=opt.zero?`<line x1="${m.l}" x2="${W-m.r}" y1="${y(0)}" y2="${y(0)}" stroke="var(--muted)" stroke-dasharray="3 3"/>`:'';
+  const last=pts.length-1;
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${opt.label}">${g}${xl}${zero}
+    <path d="${d}L${x(last)} ${y(lo)}L${x(0)} ${y(lo)}Z" fill="var(--accent)" opacity=".10"/>
+    <path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="${x(last)}" cy="${y(pts[last].y)}" r="4" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>
+    <line id="cx" y1="${m.t}" y2="${H-m.b}" stroke="var(--muted)" opacity="0"/><circle id="cd" r="4" fill="var(--accent)" stroke="var(--surface)" stroke-width="2" opacity="0"/>
+    <rect x="${m.l}" y="0" width="${W-m.l-m.r}" height="${H}" fill="transparent" id="hit"/></svg><div class="tip" style="display:none"></div>`;
+  const tip=el.querySelector('.tip'),cx=el.querySelector('#cx'),cd=el.querySelector('#cd');
+  el.querySelector('#hit').addEventListener('mousemove',e=>{
+    const r=el.getBoundingClientRect(),px_=(e.clientX-r.left)*W/r.width;
+    const i=Math.max(0,Math.min(last,Math.round((px_-m.l)/(W-m.l-m.r)*last)));
+    cx.setAttribute('x1',x(i));cx.setAttribute('x2',x(i));cx.setAttribute('opacity',1);cd.setAttribute('cx',x(i));cd.setAttribute('cy',y(pts[i].y));cd.setAttribute('opacity',1);
+    tip.style.display='block';tip.style.left=(x(i)/W*100)+'%';tip.style.top=(y(pts[i].y)/H*100)+'%';
+    tip.innerHTML=`${pts[i].x}<br><b>${opt.tip(pts[i].y)}</b>`;
+  });
+  el.querySelector('#hit').addEventListener('mouseleave',()=>{tip.style.display='none';cx.setAttribute('opacity',0);cd.setAttribute('opacity',0)});
+}
+
+function barChart(el,labels,vals,opt={}){
+  const W=el.clientWidth||600,H=opt.h||220,m={l:52,r:10,t:10,b:22};
+  const lo=Math.min(0,...vals)*1.1,hi=Math.max(0,...vals)*1.1;
+  const y=v=>m.t+(H-m.t-m.b)*(1-(v-lo)/(hi-lo)),bw=(W-m.l-m.r)/vals.length;
+  let g='';for(let k=0;k<5;k++){const v=lo+(hi-lo)*k/4;g+=`<line class="grid-l" x1="${m.l}" x2="${W-m.r}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${m.l-8}" y="${y(v)+4}" text-anchor="end">${opt.axis(v)}</text>`}
+  const bars=vals.map((v,i)=>{const x0=m.l+bw*i+bw*.18,w=bw*.64,top=Math.min(y(v),y(0)),h=Math.abs(y(v)-y(0));
+    return `<rect data-i="${i}" x="${x0}" y="${top}" width="${w}" height="${Math.max(h,1)}" rx="3" fill="var(${v>=0?'--good':'--bad'})" opacity=".85"/><text class="ax" x="${x0+w/2}" y="${H-4}" text-anchor="middle">${labels[i]}</text>`}).join('');
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${opt.label}">${g}${bars}<line x1="${m.l}" x2="${W-m.r}" y1="${y(0)}" y2="${y(0)}" stroke="var(--muted)"/></svg><div class="tip" style="display:none"></div>`;
+  const tip=el.querySelector('.tip');
+  el.querySelectorAll('rect').forEach(r=>{
+    r.addEventListener('mousemove',()=>{const i=+r.dataset.i,x0=m.l+bw*i+bw/2;tip.style.display='block';tip.style.left=(x0/W*100)+'%';tip.style.top=(Math.min(y(vals[i]),y(0))/H*100)+'%';tip.innerHTML=`${labels[i]}<br><b>${opt.tip(vals[i])}</b>`});
+    r.addEventListener('mouseleave',()=>tip.style.display='none');
+  });
+}
+
+/* waterfall as simple horizontal rows scaled to a common axis */
+function waterfall(steps,total){
+  const max=Math.max(...steps.map(s=>Math.abs(s.v)),Math.abs(total));
+  const row=(label,v,bold)=>{const w=Math.abs(v)/max*50;const left=v>=0?50:50-w;
+    return `<div class="wf-row"><span class="${bold?'':'muted'}">${label}</span>
+    <svg viewBox="0 0 100 18" preserveAspectRatio="none" aria-hidden="true"><line x1="50" x2="50" y1="0" y2="18" stroke="var(--line)" vector-effect="non-scaling-stroke"/><rect x="${left}" y="3" width="${Math.max(w,.6)}" height="12" rx="1.5" fill="var(${v>=0?'--good':'--bad'})" opacity="${bold?1:.8}"/></svg>
+    <span class="num ${cls(v)}" style="text-align:right;${bold?'font-weight:600':''}">${sg(v)}</span></div>`};
+  return `<div class="wf">${steps.map(s=>row(s.l,s.v)).join('')}<div style="border-top:1px solid var(--line);margin:2px 0"></div>${row('Net PnL',total,true)}</div>`;
+}
+
+/* ---------- views ---------- */
+const V={};
+const head=(t,s,right='')=>`<div class="page-head"><div><h1>${t}</h1><p>${s}</p></div>${right}</div>`;
+
+V.overview=()=>{
+  const o=open().filter(chainOK), all=P.filter(chainOK);
+  const val=o.reduce((s,p)=>s+p.val+p.unc,0), unc=o.reduce((s,p)=>s+p.unc,0);
+  const pnl=all.reduce((s,p)=>s+p.pnl,0), dep=all.reduce((s,p)=>s+p.dep,0);
+  const fees=all.reduce((s,p)=>s+p.fees,0), il=all.reduce((s,p)=>s+p.il,0);
+  const d24=val*.0063, wApr=o.reduce((s,p)=>s+p.apr*p.val,0)/val;
+  const alerts=[];
+  o.forEach(p=>{
+    if(p.state==='out')alerts.push({p,c:'bad',i:'!',t:`${p.pair} is out of range and earning no fees.`,d:`Price ${px(p.price)} is ${p.price>p.max?'above':'below'} your ${px(p.min)} – ${px(p.max)} range.`});
+    else if(p.edge)alerts.push({p,c:'warn',i:'~',t:`${p.pair} is close to its range edge.`,d:`Price ${px(p.price)} against ${px(p.min)} – ${px(p.max)}.`});
+    if(p.unc>=200)alerts.push({p,c:'accent',i:'$',t:`${usd(p.unc)} in unclaimed fees on ${p.pair}.`,d:`Gas to collect on ${p.chain} is roughly ${p.chain==='Ethereum'?'$9':'under $1'}.`});
+  });
+  const byVal=[...o].sort((a,b)=>b.val-a.val);
+  const chains={};o.forEach(p=>chains[p.chain]=(chains[p.chain]||0)+p.val);
+  const bars=(arr,tot)=>arr.map(([n,v])=>`<div class="bar-row"><span>${n}</span><div class="track"><i style="width:${v/arr[0][1]*100}%"></i></div><span class="num" style="text-align:right">${usd(v)} <span class="muted">${(v/tot*100).toFixed(0)}%</span></span></div>`).join('');
+  return head('Overview','Everything you provide liquidity to, across chains and protocols.')+`
+  <div class="grid g4">
+    <div class="card kpi"><div class="label">Portfolio value</div><div class="value">${usd(val)}</div><div class="sub ${cls(d24)}">${arrow(d24)} ${sg(d24)} today</div></div>
+    <div class="card kpi"><div class="label">Total PnL (all time)</div><div class="value ${cls(pnl)}">${sg(pnl)}</div><div class="sub ${cls(pnl)}">${arrow(pnl)} ${pc(pnl/dep*100)} on ${usd(dep)} deposited</div></div>
+    <div class="card kpi"><div class="label">Fees earned</div><div class="value">${usd(fees)}</div><div class="sub muted">${usd(unc)} unclaimed</div></div>
+    <div class="card kpi"><div class="label">Impermanent loss</div><div class="value ${cls(il)}">${sg(il)}</div><div class="sub muted">Blended APR ${wApr.toFixed(1)}%</div></div>
+  </div>
+  <div class="grid g-main">
+    <div class="card">
+      <div class="card-head"><h2>Portfolio history</h2>
+        <div class="filters">
+          <div class="seg" id="metric"><button data-v="value">Value</button><button data-v="pnl">Cumulative PnL</button></div>
+          <div class="seg" id="range"><button data-v="7">7D</button><button data-v="30">30D</button><button data-v="90">90D</button><button data-v="365">1Y</button></div>
+        </div></div>
+      <div class="chart" id="hist"></div>
+    </div>
+    <div class="card"><div class="card-head"><h2>Needs attention</h2><span class="muted">${alerts.length}</span></div>
+      ${alerts.map((a,i)=>`<div class="alert"><span class="ic" style="color:var(--${a.c==='bad'?'bad':a.c==='warn'?'warn':'accent'})">${a.i}</span><div><div>${a.t}</div><div class="note">${a.d} <button data-open="${a.p.id}">View position</button></div></div></div>`).join('')||'<p class="muted">Nothing needs attention.</p>'}
+    </div>
+  </div>
+  <div class="grid g2">
+    <div class="card"><div class="card-head"><h2>Allocation by position</h2></div><div class="rows">${bars(byVal.map(p=>[p.pair,p.val]),val)}</div></div>
+    <div class="card"><div class="card-head"><h2>Allocation by chain</h2></div><div class="rows">${bars(Object.entries(chains).sort((a,b)=>b[1]-a[1]),val)}</div>
+      <p class="note" style="margin:14px 0 0">Closed positions are excluded here and counted in all-time PnL.</p></div>
+  </div>`;
+};
+V.overview.after=()=>{
+  const draw=()=>{const n=state.range,src=state.metric==='value'?VAL:PNL,sl=src.slice(N-n);
+    const pts=sl.map((y,i)=>({x:dayLabel(N-n+i),y}));
+    lineChart($('#hist'),pts,{axis:v=>state.metric==='pnl'?sg(v/1000,1).replace(/(\d)$/,'$1k'):'$'+(v/1000).toFixed(0)+'k',tip:usd,label:'Portfolio history',zero:state.metric==='pnl'})};
+  seg('#metric',state.metric,v=>{state.metric=v;draw()});seg('#range',String(state.range),v=>{state.range=+v;draw()});draw();
+};
+
+V.positions=()=>{
+  const protos=[...new Set(P.map(p=>p.proto))];
+  return head('Positions','Open and closed liquidity positions. Select a row for the full breakdown.')+`
+  <div class="card">
+    <div class="card-head"><div class="filters">
+      <div class="seg" id="st"><button data-v="all">All</button><button data-v="in">In range</button><button data-v="out">Out of range</button><button data-v="closed">Closed</button></div>
+      <select id="proto" aria-label="Protocol"><option value="all">All protocols</option>${protos.map(x=>`<option>${x}</option>`).join('')}</select>
+    </div><span class="note">Click a column to sort</span></div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th class="l" data-k="pair">Pool</th><th class="l" data-k="state">Status</th><th class="l">Price range</th><th data-k="val">Value</th><th data-k="unc">Unclaimed</th><th data-k="pnl">PnL</th><th data-k="pct">PnL %</th><th data-k="apr">APR</th><th data-k="age">Age</th>
+    </tr></thead><tbody id="rows"></tbody></table></div>
+  </div>`;
+};
+V.positions.after=()=>{
+  const draw=()=>{
+    let rows=P.filter(chainOK).filter(p=>state.status==='all'||(state.status==='in'?(p.state==='in'||p.state==='full'):p.state===state.status)).filter(p=>state.proto==='all'||p.proto===state.proto);
+    rows.sort((a,b)=>{const k=state.sort,x=a[k],y=b[k];return (typeof x==='string'?x.localeCompare(y):x-y)*state.dir});
+    $('#rows').innerHTML=rows.map(p=>`<tr tabindex="0" data-open="${p.id}"><td class="pair">${p.pair}<small>${p.proto} · ${p.chain} · ${p.fee}</small></td><td class="l">${pillOf(p)}</td>
+      <td class="l">${rangeBar(p)}<small class="note num" style="margin-left:8px">${p.min==null?'Full range':px(p.min)+' – '+px(p.max)}</small></td>
+      <td class="num">${p.status==='closed'?'—':usd(p.val)}</td><td class="num">${p.status==='closed'?'—':usd(p.unc)}</td>
+      <td class="num ${cls(p.pnl)}">${sg(p.pnl)}</td><td class="num ${cls(p.pnl)}">${arrow(p.pnl)} ${pc(p.pct)}</td>
+      <td class="num">${p.status==='closed'?'—':p.apr.toFixed(1)+'%'}</td><td class="num muted">${p.age}d</td></tr>`).join('')||'<tr><td colspan="9" class="muted l">No positions match these filters.</td></tr>';
+    bindOpen();
+  };
+  seg('#st',state.status,v=>{state.status=v;draw()});
+  $('#proto').value=state.proto;$('#proto').onchange=e=>{state.proto=e.target.value;draw()};
+  document.querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>{const k=th.dataset.k;state.dir=state.sort===k?-state.dir:-1;state.sort=k;draw()});
+  draw();
+};
+
+V.pnl=()=>{
+  const all=P.filter(chainOK), sum=k=>all.reduce((s,p)=>s+p[k],0);
+  const steps=[{l:'Token price change',v:sum('priceFx')},{l:'Impermanent loss',v:sum('il')},{l:'Fees earned',v:sum('fees')},{l:'Gas spent',v:-sum('gas')}];
+  const tot=steps.reduce((s,x)=>s+x.v,0);
+  const real=all.filter(p=>p.status==='closed').reduce((s,p)=>s+p.pnl,0), unreal=tot-real;
+  const best=[...all].sort((a,b)=>b.pnl-a.pnl);
+  return head('Profit & loss','Where your return comes from, and which positions drive it.',
+    `<div class="seg" id="basis"><button data-v="usd" aria-pressed="true">USD</button><button data-v="eth" aria-pressed="false">ETH</button></div>`)+`
+  <div class="grid g4">
+    <div class="card kpi"><div class="label">Net PnL</div><div class="value ${cls(tot)}">${sg(tot)}</div><div class="sub muted">All positions</div></div>
+    <div class="card kpi"><div class="label">Unrealized</div><div class="value ${cls(unreal)}">${sg(unreal)}</div><div class="sub muted">Open positions</div></div>
+    <div class="card kpi"><div class="label">Realized</div><div class="value ${cls(real)}">${sg(real)}</div><div class="sub muted">Closed positions</div></div>
+    <div class="card kpi"><div class="label">LP vs just holding</div><div class="value ${cls(sum('il')+sum('fees'))}">${sg(sum('il')+sum('fees')-sum('gas'))}</div><div class="sub muted">IL + fees − gas</div></div>
+  </div>
+  <div class="grid g2">
+    <div class="card"><div class="card-head"><h2>PnL breakdown</h2></div>${waterfall(steps,tot)}
+      <p class="note" style="margin:14px 0 0">Token price change is what the deposited tokens gained or lost if held. Impermanent loss is the gap between the pool position and holding.</p></div>
+    <div class="card"><div class="card-head"><h2>PnL by position</h2></div><div class="rows">${best.map(p=>{const mx=Math.max(...best.map(b=>Math.abs(b.pnl)));return `<div class="bar-row" style="grid-template-columns:110px 1fr 90px;cursor:pointer" data-open="${p.id}"><span>${p.pair}</span><div class="track"><i style="width:${Math.abs(p.pnl)/mx*100}%;background:var(${p.pnl>=0?'--good':'--bad'})"></i></div><span class="num ${cls(p.pnl)}" style="text-align:right">${sg(p.pnl)}</span></div>`}).join('')}</div></div>
+  </div>
+  <div class="grid g2">
+    <div class="card"><div class="card-head"><h2>Monthly net PnL</h2></div><div class="chart" id="mpnl"></div></div>
+    <div class="card"><div class="card-head"><h2>Fees earned per month</h2></div><div class="chart" id="mfee"></div></div>
+  </div>
+  <div class="card"><h2>How PnL is calculated</h2>
+    <p class="muted" style="margin:6px 0 0;max-width:70ch">Net PnL = current value + fees collected + fees unclaimed − deposits − gas. Deposits are valued in USD at the time you added liquidity. Switch the basis to ETH to see returns measured against holding ETH instead of dollars.</p></div>`;
+};
+V.pnl.after=()=>{
+  const lab=MONTHS;
+  barChart($('#mpnl'),lab,MPNL,{axis:v=>sg(v/1000,1).replace(/(\d)$/,'$1k'),tip:sg,label:'Monthly net PnL'});
+  barChart($('#mfee'),lab,MFEES,{axis:v=>'$'+v.toFixed(0),tip:usd,label:'Monthly fees'});
+  seg('#basis','usd',()=>{});
+  document.querySelectorAll('[data-open]').forEach(el=>el.onclick=()=>openPos(+el.dataset.open));
+};
+
+V.activity=()=>{
+  const ev=EV.filter(e=>chainOK(P.find(p=>p.id===e.pid)));
+  return head('Activity','Adds, removals and fee collections.',`<div class="seg" id="evf"><button data-v="all">All</button><button data-v="Add liquidity">Add</button><button data-v="Collect fees">Collect</button><button data-v="Remove liquidity">Remove</button></div>`)+
+  `<div class="card" id="evl"></div>`;
+};
+V.activity.after=()=>{
+  let f='all';
+  const draw=()=>{$('#evl').innerHTML=EV.filter(e=>chainOK(P.find(p=>p.id===e.pid))&&(f==='all'||e.type===f)).slice(0,40).map(e=>{const p=P.find(x=>x.id===e.pid);
+    return `<div class="ev"><span class="muted num">${e.d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span><span><span class="tag">${e.type}</span></span><span>${p.pair} <span class="muted">· ${p.proto}, ${p.chain}</span></span><span class="num" style="text-align:right">${usd(e.usd)}</span><span class="num muted" style="text-align:right">${e.tx}…</span></div>`}).join('')};
+  seg('#evf','all',v=>{f=v;draw()});draw();
+};
+
+V.roadmap=()=>{
+  const F=[
+   [1,'Read-only wallet lookup','Paste any address or ENS name to see its positions. No wallet connection or signing, so nothing to approve.','Wallet address, ENS'],
+   [1,'Positions across chains','Uniswap v3, Curve, Orca, Aerodrome and Camelot on Ethereum, Arbitrum, Base and Solana.','Subgraphs, on-chain reads'],
+   [1,'Range status and edge warnings','In range, near edge, out of range, with the current price drawn against your range.','Pool price feeds'],
+   [1,'Value, fees, and PnL per position','Deposit cost basis, current value, collected and unclaimed fees, gas.','Subgraphs, price API'],
+   [1,'PnL breakdown','Splits return into token price change, impermanent loss, fees and gas.','Derived'],
+   [2,'Historical value chart','Daily portfolio value and cumulative PnL, rebuilt from past transactions and prices.','Historical price API'],
+   [2,'Compare against holding','See whether providing liquidity beat holding the same tokens, in USD or ETH.','Derived'],
+   [2,'Out-of-range alerts','Email or Telegram message when a position leaves its range or fees pass a threshold.','Scheduled checks'],
+   [2,'CSV export for tax','Every add, remove and collect with USD value at the time.','Transaction history'],
+   [3,'Pool explorer and APR estimates','Browse pools by fee APR, volume and TVL before you commit capital.','Pool analytics API'],
+   [3,'Rebalance simulator','Test a new range against past price action and see projected fees.','Historical swaps'],
+   [3,'Multiple wallets','Combine several addresses into one portfolio with per-wallet filters.','Wallet addresses']
+  ];
+  const nm={1:'MVP',2:'Next',3:'Later'};
+  return head('Features','What this site would do, in the order I would build it. The pages in this prototype show the MVP and part of Next with mock data.')+
+  `<div class="spec-grid">${F.map(f=>`<div class="spec"><h3>${f[1]}<span class="ph ph${f[0]}">${nm[f[0]]}</span></h3><p>${f[2]}</p><p class="note" style="margin-top:8px">Data: ${f[3]}</p></div>`).join('')}</div>`;
+};
+
+/* ---------- drawer ---------- */
+function openPos(id){
+  const p=P.find(x=>x.id===id), steps=[{l:'Token price change',v:p.priceFx},{l:'Impermanent loss',v:p.il},{l:'Fees earned',v:p.fees},{l:'Gas spent',v:-p.gas}];
+  const ev=EV.filter(e=>e.pid===id).slice(0,6);
+  const hist=series(p.val,.0012,.02,100+id).slice(N-Math.min(p.age,90)).map((y,i,a)=>({x:dayLabel(N-a.length+i),y}));
+  $('#drawer').innerHTML=`<div class="in">
+    <div class="page-head"><div><h1 style="font-size:22px">${p.pair}</h1><p>${p.proto} · ${p.chain} · ${p.fee} fee tier</p></div><button class="btn" id="close">Close</button></div>
+    <div>${pillOf(p)} <span class="muted" style="margin-left:6px">${p.status==='closed'?'Closed '+fmtD(new Date(p.closed)):'Open for '+p.age+' days'}</span></div>
+    <div class="card"><div class="card-head"><h2>Price range</h2><span class="num">Now ${px(p.price)}</span></div>
+      ${rangeBar(p,true)}<div class="rng-lbl num"><span>${p.min==null?'0':px(p.min)}</span><span>Entry ${px(p.entry)}</span><span>${p.max==null?'∞':px(p.max)}</span></div></div>
+    <div class="mini">
+      <div><span>Current value</span><b>${p.status==='closed'?'—':usd(p.val)}</b></div>
+      <div><span>Net PnL</span><b class="${cls(p.pnl)}">${sg(p.pnl)} (${pc(p.pct)})</b></div>
+      <div><span>Unclaimed fees</span><b>${usd(p.unc)}</b></div>
+      <div><span>Fee APR</span><b>${p.status==='closed'?'—':p.apr.toFixed(1)+'%'}</b></div>
+      <div><span>Deposited</span><b>${usd(p.dep)}</b></div>
+      <div><span>If held instead</span><b>${usd(p.hodl)}</b></div>
+    </div>
+    ${p.status==='open'?`<div class="card"><h2 style="margin-bottom:10px">Holdings</h2><div class="rows">
+      <div class="bar-row" style="grid-template-columns:1fr auto"><span>${p.t0}</span><span class="num">${p.a0.toLocaleString('en-US',{maximumFractionDigits:4})}</span></div>
+      <div class="bar-row" style="grid-template-columns:1fr auto"><span>${p.t1}</span><span class="num">${p.a1.toLocaleString('en-US',{maximumFractionDigits:4})}</span></div></div>
+      ${p.state==='out'?`<p class="note" style="margin:10px 0 0">Fully converted to ${p.price>p.max?p.t1:p.t0} because price moved ${p.price>p.max?'above':'below'} the range.</p>`:''}</div>`:''}
+    <div class="card"><div class="card-head"><h2>PnL breakdown</h2></div>${waterfall(steps,p.pnl)}</div>
+    <div class="card"><div class="card-head"><h2>Value, last ${hist.length} days</h2></div><div class="chart" id="dh"></div></div>
+    <div class="card"><h2 style="margin-bottom:6px">History</h2>${ev.map(e=>`<div class="alert" style="justify-content:space-between"><span><span class="tag">${e.type}</span> <span class="muted">${fmtD(e.d)}</span></span><span class="num">${usd(e.usd)}</span></div>`).join('')}</div>
+    <div class="card toggle"><div><b>Alert me when out of range</b><div class="note">Sends a message to your saved contact. Not active in this prototype.</div></div><input type="checkbox" id="al" aria-label="Alert when out of range"></div>
+  </div>`;
+  $('#drawer').classList.add('on');$('#scrim').classList.add('on');$('#drawer').scrollTop=0;
+  $('#close').onclick=closePos;$('#close').focus();
+  requestAnimationFrame(()=>lineChart($('#dh'),hist,{h:170,axis:v=>'$'+(v/1000).toFixed(1)+'k',tip:usd,label:'Position value'}));
+}
+function closePos(){$('#drawer').classList.remove('on');$('#scrim').classList.remove('on')}
+$('#scrim').onclick=closePos;
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closePos()});
+function bindOpen(){document.querySelectorAll('[data-open]').forEach(el=>{el.onclick=()=>openPos(+el.dataset.open);el.onkeydown=e=>{if(e.key==='Enter')openPos(+el.dataset.open)}})}
+function seg(sel,cur,fn){const el=$(sel);const mark=()=>el.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===cur));mark();
+  el.querySelectorAll('button').forEach(b=>b.onclick=()=>{cur=b.dataset.v;mark();fn(cur)})}
+
+/* ---------- router ---------- */
+function route(){
+  const h=(location.hash||'#overview').slice(1),page=V[h]?h:'overview';
+  document.querySelectorAll('nav a').forEach(a=>a.setAttribute('aria-current',a.dataset.p===page?'page':'false'));
+  $('#view').innerHTML=V[page]();V[page].after&&V[page].after();bindOpen();window.scrollTo(0,0);
+}
+addEventListener('hashchange',()=>{closePos();route()});
+let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(route,200)});
+[...new Set(P.map(p=>p.chain))].forEach(c=>$('#chain').insertAdjacentHTML('beforeend',`<option>${c}</option>`));
+$('#chain').onchange=e=>{state.chain=e.target.value;route()};
+$('#theme').onclick=()=>{const r=document.documentElement,dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;r.dataset.theme=dark?'light':'dark';route()};
+route();
+</script>
+</body>
+</html>

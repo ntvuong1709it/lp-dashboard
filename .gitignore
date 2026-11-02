@@ -1,0 +1,7 @@
+bin/
+obj/
+node_modules/
+dist/
+*.tsbuildinfo
+.env
+appsettings.Local.json
