@@ -120,3 +120,13 @@ Things to know before exposing it:
 - **SQLite on `/home`** (persistent, SMB-backed) with `DELETE` journaling. Keep the app at **one instance** (no scale-out); the background sync and the file are single-writer. For more than that, Postgres needs a migrations assembly first (not built).
 - `Backup:Enabled` is `false` there. Secrets (RPC URL, Telegram) are app settings, not in the image or repo.
 - Health probe: `/health`.
+
+### Deploy on every push to main
+
+The `deploy` job in `.github/workflows/ci.yml` runs after the backend and frontend jobs pass on a push to `main`. It builds the image on the runner, pushes it to the Azure Container Registry (tagged with the commit SHA and `latest`), points the web app at it with `azure/webapps-deploy`, and waits for `/health`. Run `deploy/azure.ps1` once first so the resources exist, then add to the repo's Actions settings:
+
+- **Variable** `AZURE_APP_NAME`: the `-Name` you gave the script.
+- **Secrets** `ACR_USERNAME` and `ACR_PASSWORD`: from `az acr credential show -n <name without dashes>acr`.
+- **Secret** `AZURE_WEBAPP_PUBLISH_PROFILE`: the whole XML from `az webapp deployment list-publishing-profiles -g rg-<name> -n <name> --xml`.
+
+These are long-lived credentials; rotate them if access to the repo changes. App settings (RPC URL, Telegram) are not touched by the pipeline; change them with the script or `az webapp config appsettings set`.
