@@ -10,7 +10,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { useDailyEarnings, useWeeklyClaims } from "../api/client";
+import { exportUrl, useDailyEarnings, useWeeklyClaims } from "../api/client";
+import { ExportMenu } from "../components/ExportMenu";
 import { UpdatedAgo } from "../components/UpdatedAgo";
 import {
   CopyButton,
@@ -33,10 +34,24 @@ import { useHideBalances } from "../lib/privacy";
 
 export function FeeClaimsPage() {
   useHideBalances(); // re-render when the toggle changes; formatters read the flag
+  const { owner } = useOwner();
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   return (
     <div className="space-y-10">
-      <div className="-mb-6 text-right">
+      <div className="-mb-6 flex items-center justify-end gap-3">
         <UpdatedAgo />
+        <ExportMenu
+          items={[
+            {
+              label: "Fee and reward claims",
+              href: exportUrl("fee-claims", { owner, timeZone }),
+            },
+            {
+              label: "Daily earnings",
+              href: exportUrl("daily-earnings", { owner, timeZone }),
+            },
+          ]}
+        />
       </div>
       <DailyEarnings />
       <WeeklyClaims />

@@ -1,10 +1,12 @@
 using LpDashboard.Application.Abstractions;
 using LpDashboard.Application.Pricing;
+using LpDashboard.Application.Sync;
 using LpDashboard.Domain;
 using LpDashboard.Domain.Calculations;
 using LpDashboard.Domain.Entities;
 using LpDashboard.Domain.Metrics;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace LpDashboard.Application.Queries;
 
@@ -16,21 +18,44 @@ public sealed class PositionQueryService(
     IEnumerable<IPositionProvider> providers,
     PriceService prices,
     IUnitOfWork unitOfWork,
+    IOptions<SyncOptions> syncOptions,
     TimeProvider time,
     ILogger<PositionQueryService> logger)
 {
     private const int MaxHistorySamples = 120;
 
+    /// <summary>Hourly samples up to 120 days. Time in range needs the finest data available: a brief dip out of range
+    /// falls between coarser samples and would be missed entirely.</summary>
+    private const int MaxTimeInRangeSamples = 24 * 120;
+
+    /// <summary>Snapshots are normally one interval apart; a few missed ones are tolerated, longer holes are not measured.</summary>
+    private TimeSpan MaxSnapshotGap => TimeSpan.FromMinutes(Math.Max(1, syncOptions.Value.SnapshotIntervalMinutes) * 3);
+
     /// <summary>A specific (already normalized) owner, or every watched address when null.</summary>
     public async Task<IReadOnlyCollection<string>> ResolveOwnersAsync(string? owner, CancellationToken ct) =>
         owner is not null ? [owner] : (await addresses.ListAsync(ct)).Select(a => a.Address).ToList();
 
-    public async Task<IReadOnlyList<PositionDto>> ListAsync(PositionFilter filter, CancellationToken ct)
+    /// <param name="withTimeInRange">
+    /// Time in range loads price history for positions it has not seen before (cached afterwards), so callers that only
+    /// need totals can skip it.
+    /// </param>
+    public async Task<IReadOnlyList<PositionDto>> ListAsync(PositionFilter filter, CancellationToken ct, bool withTimeInRange = true)
     {
         var now = time.GetUtcNow().UtcDateTime;
         var list = await positions.QueryAsync(filter, ct);
-        return list
-            .Select(p => ToDto(p, now))
+        var snapshotsByPosition = withTimeInRange
+            ? (await snapshots.ListLiteAsync(list.Select(p => p.Id).ToList(), ct)).ToLookup(s => s.PositionId)
+            : null;
+
+        // One at a time: the price cache writes through a single DbContext.
+        var dtos = new List<PositionDto>(list.Count);
+        foreach (var p in list)
+        {
+            var timeInRange = snapshotsByPosition is null ? null : await ComputeTimeInRangeAsync(p, snapshotsByPosition[p.Id], now, ct);
+            dtos.Add(ToDto(p, now, timeInRange));
+        }
+
+        return dtos
             .OrderByDescending(p => p.OpenedAt)
             .ThenByDescending(p => p.Id)
             .ToList();
@@ -41,14 +66,16 @@ public sealed class PositionQueryService(
         var position = await positions.GetAsync(id, ct);
         if (position is null) return null;
 
-        var dto = ToDto(position, time.GetUtcNow().UtcDateTime);
+        var now = time.GetUtcNow().UtcDateTime;
+        var timeInRange = await ComputeTimeInRangeAsync(position, await snapshots.ListLiteAsync([id], ct), now, ct);
+        var dto = ToDto(position, now, timeInRange);
         var eventDtos = CollectSplitter.Order(position.Events).Reverse().Select(ToEventDto).ToList();
         return new PositionDetailDto(dto, eventDtos);
     }
 
     public async Task<PortfolioSummaryDto> GetSummaryAsync(PositionFilter filter, CancellationToken ct)
     {
-        var list = await ListAsync(filter, ct);
+        var list = await ListAsync(filter, ct, withTimeInRange: false);
         var m = list.Select(p => p.Metrics).ToList();
         return new PortfolioSummaryDto(
             OpenCount: list.Count(p => p.Status == PositionStatus.Open),
@@ -64,6 +91,69 @@ public sealed class PositionQueryService(
             HasMissingPrices: m.Any(x => x.HasMissingPrices));
     }
 
+    /// <summary>
+    /// Measured from snapshots where they exist; the rest of the position's life (before the first sync, gaps while the
+    /// app was off) is estimated from the tick implied by historical token prices. Falls back to measured-only if the
+    /// price history cannot be loaded.
+    /// </summary>
+    private async Task<TimeInRange?> ComputeTimeInRangeAsync(Position p, IEnumerable<SnapshotLite> snaps, DateTime now, CancellationToken ct)
+    {
+        var measured = snaps.Select(s => new TickSample(s.Timestamp, s.CurrentTick)).ToList();
+
+        // Include the latest synced state so an open position's current stretch counts.
+        if (p.Status == PositionStatus.Open && p.ValuedAt is { } valuedAt && p.CurrentTick is { } tick
+            && (measured.Count == 0 || valuedAt > measured.Max(s => s.Timestamp)))
+        {
+            measured.Add(new TickSample(valuedAt, tick));
+        }
+
+        var estimated = new List<TickSample>();
+        var estimatedGap = MaxSnapshotGap;
+        try
+        {
+            var end = p.Status == PositionStatus.Closed ? p.ClosedAt ?? now : now;
+            var history = await ReconstructHistoryAsync(p, CollectSplitter.Order(p.Events).ToList(), end, MaxTimeInRangeSamples, ct);
+            estimated.AddRange(history.Points.Select(h => new TickSample(h.Timestamp, h.CurrentTick)));
+            // Points exist only while liquidity does, so a hole wider than the sampling step means the position was empty.
+            estimatedGap = history.Step * 2 + TimeSpan.FromHours(1);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Could not estimate time in range from price history for position {PositionId}", p.Id);
+        }
+
+        return TimeInRangeCalculator.Calculate(measured, estimated, p.TickLower, p.TickUpper, MaxSnapshotGap, estimatedGap);
+    }
+
+    /// <summary>Total value of the matching positions over time, from snapshots (history starts at the first sync).</summary>
+    public async Task<IReadOnlyList<PortfolioHistoryPointDto>> GetPortfolioHistoryAsync(
+        PositionFilter filter, DateTime? from, DateTime? to, CancellationToken ct)
+    {
+        var list = await positions.QueryAsync(filter, ct);
+        var snapshotsByPosition = (await snapshots.ListLiteAsync(list.Select(p => p.Id).ToList(), ct)).ToLookup(s => s.PositionId);
+
+        var series = new List<PositionSeries>(list.Count);
+        foreach (var p in list)
+        {
+            var points = snapshotsByPosition[p.Id].Select(s => new ValuePoint(s.Timestamp, s.ValueUsd, s.UncollectedUsd)).ToList();
+
+            // Add the latest synced valuation (same formula as a snapshot) so the chart ends at the current value.
+            if (p.Status == PositionStatus.Open && p.ValuedAt is { } valuedAt && (points.Count == 0 || valuedAt > points.Max(x => x.Timestamp)))
+            {
+                var value = p.CurrentAmount0 * (p.Price0Usd ?? 0) + p.CurrentAmount1 * (p.Price1Usd ?? 0);
+                var unclaimed = p.Uncollected0 * (p.Price0Usd ?? 0) + p.Uncollected1 * (p.Price1Usd ?? 0)
+                    + p.PendingReward * (p.RewardPriceUsd ?? 0);
+                points.Add(new ValuePoint(valuedAt, value, unclaimed));
+            }
+
+            series.Add(new PositionSeries(points, p.Status == PositionStatus.Closed ? p.ClosedAt : null));
+        }
+
+        return PortfolioHistoryCalculator.Build(series, from, to)
+            .Select(h => new PortfolioHistoryPointDto(h.Timestamp, h.ValueUsd, h.UnclaimedUsd, h.PositionCount))
+            .ToList();
+    }
+
     public async Task<IReadOnlyList<SnapshotPointDto>?> GetSnapshotsAsync(int id, DateTime? from, DateTime? to, CancellationToken ct)
     {
         var position = await positions.GetAsync(id, ct);
@@ -75,7 +165,7 @@ public sealed class PositionQueryService(
 
         // Snapshots are only taken while syncing open positions, so reconstruct whatever came before the first one.
         var historyEnd = points.FirstOrDefault()?.Timestamp ?? position.ClosedAt ?? time.GetUtcNow().UtcDateTime;
-        foreach (var h in await ReconstructHistoryAsync(position, ordered, historyEnd, ct))
+        foreach (var h in (await ReconstructHistoryAsync(position, ordered, historyEnd, MaxHistorySamples, ct)).Points)
         {
             if (points.Count == 0 || h.Timestamp < historyEnd)
                 result.Add(new SnapshotPointDto(h.Timestamp, h.ValueUsd, h.ValueWithFeesUsd, h.HodlValueUsd, h.Price0Usd, h.Price1Usd, h.CurrentTick));
@@ -111,27 +201,33 @@ public sealed class PositionQueryService(
             .ToList();
     }
 
-    private async Task<IReadOnlyList<HistoryPoint>> ReconstructHistoryAsync(
-        Position position, IReadOnlyList<PositionEvent> ordered, DateTime end, CancellationToken ct)
+    /// <param name="Step">Spacing of the price samples; zero when none were taken.</param>
+    private sealed record Reconstruction(IReadOnlyList<HistoryPoint> Points, TimeSpan Step);
+
+    /// <param name="maxSamples">Upper bound on price samples; the spacing grows beyond one hour only when the span needs more.</param>
+    private async Task<Reconstruction> ReconstructHistoryAsync(
+        Position position, IReadOnlyList<PositionEvent> ordered, DateTime end, int maxSamples, CancellationToken ct)
     {
         var t0 = position.Pool?.Token0;
         var t1 = position.Pool?.Token1;
         var firstDeposit = ordered.FirstOrDefault(e => e.Type == PositionEventType.IncreaseLiquidity);
-        if (t0 is null || t1 is null || firstDeposit is null || end <= firstDeposit.Timestamp) return [];
+        if (t0 is null || t1 is null || firstDeposit is null || end <= firstDeposit.Timestamp) return new([], TimeSpan.Zero);
 
         var samples = new List<PriceSample>();
+        var stepSpan = TimeSpan.Zero;
         var provider = providers.FirstOrDefault(p => p.Chain == position.Chain && p.Protocol == position.Protocol);
         if (provider is not null)
         {
             const long hour = 3600;
             var start = new DateTimeOffset(DateTime.SpecifyKind(firstDeposit.Timestamp, DateTimeKind.Utc)).ToUnixTimeSeconds();
             var stop = new DateTimeOffset(DateTime.SpecifyKind(end, DateTimeKind.Utc)).ToUnixTimeSeconds();
-            var step = Math.Max(1, (long)Math.Ceiling((stop - start) / (double)(MaxHistorySamples * hour))) * hour;
+            var step = Math.Max(1, (long)Math.Ceiling((stop - start) / (double)(maxSamples * hour))) * hour;
             var first = start - start % hour + hour;
             var count = first < stop ? (int)((stop - 1 - first) / step) + 1 : 0;
 
             if (count > 0)
             {
+                stepSpan = TimeSpan.FromSeconds(step);
                 var key0 = provider.GetPriceKey(t0.Address).ToLowerInvariant();
                 var key1 = provider.GetPriceKey(t1.Address).ToLowerInvariant();
                 var series = await prices.GetSeriesAsync([key0, key1], first, step, count, ct);
@@ -154,7 +250,7 @@ public sealed class PositionQueryService(
             }
         }
 
-        return PositionHistory.Build(ordered, position.TickLower, position.TickUpper, t0.Decimals, t1.Decimals, samples);
+        return new(PositionHistory.Build(ordered, position.TickLower, position.TickUpper, t0.Decimals, t1.Decimals, samples), stepSpan);
     }
 
     public async Task<IReadOnlyList<WeeklyClaimsDto>> GetWeeklyClaimsAsync(ClaimFilter filter, TimeZoneInfo timeZone, CancellationToken ct)
@@ -271,7 +367,7 @@ public sealed class PositionQueryService(
             missing);
     }
 
-    private static PositionEventDto ToEventDto(PositionEvent e)
+    internal static PositionEventDto ToEventDto(PositionEvent e)
     {
         decimal? value = e.Type switch
         {
@@ -286,7 +382,7 @@ public sealed class PositionQueryService(
             e.Price0Usd, e.Price1Usd, e.RewardPriceUsd, value, e.GasUsd);
     }
 
-    private static PositionDto ToDto(Position p, DateTime now)
+    private static PositionDto ToDto(Position p, DateTime now, TimeInRange? timeInRange)
     {
         var t0 = p.Pool?.Token0;
         var t1 = p.Pool?.Token1;
@@ -324,7 +420,8 @@ public sealed class PositionQueryService(
             p.Price0Usd,
             p.Price1Usd,
             p.ValuedAt,
-            metrics);
+            metrics,
+            timeInRange);
     }
 
     private static RangeDto BuildRange(Position p, int decimals0, int decimals1)

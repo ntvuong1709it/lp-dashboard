@@ -11,6 +11,12 @@ public sealed record PriceQuery(string Key, long Timestamp);
 public sealed class PriceService(IPriceSource source, ITokenPriceRepository repository, TimeProvider time, ILogger<PriceService> logger)
 {
     private const long BucketSeconds = 3600;
+
+    /// <summary>
+    /// The chart endpoint answers 400 once tokens x span exceeds 500 points in a single request (measured against the live
+    /// API: 1 token up to 500, 2 tokens up to 250), so each window's span is this budget divided by the token count.
+    /// </summary>
+    private const int MaxChartPoints = 480;
     private static readonly TimeSpan CurrentTtl = TimeSpan.FromSeconds(60);
     private static readonly ConcurrentDictionary<string, (decimal Price, DateTimeOffset At)> CurrentCache = new(StringComparer.OrdinalIgnoreCase);
 
@@ -111,11 +117,15 @@ public sealed class PriceService(IPriceSource source, ITokenPriceRepository repo
             unresolved = unresolved.Where(b => !_historical.ContainsKey(b)).ToList();
         }
 
-        if (unresolved.Count > 0)
+        // The chart API caps the points per request, so fetch in windows sized to stay under the cap.
+        var firstUnresolved = unresolved.Count > 0 ? unresolved.Min(b => b.Bucket) : 0;
+        var maxSpan = Math.Max(1, MaxChartPoints / Math.Max(1, unresolved.Select(b => b.Key).Distinct().Count()));
+        foreach (var window in unresolved.GroupBy(b => (b.Bucket - firstUnresolved) / (stepSeconds * maxSpan)).OrderBy(g => g.Key))
         {
-            var missingKeys = unresolved.Select(b => b.Key).Distinct().ToList();
-            var first = unresolved.Min(b => b.Bucket);
-            var span = (int)((unresolved.Max(b => b.Bucket) - first) / stepSeconds) + 1;
+            var windowBuckets = window.ToList();
+            var missingKeys = windowBuckets.Select(b => b.Key).Distinct().ToList();
+            var first = windowBuckets.Min(b => b.Bucket);
+            var span = (int)((windowBuckets.Max(b => b.Bucket) - first) / stepSeconds) + 1;
             try
             {
                 var charts = await source.GetChartAsync(missingKeys, first, stepSeconds, span, ct);
@@ -123,7 +133,7 @@ public sealed class PriceService(IPriceSource source, ITokenPriceRepository repo
                 // Very recent prices may not be indexed yet, so only remember misses for older buckets.
                 var settled = time.GetUtcNow().ToUnixTimeSeconds() - 24 * BucketSeconds;
 
-                foreach (var (key, bucket) in unresolved)
+                foreach (var (key, bucket) in windowBuckets)
                 {
                     decimal? price = null;
                     if (charts.TryGetValue(key, out var points) && points.Count > 0)

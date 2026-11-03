@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { usePositions, useSummary } from "../api/client";
+import { exportUrl, usePositions, useSummary } from "../api/client";
 import type {
   PortfolioSummaryDto,
   PositionDto,
@@ -8,6 +8,8 @@ import type {
   Protocol,
 } from "../api/types";
 import { RangeBadge, RangeBar } from "../components/RangeBar";
+import { ExportMenu } from "../components/ExportMenu";
+import { PortfolioValueChart } from "../components/PortfolioValueChart";
 import { UpdatedAgo } from "../components/UpdatedAgo";
 import {
   CopyButton,
@@ -18,15 +20,19 @@ import {
   TableSkeleton,
 } from "../components/ui";
 import {
+  estimateMark,
   formatAge,
   formatDate,
   formatFee,
+  formatHours,
   formatPercent,
+  formatShare,
   formatUsd,
   invertRange,
   pnlClass,
   poolLinks,
   protocolLabels,
+  timeInRangeSource,
 } from "../lib/format";
 import { useOwner } from "../lib/owner";
 import { useHideBalances } from "../lib/privacy";
@@ -143,6 +149,8 @@ export function PortfolioPage() {
         />
       </div>
 
+      <PortfolioValueChart owner={owner} />
+
       <div className="flex items-center justify-between">
         <div className="flex gap-1 rounded-md border border-slate-800 p-1">
           {statusTabs.map((t) => (
@@ -164,6 +172,18 @@ export function PortfolioPage() {
         </div>
         <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
           <UpdatedAgo />
+          <ExportMenu
+            items={[
+              {
+                label: `Positions (${status?.toLowerCase() ?? "all"})`,
+                href: exportUrl("positions", { owner, status }),
+              },
+              {
+                label: "All events (transactions)",
+                href: exportUrl("events", { owner }),
+              },
+            ]}
+          />
           <input
             type="search"
             value={search}
@@ -301,6 +321,7 @@ function PositionsTable({
             <SortHeader label="IL" k="il" right sort={sort} onSort={onSort} />
             <SortHeader label="vs HODL" k="vsHodl" right sort={sort} onSort={onSort} />
             <SortHeader label="Fee APR" k="apr" right sort={sort} onSort={onSort} />
+            <SortHeader label="In range" k="inRange" right sort={sort} onSort={onSort} />
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-800">
@@ -416,6 +437,29 @@ function PositionsTable({
                     </div>
                   )}
                 </td>
+                <td className="px-3 py-2 text-right num">
+                  {p.timeInRange ? (
+                    <>
+                      <div>
+                        {estimateMark(p.timeInRange)}
+                        {formatShare(p.timeInRange.percent)}
+                      </div>
+                      <div
+                        className="text-xs text-slate-500"
+                        title={timeInRangeSource(p.timeInRange)}
+                      >
+                        of {formatHours(p.timeInRange.trackedHours)}
+                      </div>
+                    </>
+                  ) : (
+                    <span
+                      className="text-slate-500"
+                      title="No snapshots and no price history available for this position"
+                    >
+                      n/a
+                    </span>
+                  )}
+                </td>
               </tr>
             );
           })}
@@ -453,7 +497,7 @@ function PositionsTable({
             >
               {formatUsd(sum((m) => m.pnlVsHodlUsd), true)}
             </td>
-            <td className="px-3 py-2" />
+            <td colSpan={2} className="px-3 py-2" />
           </tr>
         </tfoot>
       </table>

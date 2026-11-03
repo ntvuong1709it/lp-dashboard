@@ -52,8 +52,12 @@ public interface IPositionEventRepository
     Task<List<PositionEvent>> ListClaimsAsync(ClaimFilter filter, CancellationToken ct);
 }
 
+/// <summary>The few snapshot columns needed for time in range and portfolio history.</summary>
+public sealed record SnapshotLite(int PositionId, DateTime Timestamp, int CurrentTick, decimal ValueUsd, decimal UncollectedUsd);
+
 public interface ISnapshotRepository
 {
+    Task<List<SnapshotLite>> ListLiteAsync(IReadOnlyCollection<int> positionIds, CancellationToken ct);
     Task<PositionSnapshot?> GetLatestAsync(int positionId, CancellationToken ct);
     Task<List<PositionSnapshot>> ListAsync(int positionId, DateTime? from, DateTime? to, CancellationToken ct);
     Task<List<PositionSnapshot>> ListForPositionsAsync(IReadOnlyCollection<int> positionIds, CancellationToken ct);

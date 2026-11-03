@@ -42,7 +42,11 @@ public sealed record PositionDto(
     decimal? Price0Usd,
     decimal? Price1Usd,
     DateTime? ValuedAt,
-    PositionMetrics Metrics);
+    PositionMetrics Metrics,
+    /// <summary>Measured from snapshots, completed with an estimate from historical prices where there are none. Null when nothing could be covered.</summary>
+    TimeInRange? TimeInRange);
+
+public sealed record PortfolioHistoryPointDto(DateTime Timestamp, decimal ValueUsd, decimal UnclaimedUsd, int PositionCount);
 
 public sealed record PositionEventDto(
     int Id,
