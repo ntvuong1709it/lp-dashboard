@@ -20,6 +20,7 @@ public sealed class SyncServiceTests : IDisposable
 
     private readonly string _dbPath = Path.Combine(Path.GetTempPath(), $"lpdash-test-{Guid.NewGuid():N}.db");
     private readonly FakeProvider _provider = new();
+    private readonly RecordingNotifier _alerts = new();
     private readonly FakeClock _clock = new(T0.AddDays(1));
     private readonly ServiceProvider _services;
 
@@ -40,6 +41,7 @@ public sealed class SyncServiceTests : IDisposable
         services.Configure<SyncOptions>(o => o.SnapshotIntervalMinutes = 60);
         services.AddSingleton<TimeProvider>(_clock);
         services.AddSingleton<IPositionProvider>(_provider);
+        services.AddSingleton<IAlertNotifier>(_alerts);
         services.AddSingleton<IPriceSource, FakePriceSource>();
         _services = services.BuildServiceProvider();
 
@@ -61,6 +63,25 @@ public sealed class SyncServiceTests : IDisposable
         Assert.Equal(2m, position.Events[0].Price0Usd);
         Assert.Equal(1, await db.PositionSnapshots.CountAsync());
         Assert.Equal(1000, (await db.SyncCursors.SingleAsync()).LastSyncedBlock);
+    }
+
+    [Fact]
+    public async Task LeavingAndReturningToRange_SendsOneAlertEach()
+    {
+        await SyncAsync();
+        Assert.Empty(_alerts.Messages); // first sync never alerts
+
+        _provider.Tick = 2000;
+        await SyncAsync();
+        await SyncAsync();
+        Assert.Single(_alerts.Messages);
+        Assert.Contains("out of range", _alerts.Messages[0]);
+        Assert.Contains("T0/T1 #1", _alerts.Messages[0]);
+
+        _provider.Tick = 0;
+        await SyncAsync();
+        Assert.Equal(2, _alerts.Messages.Count);
+        Assert.Contains("back in range", _alerts.Messages[1]);
     }
 
     [Fact]
@@ -218,6 +239,18 @@ public sealed class SyncServiceTests : IDisposable
             Task.FromResult<IReadOnlyDictionary<string, IReadOnlyList<PricePoint>>>(new Dictionary<string, IReadOnlyList<PricePoint>>());
     }
 
+    private sealed class RecordingNotifier : IAlertNotifier
+    {
+        public List<string> Messages { get; } = [];
+        public bool IsConfigured => true;
+
+        public Task<string?> SendAsync(string message, CancellationToken ct)
+        {
+            Messages.Add(message);
+            return Task.FromResult<string?>(null);
+        }
+    }
+
     private sealed class FakeProvider : IPositionProvider
     {
         private static readonly BigInteger Q96 = BigInteger.Pow(2, 96);
@@ -230,6 +263,7 @@ public sealed class SyncServiceTests : IDisposable
         public long LatestBlock { get; set; } = 1000;
         public bool ThrowOnState { get; set; }
         public bool Burned { get; set; }
+        public int Tick { get; set; }
         public long? LastFromBlock { get; private set; }
         public List<RawPositionEvent> Events { get; } = [Event("0xabc", 0, 900, PositionEventType.IncreaseLiquidity, 1m, 2m)];
 
@@ -258,7 +292,7 @@ public sealed class SyncServiceTests : IDisposable
                 LatestBlock, "0xpool",
                 new TokenInfo("token0", "T0", 18), new TokenInfo("token1", "T1", 18),
                 3000, 60, -1000, 1000,
-                Burned ? BigInteger.Zero : oneEther * 10, Q96, 0,
+                Burned ? BigInteger.Zero : oneEther * 10, Q96, Tick,
                 BigInteger.Zero, BigInteger.Zero, null, BigInteger.Zero, Burned));
         }
     }

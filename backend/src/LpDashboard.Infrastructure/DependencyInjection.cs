@@ -22,6 +22,7 @@ public static class DependencyInjection
         services.AddPersistence(configuration, contentRoot);
         services.AddPricing(configuration);
         services.AddEvmProviders(configuration);
+        services.AddAlerts(configuration);
         return services;
     }
 
@@ -75,6 +76,16 @@ public static class DependencyInjection
             builder.DataSource = Path.Combine(contentRoot, builder.DataSource);
         }
         return builder.ToString();
+    }
+
+    private static void AddAlerts(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<TelegramOptions>(configuration.GetSection(TelegramOptions.SectionName));
+        services.AddHttpClient<IAlertNotifier, TelegramAlertNotifier>(client =>
+        {
+            client.BaseAddress = new Uri("https://api.telegram.org/");
+            client.Timeout = TimeSpan.FromSeconds(15);
+        });
     }
 
     private static void AddPricing(this IServiceCollection services, IConfiguration configuration)

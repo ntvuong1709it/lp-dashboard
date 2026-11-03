@@ -45,10 +45,22 @@ Defaults are in `backend/src/LpDashboard.Api/appsettings.json`; override with us
 | `Evm:Chains:0:RpcUrl` | empty | Required to sync. Never logged. |
 | `Sync:IntervalMinutes` | 15 | Background sync period. |
 | `Sync:SnapshotIntervalMinutes` | 60 | Minimum spacing of position snapshots. |
+| `Alerts:Telegram:BotToken` / `ChatId` | empty | Enables Telegram alerts (below). Never logged. |
 | `Database:Provider` | `Sqlite` | `Postgres` is wired but has no migrations yet. |
 | `ConnectionStrings:Default` | `Data Source=lpdashboard.db` | Relative paths resolve against the API content root. |
 
 Without an RPC URL the API still runs; the sync status reports "No chain providers configured".
+
+## Alerts
+
+When a sync sees an open position leave its range, or return to it, a Telegram message is sent (one per change, after the new state is saved). The first sync of a position never alerts.
+
+1. Create a bot with [@BotFather](https://t.me/BotFather) and copy its token.
+2. Send your bot any message, then open `https://api.telegram.org/bot<token>/getUpdates` and copy `message.chat.id`.
+3. Put `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in `.env` (Docker) or set `Alerts__Telegram__BotToken` / `Alerts__Telegram__ChatId`.
+4. Check it with `curl -X POST http://localhost:5080/api/alerts/test`; `GET /api/alerts/status` reports whether a channel is configured.
+
+Alerts are only as timely as the sync (`Sync:IntervalMinutes`, 15 by default).
 
 ## Backups
 

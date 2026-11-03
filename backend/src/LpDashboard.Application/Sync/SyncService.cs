@@ -19,12 +19,14 @@ public sealed class SyncService(
     ISyncCursorRepository cursors,
     PriceService prices,
     IUnitOfWork unitOfWork,
+    IAlertNotifier notifier,
     IOptions<SyncOptions> options,
     TimeProvider time,
     ILogger<SyncService> logger)
 {
     private readonly Dictionary<string, Token> _tokens = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Pool> _pools = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<string> _alerts = [];
 
     /// <param name="onlyTokenId">Sync just this position. The cursor is left alone so other positions still fetch their events next run.</param>
     /// <param name="rescanFromBlock">Fetch events from this block even if the cursor is further ahead (stored events are not duplicated).</param>
@@ -107,6 +109,7 @@ public sealed class SyncService(
         }
 
         await unitOfWork.SaveChangesAsync(ct);
+        await SendAlertsAsync(ct);
         logger.LogInformation("Synced {Chain}/{Protocol} {Owner}: {Positions} positions, {Events} new raw events, {Errors} errors",
             chain, protocol, owner, discovered.Count, raw.Count, errors.Count);
         return errors;
@@ -166,6 +169,13 @@ public sealed class SyncService(
             };
             positions.Add(position);
         }
+
+        // Compare against the state the previous sync stored, before it is overwritten below.
+        var transition = state.IsBurned
+            ? RangeTransition.None
+            : RangeTransitionDetector.Detect(
+                position.Status == PositionStatus.Open ? position.CurrentTick : null,
+                position.TickLower, position.TickUpper, state.CurrentTick, state.TickLower, state.TickUpper);
 
         position.Pool = pool;
         position.TickLower = state.TickLower;
@@ -234,9 +244,37 @@ public sealed class SyncService(
         position.RewardPriceUsd = Current(rewardKey);
         position.ValuedAt = now;
 
+        if (!isClosed && transition != RangeTransition.None)
+        {
+            _alerts.Add(DescribeTransition(position, token0, token1, transition, state.CurrentTick));
+        }
+
         if (!isClosed)
         {
             await AddSnapshotIfDueAsync(position, state.BlockNumber, now, ct);
+        }
+    }
+
+    private static string DescribeTransition(Position p, Token token0, Token token1, RangeTransition transition, int tick)
+    {
+        var pair = $"{token0.Symbol}/{token1.Symbol} #{p.TokenId}";
+        var where = $"{p.Chain} {p.Protocol}";
+        return transition == RangeTransition.WentOut
+            ? $"\u26a0\ufe0f {pair} went out of range ({(tick >= p.TickUpper ? "price above" : "price below")} the range) and no longer earns fees. {where}"
+            : $"\u2705 {pair} is back in range and earning fees again. {where}";
+    }
+
+    /// <summary>Sent only after the new state is saved, so a failed sync cannot repeat the same alert. A delivery failure is logged, never fatal.</summary>
+    private async Task SendAlertsAsync(CancellationToken ct)
+    {
+        var pending = _alerts.ToList();
+        _alerts.Clear();
+        if (pending.Count == 0 || !notifier.IsConfigured) return;
+
+        foreach (var message in pending)
+        {
+            if (await notifier.SendAsync(message, ct) is { } reason)
+                logger.LogWarning("Alert not delivered: {Reason}", reason);
         }
     }
 
