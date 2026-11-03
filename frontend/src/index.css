@@ -1,5 +1,52 @@
 @import "tailwindcss";
 
+/*
+ * Theming: the app is written against Tailwind's slate scale (dark by default). The light theme mirrors that
+ * scale, so every existing `bg-slate-900` / `text-slate-400` flips without touching the components, and
+ * darkens the accent text colours so they stay readable on a light surface.
+ * Charts read the --chart-* variables (recharts accepts var() in colour props).
+ */
+:root {
+  --chart-grid: var(--color-slate-800);
+  --chart-axis: var(--color-slate-500);
+  --chart-tip-bg: var(--color-slate-900);
+  --chart-tip-border: var(--color-slate-700);
+  --chart-cursor: var(--color-slate-800);
+  --chart-a: #38bdf8;
+  --chart-b: #34d399;
+  --chart-c: #f59e0b;
+  --marker: #fff;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-slate-50: #0f1720;
+  --color-slate-100: #1b2430;
+  --color-slate-200: #2c3745;
+  --color-slate-300: #465363;
+  --color-slate-400: #5b6675;
+  --color-slate-500: #6b7686;
+  --color-slate-600: #a3adb9;
+  --color-slate-700: #cfd6de;
+  --color-slate-800: #e2e7ec;
+  --color-slate-900: #ffffff;
+  --color-slate-950: #f4f6f8;
+
+  --color-emerald-400: #0f7d57;
+  --color-rose-400: #c23b36;
+  --color-sky-300: #1d5fb0;
+  --color-sky-400: #2a78d6;
+  --color-amber-200: #7a4a00;
+  --color-amber-300: #8a5300;
+  --color-amber-400: #b36b00;
+
+  --chart-a: #2a78d6;
+  --chart-b: #1baf7a;
+  --chart-c: #d98a00;
+  --marker: #0f1720;
+}
+
 body {
   font-family:
     ui-sans-serif,
@@ -12,4 +59,9 @@ body {
 
 .num {
   font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-sky-400);
+  outline-offset: 2px;
 }
