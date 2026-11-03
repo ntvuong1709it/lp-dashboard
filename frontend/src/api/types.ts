@@ -287,3 +287,8 @@ export interface ProblemDetails {
   detail?: string;
   status?: number;
 }
+
+export interface PnlHistoryDto {
+  points: { timestamp: string; cumulativePnlUsd: number }[];
+  months: { month: string; netPnlUsd: number }[];
+}

@@ -3,6 +3,7 @@ import type {
   ActivityEventDto,
   DailyEarningsDto,
   HealthDto,
+  PnlHistoryDto,
   PortfolioHistoryPoint,
   SyncRequestBody,
   PortfolioSummaryDto,
@@ -131,6 +132,13 @@ export const exportUrl = (
   file: "positions" | "events" | "fee-claims" | "daily-earnings",
   params: Record<string, string | undefined | null> = {},
 ) => `/api/export/${file}.csv${query(params)}`;
+
+export const usePnlHistory = (owner: string | null) =>
+  useQuery({
+    queryKey: ["pnl-history", owner],
+    queryFn: () =>
+      request<PnlHistoryDto>(`/api/portfolio/pnl-history${query({ owner })}`),
+  });
 
 export const useActivity = (owner: string | null, limit = 500) =>
   useQuery({

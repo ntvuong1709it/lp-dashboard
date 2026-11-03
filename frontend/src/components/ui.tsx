@@ -54,13 +54,13 @@ export function StatCard({
 }) {
   return (
     <div className="rounded-lg border border-slate-800 bg-slate-900 p-4">
-      <div className="text-xs uppercase tracking-wide text-slate-400">
+      <div className="text-xs uppercase tracking-[.05em] text-slate-400">
         {label}
       </div>
       {loading ? (
         <Skeleton className="mt-2 h-6 w-24" />
       ) : (
-        <div className={`mt-1 text-xl font-semibold num ${valueClass ?? ""}`}>
+        <div className={`mt-1 text-2xl font-medium tracking-tight num ${valueClass ?? ""}`}>
           {value}
         </div>
       )}
@@ -259,6 +259,70 @@ export function Segmented<T extends string | number | null>({
           {o.label}
         </button>
       ))}
+    </div>
+  );
+}
+
+/** Diverging bars (gains right, losses left of a centre line) that add up to a total. */
+export function Waterfall({
+  steps,
+  total,
+  totalLabel,
+  format,
+  pnlClass,
+}: {
+  steps: { label: string; value: number }[];
+  total: number;
+  totalLabel: string;
+  format: (n: number) => string;
+  pnlClass: (n: number) => string;
+}) {
+  const max = Math.max(...steps.map((s) => Math.abs(s.value)), Math.abs(total), 1);
+  const row = (label: string, value: number, bold = false) => (
+    <div
+      key={label}
+      className="grid grid-cols-[9rem_1fr_6.5rem] items-center gap-3 text-sm"
+    >
+      <span className={bold ? "font-semibold" : "text-slate-400"}>{label}</span>
+      <div className="relative h-3">
+        <div className="absolute inset-y-0 left-1/2 w-px bg-slate-700" />
+        <div
+          className={`absolute inset-y-0.5 rounded-sm ${value >= 0 ? "bg-emerald-500/80" : "bg-rose-500/80"}`}
+          style={{
+            width: `${(Math.abs(value) / max) * 50}%`,
+            [value >= 0 ? "left" : "right"]: "50%",
+          }}
+        />
+      </div>
+      <span
+        className={`text-right num ${pnlClass(value)} ${bold ? "font-semibold" : ""}`}
+      >
+        {format(value)}
+      </span>
+    </div>
+  );
+  return (
+    <div className="space-y-2">
+      {steps.map((s) => row(s.label, s.value))}
+      <div className="border-t border-slate-800 pt-2">{row(totalLabel, total, true)}</div>
+    </div>
+  );
+}
+
+/** Small label/value tile used in the position drawer summary. */
+export function MiniStat({
+  label,
+  value,
+  valueClass = "",
+}: {
+  label: string;
+  value: ReactNode;
+  valueClass?: string;
+}) {
+  return (
+    <div className="rounded-lg border border-slate-800 bg-slate-900 px-3 py-2.5">
+      <span className="block text-xs text-slate-400">{label}</span>
+      <b className={`text-base font-medium num ${valueClass}`}>{value}</b>
     </div>
   );
 }

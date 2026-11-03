@@ -5,14 +5,17 @@ import { formatPrice } from "../lib/format";
 export function RangeBar({
   range,
   showLabels = false,
+  entry,
 }: {
   range: RangeDto;
   showLabels?: boolean;
+  /** Price when the position was opened, drawn as a dot on the bar. */
+  entry?: number | null;
 }) {
   const { priceLower: lower, priceUpper: upper, priceCurrent: current } = range;
   const span = Math.max(upper - lower, Math.abs(upper) * 1e-9);
-  const min = Math.min(lower, current ?? lower) - span * 0.25;
-  const max = Math.max(upper, current ?? upper) + span * 0.25;
+  const min = Math.min(lower, current ?? lower, entry ?? lower) - span * 0.25;
+  const max = Math.max(upper, current ?? upper, entry ?? upper) + span * 0.25;
   const pct = (v: number) => ((v - min) / (max - min)) * 100;
 
   const color =
@@ -32,6 +35,13 @@ export function RangeBar({
             width: `${pct(upper) - pct(lower)}%`,
           }}
         />
+        {entry != null && (
+          <div
+            className="absolute -top-0.5 h-3 w-3 -translate-x-1/2 rounded-full border-2 border-[var(--marker)] bg-sky-400"
+            title={`Entry ${formatPrice(entry)}`}
+            style={{ left: `${Math.min(100, Math.max(0, pct(entry)))}%` }}
+          />
+        )}
         {current != null && (
           <div
             className="absolute -top-1 h-4 w-0.5 bg-[var(--marker)]"

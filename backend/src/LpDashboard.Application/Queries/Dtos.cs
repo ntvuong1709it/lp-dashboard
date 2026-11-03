@@ -48,6 +48,12 @@ public sealed record PositionDto(
 
 public sealed record PortfolioHistoryPointDto(DateTime Timestamp, decimal ValueUsd, decimal UnclaimedUsd, int PositionCount);
 
+public sealed record PnlPointDto(DateTime Timestamp, decimal CumulativePnlUsd);
+
+public sealed record MonthlyPnlDto(string Month, decimal NetPnlUsd);
+
+public sealed record PnlHistoryDto(IReadOnlyList<PnlPointDto> Points, IReadOnlyList<MonthlyPnlDto> Months);
+
 public sealed record PositionEventDto(
     int Id,
     PositionEventType Type,

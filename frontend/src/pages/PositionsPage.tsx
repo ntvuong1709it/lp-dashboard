@@ -3,9 +3,9 @@ import { Link } from "react-router-dom";
 import { usePositionDrawer } from "../lib/positionDrawer";
 import { exportUrl, usePositions, useSummary } from "../api/client";
 import type {
-  PortfolioSummaryDto,
+
   PositionDto,
-  PositionStatus,
+
   Protocol,
 } from "../api/types";
 import { RangeBadge, RangeBar } from "../components/RangeBar";
@@ -16,6 +16,7 @@ import {
   Empty,
   ErrorText,
   ExternalLink,
+  Segmented,
   TableSkeleton,
 } from "../components/ui";
 import {
@@ -44,22 +45,27 @@ import {
 } from "../lib/positionTable";
 import { usePersistentState } from "../lib/usePersistentState";
 
-const statusTabs: {
-  label: string;
-  value: PositionStatus | null;
-  count: (s: PortfolioSummaryDto) => number;
-}[] = [
-  { label: "Open", value: "Open", count: (s) => s.openCount },
-  { label: "Closed", value: "Closed", count: (s) => s.closedCount },
-  { label: "All", value: null, count: (s) => s.openCount + s.closedCount },
+type StatusFilter = "all" | "in" | "out" | "closed";
+
+const statusOptions: { label: string; value: StatusFilter }[] = [
+  { label: "All", value: "all" },
+  { label: "In range", value: "in" },
+  { label: "Out of range", value: "out" },
+  { label: "Closed", value: "closed" },
 ];
+
+const matchesStatus = (p: PositionDto, f: StatusFilter) =>
+  f === "all" ||
+  (f === "closed"
+    ? p.status === "Closed"
+    : p.status === "Open" && p.range?.inRange === (f === "in"));
 
 export function PositionsPage() {
   useHideBalances(); // re-render when the toggle changes; formatters read the flag
   const { owner } = useOwner();
-  const [status, setStatus] = usePersistentState<PositionStatus | null>(
-    "lpdash.portfolio.status",
-    "Open",
+  const [status, setStatus] = usePersistentState<StatusFilter>(
+    "lpdash.portfolio.statusFilter",
+    "all",
   );
   const [inverted, setInverted] = usePersistentState(
     "lpdash.portfolio.inverted",
@@ -70,17 +76,12 @@ export function PositionsPage() {
     "lpdash.portfolio.protocol",
     "",
   );
-  const [inRangeOnly, setInRangeOnly] = usePersistentState(
-    "lpdash.portfolio.inRangeOnly",
-    false,
-  );
   const [sort, setSort] = usePersistentState<SortState>(
     "lpdash.portfolio.sort",
     { key: "created", dir: "desc" },
   );
-  // Unfiltered totals so tab counts don't depend on the selected tab.
   const totals = useSummary(owner, null).data;
-  const positions = usePositions(owner, status);
+  const positions = usePositions(owner, null);
 
   const protocols = useMemo(
     () => [...new Set((positions.data ?? []).map((p) => p.protocol))],
@@ -89,12 +90,17 @@ export function PositionsPage() {
   const visible = useMemo(
     () =>
       sortPositions(
-        filterPositions(positions.data ?? [], search, protocol, inRangeOnly),
+        filterPositions(
+          (positions.data ?? []).filter((p) => matchesStatus(p, status)),
+          search,
+          protocol,
+          false,
+        ),
         sort,
       ),
-    [positions.data, search, protocol, inRangeOnly, sort],
+    [positions.data, status, search, protocol, sort],
   );
-  const filtered = !!search.trim() || !!protocol || inRangeOnly;
+  const filtered = !!search.trim() || !!protocol || status !== "all";
   const toggleSort = (key: SortKey) =>
     setSort(
       sort.key === key
@@ -105,31 +111,19 @@ export function PositionsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-1 rounded-md border border-slate-800 p-1">
-          {statusTabs.map((t) => (
-            <button
-              key={t.label}
-              onClick={() => setStatus(t.value)}
-              className={`flex items-center gap-1.5 rounded px-3 py-1 text-sm ${status === t.value ? "bg-slate-700 text-white" : "text-slate-400 hover:text-white"}`}
-            >
-              {t.label}
-              {totals && (
-                <span
-                  className={`num rounded-full px-1.5 text-xs ${status === t.value ? "bg-slate-600 text-slate-100" : "bg-slate-800 text-slate-400"}`}
-                >
-                  {t.count(totals)}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          label="Status"
+          options={statusOptions}
+          value={status}
+          onChange={setStatus}
+        />
         <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
           <UpdatedAgo />
           <ExportMenu
             items={[
               {
-                label: `Positions (${status?.toLowerCase() ?? "all"})`,
-                href: exportUrl("positions", { owner, status }),
+                label: "Positions (all)",
+                href: exportUrl("positions", { owner }),
               },
               {
                 label: "All events (transactions)",
@@ -161,14 +155,6 @@ export function PositionsPage() {
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
-              checked={inRangeOnly}
-              onChange={(e) => setInRangeOnly(e.target.checked)}
-            />
-            In range only
-          </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
               checked={inverted}
               onChange={(e) => setInverted(e.target.checked)}
             />
@@ -185,7 +171,7 @@ export function PositionsPage() {
         filtered && positions.data?.length ? (
           <Empty>No positions match the filters.</Empty>
         ) : totals && totals.openCount + totals.closedCount > 0 ? (
-          <Empty>No {status?.toLowerCase()} positions.</Empty>
+          <Empty>No positions in this view.</Empty>
         ) : (
           <Empty>
             No positions yet.{" "}

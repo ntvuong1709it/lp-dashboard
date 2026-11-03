@@ -168,6 +168,44 @@ public sealed class PositionQueryService(
             .ToList();
     }
 
+    /// <summary>Cumulative and monthly P/L of the matching positions, using reconstructed value history from the first deposit.</summary>
+    public async Task<PnlHistoryDto> GetPnlHistoryAsync(PositionFilter filter, CancellationToken ct)
+    {
+        var now = time.GetUtcNow().UtcDateTime;
+        var list = await positions.QueryAsync(filter, ct);
+
+        // One at a time: reconstruction writes the price cache through a single DbContext.
+        var series = new List<PnlSeries>(list.Count);
+        foreach (var p in list)
+        {
+            var points = await GetSnapshotsAsync(p.Id, null, null, ct) ?? [];
+            var flows = new List<PnlFlow>();
+            foreach (var e in CollectSplitter.Order(p.Events))
+            {
+                var gas = e.GasUsd ?? 0;
+                var usd = e.Type switch
+                {
+                    PositionEventType.IncreaseLiquidity => -(e.Amount0 * (e.Price0Usd ?? 0) + e.Amount1 * (e.Price1Usd ?? 0)),
+                    PositionEventType.DecreaseLiquidity => e.Principal0 * (e.Price0Usd ?? 0) + e.Principal1 * (e.Price1Usd ?? 0),
+                    _ => 0m,
+                };
+                if (usd - gas != 0) flows.Add(new PnlFlow(e.Timestamp, usd - gas));
+            }
+
+            var finalAt = p.Status == PositionStatus.Closed ? p.ClosedAt ?? now : now;
+            series.Add(new PnlSeries(
+                points.Select(x => new ValuePoint(x.Timestamp, x.ValueWithFeesUsd, 0)).ToList(),
+                flows,
+                finalAt,
+                ToDto(p, now, null).Metrics.PnlUsd));
+        }
+
+        var history = PnlHistoryCalculator.Build(series, now);
+        return new(
+            history.Points.Select(x => new PnlPointDto(x.Timestamp, x.CumulativePnlUsd)).ToList(),
+            history.Months.Select(x => new MonthlyPnlDto(x.Month, x.NetPnlUsd)).ToList());
+    }
+
     public async Task<IReadOnlyList<SnapshotPointDto>?> GetSnapshotsAsync(int id, DateTime? from, DateTime? to, CancellationToken ct)
     {
         var position = await positions.GetAsync(id, ct);

@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --font-display: "Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
+}
+
 /*
  * Theming: the app is written against Tailwind's slate scale (dark by default). The light theme mirrors that
  * scale, so every existing `bg-slate-900` / `text-slate-400` flips without touching the components, and
@@ -47,17 +53,20 @@
   --marker: #0f1720;
 }
 
-body {
-  font-family:
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    Roboto,
-    sans-serif;
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  text-wrap: balance;
 }
 
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Figures use the mono face with tabular digits, as in the design. */
 .num {
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 

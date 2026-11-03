@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { usePortfolioHistory } from "../api/client";
 import { formatUsd } from "../lib/format";
+import { CumulativePnlChart } from "./PnlHistoryChart";
 import { Empty, ErrorText, Panel, Segmented, Skeleton } from "./ui";
 
 const DAY = 86_400_000;
@@ -27,6 +28,7 @@ const ranges = [
 export function PortfolioValueChart({ owner }: { owner: string | null }) {
   const { data, error, isLoading } = usePortfolioHistory(owner);
 
+  const [metric, setMetric] = usePersistentState<"value" | "pnl">("lpdash.overview.metric", "value");
   const [days, setDays] = usePersistentState<number>("lpdash.overview.range", 0);
   const points = useMemo(
     () => {
@@ -43,10 +45,25 @@ export function PortfolioValueChart({ owner }: { owner: string | null }) {
 
   return (
     <Panel
-      title="Portfolio value over time"
-      actions={<Segmented label="Time range" options={ranges} value={days} onChange={setDays} />}
+      title={metric === "pnl" ? "Cumulative P/L" : "Portfolio value over time"}
+      actions={
+        <div className="flex gap-2">
+          <Segmented
+            label="Metric"
+            options={[
+              { label: "Value", value: "value" as const },
+              { label: "Cumulative P/L", value: "pnl" as const },
+            ]}
+            value={metric}
+            onChange={setMetric}
+          />
+          <Segmented label="Time range" options={ranges} value={days} onChange={setDays} />
+        </div>
+      }
     >
-      {error ? (
+      {metric === "pnl" ? (
+        <CumulativePnlChart owner={owner} days={days} />
+      ) : error ? (
         <ErrorText error={error} />
       ) : isLoading ? (
         <Skeleton className="h-64 w-full" />

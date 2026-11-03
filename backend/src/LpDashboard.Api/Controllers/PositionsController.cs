@@ -80,6 +80,16 @@ public sealed class PositionsController(PositionQueryService queries) : Controll
         return Ok(await queries.GetPortfolioHistoryAsync(new PositionFilter(owners), from?.ToUniversalTime(), to?.ToUniversalTime(), ct));
     }
 
+    [HttpGet("portfolio/pnl-history")]
+    [ProducesResponseType<PnlHistoryDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> PnlHistory([FromQuery] string? owner, CancellationToken ct)
+    {
+        if (!TryOwner(owner, out var normalized)) return InvalidOwner();
+        var owners = await queries.ResolveOwnersAsync(normalized, ct);
+        return Ok(await queries.GetPnlHistoryAsync(new PositionFilter(owners), ct));
+    }
+
     [HttpGet("fees/claims")]
     [ProducesResponseType<IReadOnlyList<WeeklyClaimsDto>>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

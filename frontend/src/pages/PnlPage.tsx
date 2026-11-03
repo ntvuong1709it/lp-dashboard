@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import { exportUrl, useDailyEarnings, usePositions } from "../api/client";
 import type { PositionDto } from "../api/types";
+import { MonthlyPnlChart } from "../components/PnlHistoryChart";
 import { ExportMenu } from "../components/ExportMenu";
 import { UpdatedAgo } from "../components/UpdatedAgo";
 import {
@@ -20,6 +21,7 @@ import {
   Panel,
   Skeleton,
   StatCard,
+  Waterfall,
 } from "../components/ui";
 import { pairLabel } from "../lib/attention";
 import { chart } from "../lib/chartTheme";
@@ -120,7 +122,10 @@ export function PnlPage() {
               {isLoading ? (
                 <Skeleton className="h-40 w-full" />
               ) : (
-                <Breakdown
+                <Waterfall
+                  totalLabel="Net P/L"
+                  format={(n) => formatUsd(n, true)}
+                  pnlClass={pnlClass}
                   steps={[
                     { label: "Token price change", value: t.priceChange },
                     { label: "Impermanent loss", value: t.il },
@@ -140,6 +145,10 @@ export function PnlPage() {
             <PnlByPosition positions={t.all} loading={isLoading} />
           </div>
 
+          <Panel title="Monthly net P/L">
+            <MonthlyPnlChart owner={owner} />
+          </Panel>
+
           <MonthlyFees />
 
           <Panel title="How P/L is calculated">
@@ -151,48 +160,6 @@ export function PnlPage() {
           </Panel>
         </>
       )}
-    </div>
-  );
-}
-
-function Breakdown({
-  steps,
-  total,
-}: {
-  steps: { label: string; value: number }[];
-  total: number;
-}) {
-  const max = Math.max(...steps.map((s) => Math.abs(s.value)), Math.abs(total), 1);
-  const row = (label: string, value: number, bold = false) => (
-    <div
-      key={label}
-      className="grid grid-cols-[9rem_1fr_6.5rem] items-center gap-3 text-sm"
-    >
-      <span className={bold ? "font-semibold" : "text-slate-400"}>{label}</span>
-      {/* Diverging bar: zero in the middle, gains right, losses left. */}
-      <div className="relative h-3">
-        <div className="absolute inset-y-0 left-1/2 w-px bg-slate-700" />
-        <div
-          className={`absolute inset-y-0.5 rounded-sm ${value >= 0 ? "bg-emerald-500/80" : "bg-rose-500/80"}`}
-          style={{
-            width: `${(Math.abs(value) / max) * 50}%`,
-            [value >= 0 ? "left" : "right"]: "50%",
-          }}
-        />
-      </div>
-      <span
-        className={`text-right num ${pnlClass(value)} ${bold ? "font-semibold" : ""}`}
-      >
-        {formatUsd(value, true)}
-      </span>
-    </div>
-  );
-  return (
-    <div className="space-y-2">
-      {steps.map((s) => row(s.label, s.value))}
-      <div className="border-t border-slate-800 pt-2">
-        {row("Net P/L", total, true)}
-      </div>
     </div>
   );
 }

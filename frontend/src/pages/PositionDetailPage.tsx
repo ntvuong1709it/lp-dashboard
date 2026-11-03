@@ -32,9 +32,11 @@ import {
   Empty,
   ErrorText,
   ExternalLink,
+  MiniStat,
   PageSkeleton,
   Panel,
   StatCard,
+  Waterfall,
 } from "../components/ui";
 import {
   addressUrl,
@@ -112,6 +114,11 @@ export function PositionDetailPage({
           {protocolLabels[p.protocol]} · {p.chain} · #{p.tokenId}
         </span>
         <CopyButton text={p.tokenId} title="Copy token ID" />
+        <RangeBadge
+          inRange={p.range?.inRange ?? null}
+          closed={p.status === "Closed"}
+          nearEdge={isNearEdge(p.range)}
+        />
         {p.isStaked && <span className="text-sm text-sky-400">staked</span>}
         {p.poolAddress && (
           <span className="flex items-center gap-2 text-sm">
@@ -148,6 +155,42 @@ export function PositionDetailPage({
         </span>
       </div>
 
+      {onClose ? (
+        <>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <MiniStat label="Current value" value={formatUsd(m.currentValueUsd)} />
+            <MiniStat
+              label="Net P/L"
+              value={`${formatUsd(m.pnlUsd, true)} (${formatPercent(m.pnlPercent, true)})`}
+              valueClass={pnlClass(m.pnlUsd)}
+            />
+            <MiniStat
+              label="Unclaimed fees"
+              value={formatUsd(m.uncollectedFeesUsd + m.pendingRewardsUsd)}
+            />
+            <MiniStat label="Fee APR" value={formatPercent(m.feeAprPercent)} />
+            <MiniStat label="Deposited" value={formatUsd(m.depositedUsd)} />
+            <MiniStat label="If held instead" value={formatUsd(m.hodlValueUsd)} />
+          </div>
+          <Panel title="P/L breakdown">
+            <Waterfall
+              totalLabel="Net P/L"
+              format={(n) => formatUsd(n, true)}
+              pnlClass={pnlClass}
+              total={m.pnlUsd}
+              steps={[
+                {
+                  label: "Token price change",
+                  value: m.pnlUsd - m.impermanentLossUsd - m.feesEarnedUsd + m.gasUsd,
+                },
+                { label: "Impermanent loss", value: m.impermanentLossUsd },
+                { label: "Fees earned", value: m.feesEarnedUsd },
+                { label: "Gas spent", value: -m.gasUsd },
+              ]}
+            />
+          </Panel>
+        </>
+      ) : (
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-8">
         <StatCard label="Value" value={formatUsd(m.currentValueUsd)} />
         <StatCard
@@ -195,9 +238,10 @@ export function PositionDetailPage({
           }
         />
       </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <RangePanel position={p} />
+        <RangePanel position={p} events={data.events} />
         <BreakdownPanel position={p} events={data.events} />
       </div>
 
@@ -210,7 +254,13 @@ export function PositionDetailPage({
   );
 }
 
-function RangePanel({ position: p }: { position: PositionDto }) {
+function RangePanel({
+  position: p,
+  events,
+}: {
+  position: PositionDto;
+  events: PositionEventDto[];
+}) {
   const [inverted, setInverted] = useState(false);
   if (!p.range)
     return (
@@ -220,6 +270,10 @@ function RangePanel({ position: p }: { position: PositionDto }) {
     );
 
   const range = inverted ? invertRange(p.range) : p.range;
+  // Pool price at the first deposit, in the same units as the range.
+  const first = events.find((e) => e.type === "IncreaseLiquidity" && e.price0Usd && e.price1Usd);
+  const entry0 = first ? first.price0Usd! / first.price1Usd! : null;
+  const entry = entry0 == null ? null : inverted ? 1 / entry0 : entry0;
   const [base, quote] = inverted ? [p.token1, p.token0] : [p.token0, p.token1];
 
   return (
@@ -244,7 +298,7 @@ function RangePanel({ position: p }: { position: PositionDto }) {
           nearEdge={isNearEdge(range)}
         />
       </div>
-      <RangeBar range={range} />
+      <RangeBar range={range} entry={entry} />
       <dl className="mt-4 grid grid-cols-3 gap-2 text-sm num">
         <div>
           <dt className="text-xs text-slate-500">Min</dt>
@@ -254,6 +308,12 @@ function RangePanel({ position: p }: { position: PositionDto }) {
           <dt className="text-xs text-slate-500">Current</dt>
           <dd>{formatPrice(range.priceCurrent)}</dd>
         </div>
+        {entry != null && (
+          <div>
+            <dt className="text-xs text-slate-500">Entry (dot)</dt>
+            <dd>{formatPrice(entry)}</dd>
+          </div>
+        )}
         <div>
           <dt className="text-xs text-slate-500">Max</dt>
           <dd>{formatPrice(range.priceUpper)}</dd>
