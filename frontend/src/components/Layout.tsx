@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, Navigate, Outlet, useLocation } from "react-router-dom";
 import {
-  useAddresses,
   useHealth,
   useSyncStatus,
   useTriggerSync,
@@ -74,8 +73,12 @@ export function Layout() {
 function Content() {
   const { data: health } = useHealth();
   const { pathname } = useLocation();
+  const { addresses } = useOwner();
   const needsSetup = health?.providers.length === 0;
 
+  // The wallets a visitor follows live in their browser, so a new visitor starts by entering one.
+  if (addresses.length === 0 && pathname !== "/addresses")
+    return <Navigate to="/addresses" replace />;
   if (needsSetup && pathname !== "/addresses") return <SetupScreen />;
   return <Outlet />;
 }
@@ -110,18 +113,17 @@ function HideBalancesToggle() {
 }
 
 function OwnerSelect() {
-  const { owner, setOwner } = useOwner();
-  const { data: addresses } = useAddresses();
+  const { selected, setOwner, addresses } = useOwner();
 
   return (
     <select
       className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm"
-      value={owner ?? ""}
+      value={selected ?? ""}
       onChange={(e) => setOwner(e.target.value || null)}
     >
       <option value="">All wallets</option>
-      {addresses?.map((a) => (
-        <option key={a.id} value={a.address}>
+      {addresses.map((a) => (
+        <option key={a.address} value={a.address}>
           {a.label
             ? `${a.label} (${shortAddress(a.address)})`
             : shortAddress(a.address)}
@@ -134,6 +136,7 @@ function OwnerSelect() {
 function SyncIndicator() {
   const { data: status, error: statusError } = useSyncStatus();
   const trigger = useTriggerSync();
+  const { allOwners } = useOwner();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -212,7 +215,7 @@ function SyncIndicator() {
       )}
       <button
         className="rounded-md border border-slate-700 px-2 py-1 text-slate-200 hover:bg-slate-800 disabled:opacity-50"
-        disabled={busy}
+        disabled={busy || !allOwners}
         onClick={() => trigger.mutate()}
       >
         Sync now
@@ -264,7 +267,7 @@ function SyncIndicator() {
             </Link>
             <button
               className="rounded-md bg-sky-600 px-2 py-1 font-medium text-white hover:bg-sky-500 disabled:opacity-50"
-              disabled={busy}
+              disabled={busy || !allOwners}
               onClick={() => trigger.mutate()}
             >
               {errors.length > 0 ? "Retry sync" : "Sync now"}

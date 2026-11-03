@@ -62,9 +62,19 @@ When a sync sees an open position leave its range, or return to it, a Telegram m
 
 Alerts are only as timely as the sync (`Sync:IntervalMinutes`, 15 by default).
 
+## Wallets and privacy
+
+There is no login. The list of wallets you follow (and their labels) is stored in your browser's localStorage, and every API call names the wallet(s) it wants (`?owner=0x…[,0x…]`, required). The server never lists the wallets it tracks, so a visitor to a deployed URL starts empty and must enter an address. "Forget" only removes it from your browser; its synced data stays in the database, so adding it again restores everything immediately.
+
+This is not secrecy: positions are public on-chain data, and anyone who knows a wallet address can look it up, or fetch a position by id. Other things to know when hosting it publicly:
+
+- `/api/backup` is disabled unless `Backup:Enabled` is true (it contains every wallet ever entered). The Docker compose file enables it because it only listens on localhost.
+- The background sync keeps syncing every wallet ever entered, and out-of-range alerts go to the one configured Telegram chat for all of them.
+- Run a single instance; sync state is in memory.
+
 ## Backups
 
-The database holds price history and position snapshots that cannot be rebuilt from chain data. Use **Addresses → Download database backup** or `GET /api/backup` (SQLite only). Deleting the database file forces a full resync.
+The database holds price history and position snapshots that cannot be rebuilt from chain data. Use **Addresses → Download database backup** or `GET /api/backup` (SQLite only, needs `Backup:Enabled=true`). Deleting the database file forces a full resync.
 
 ## Development
 

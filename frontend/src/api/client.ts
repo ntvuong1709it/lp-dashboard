@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useOwner } from "../lib/owner";
 import type {
   ActivityEventDto,
   DailyEarningsDto,
@@ -57,42 +58,20 @@ function query(params: Record<string, string | undefined | null>) {
 
 const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-export const useAddresses = () =>
-  useQuery({
-    queryKey: ["addresses"],
-    queryFn: () => request<WatchedAddress[]>("/api/addresses"),
-  });
-
+/** Registers a wallet with the server (idempotent), then remembers it in this browser. */
 export function useAddAddress() {
   const client = useQueryClient();
+  const { addAddress } = useOwner();
   return useMutation({
     mutationFn: (body: { address: string; label?: string }) =>
       request<WatchedAddress>("/api/addresses", {
         method: "POST",
-        body: JSON.stringify(body),
+        body: JSON.stringify({ address: body.address }),
       }),
-    onSuccess: () => client.invalidateQueries(),
-  });
-}
-
-export function useUpdateAddressLabel() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: (body: { id: number; label: string }) =>
-      request<WatchedAddress>(`/api/addresses/${body.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ label: body.label }),
-      }),
-    onSuccess: () => client.invalidateQueries(),
-  });
-}
-
-export function useRemoveAddress() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: (id: number) =>
-      request<void>(`/api/addresses/${id}`, { method: "DELETE" }),
-    onSuccess: () => client.invalidateQueries(),
+    onSuccess: (dto, body) => {
+      addAddress(dto.address, body.label);
+      void client.invalidateQueries();
+    },
   });
 }
 
@@ -196,11 +175,15 @@ export const useHealth = () =>
 
 export function useSyncStatus() {
   const client = useQueryClient();
+  const { allOwners } = useOwner();
+  const key = ["sync-status", allOwners];
   return useQuery({
-    queryKey: ["sync-status"],
+    queryKey: key,
     queryFn: async () => {
-      const status = await request<SyncStatus>("/api/sync/status");
-      const previous = client.getQueryData<SyncStatus>(["sync-status"]);
+      const status = await request<SyncStatus>(
+        `/api/sync/status${query({ owner: allOwners })}`,
+      );
+      const previous = client.getQueryData<SyncStatus>(key);
       if (previous && previous.lastFinishedAt !== status.lastFinishedAt) {
         await client.invalidateQueries({
           predicate: (q) => q.queryKey[0] !== "sync-status",
@@ -215,15 +198,17 @@ export function useSyncStatus() {
 
 export function useTriggerSync() {
   const client = useQueryClient();
+  const { allOwners } = useOwner();
   return useMutation({
     mutationFn: (scope?: SyncRequestBody) =>
       request<SyncStatus>("/api/sync", {
         method: "POST",
-        body: scope ? JSON.stringify(scope) : undefined,
+        // Without a narrower scope this syncs every wallet the browser follows.
+        body: JSON.stringify({ owner: allOwners, ...scope }),
       }),
     onSuccess: (status) => {
       // Show the queued state immediately; polling picks up the run once it starts.
-      client.setQueryData(["sync-status"], status);
+      client.setQueryData(["sync-status", allOwners], status);
       void client.invalidateQueries({ queryKey: ["sync-status"] });
     },
   });

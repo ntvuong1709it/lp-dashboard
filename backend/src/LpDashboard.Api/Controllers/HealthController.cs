@@ -11,10 +11,11 @@ public sealed record HealthDto(
     IReadOnlyList<string> Providers,
     bool IsSyncing,
     DateTime? LastSyncFinishedAt,
-    int LastSyncErrorCount);
+    int LastSyncErrorCount,
+    bool BackupEnabled);
 
 [ApiController]
-public sealed class HealthController(AppDbContext db, IEnumerable<IPositionProvider> providers, SyncCoordinator coordinator) : ControllerBase
+public sealed class HealthController(AppDbContext db, IEnumerable<IPositionProvider> providers, SyncCoordinator coordinator, IConfiguration configuration) : ControllerBase
 {
     /// <summary>200 when the database is reachable; "Degraded" when no chain provider (RPC URL) is configured.</summary>
     [HttpGet("/health")]
@@ -33,7 +34,8 @@ public sealed class HealthController(AppDbContext db, IEnumerable<IPositionProvi
             configured,
             status.IsRunning,
             status.LastFinishedAt,
-            status.LastErrors.Count);
+            status.LastErrors.Count,
+            configuration.GetValue<bool>("Backup:Enabled"));
         return databaseOk ? Ok(dto) : StatusCode(StatusCodes.Status503ServiceUnavailable, dto);
     }
 }

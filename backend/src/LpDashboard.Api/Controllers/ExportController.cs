@@ -17,48 +17,35 @@ public sealed class ExportController(ExportService export, PositionQueryService 
     [HttpGet("positions.csv")]
     public async Task<IActionResult> Positions([FromQuery] string? owner, [FromQuery] PositionStatus? status, CancellationToken ct)
     {
-        if (!TryOwner(owner, out var normalized)) return InvalidOwner();
-        var owners = await queries.ResolveOwnersAsync(normalized, ct);
+        if (!OwnerParam.TryParse(owner, out var owners)) return InvalidOwner();
         return Csv(await export.PositionsAsync(new PositionFilter(owners, status), ct), "positions");
     }
 
     [HttpGet("events.csv")]
     public async Task<IActionResult> Events([FromQuery] string? owner, CancellationToken ct)
     {
-        if (!TryOwner(owner, out var normalized)) return InvalidOwner();
-        var owners = await queries.ResolveOwnersAsync(normalized, ct);
+        if (!OwnerParam.TryParse(owner, out var owners)) return InvalidOwner();
         return Csv(await export.EventsAsync(new PositionFilter(owners), ct), "events");
     }
 
     [HttpGet("fee-claims.csv")]
     public async Task<IActionResult> FeeClaims([FromQuery] string? owner, [FromQuery] string? timeZone, CancellationToken ct)
     {
-        if (!TryOwner(owner, out var normalized)) return InvalidOwner();
+        if (!OwnerParam.TryParse(owner, out var owners)) return InvalidOwner();
         if (!TryZone(timeZone, out var zone)) return InvalidZone();
-        var owners = await queries.ResolveOwnersAsync(normalized, ct);
         return Csv(await export.FeeClaimsAsync(new ClaimFilter(owners), zone, ct), "fee-claims");
     }
 
     [HttpGet("daily-earnings.csv")]
     public async Task<IActionResult> DailyEarnings([FromQuery] string? owner, [FromQuery] string? timeZone, CancellationToken ct)
     {
-        if (!TryOwner(owner, out var normalized)) return InvalidOwner();
+        if (!OwnerParam.TryParse(owner, out var owners)) return InvalidOwner();
         if (!TryZone(timeZone, out var zone)) return InvalidZone();
-        var owners = await queries.ResolveOwnersAsync(normalized, ct);
         return Csv(await export.DailyEarningsAsync(new PositionFilter(owners), zone, ct), "daily-earnings");
     }
 
     private FileContentResult Csv(byte[] bytes, string name) =>
         File(bytes, ContentType, $"lp-dashboard-{name}-{time.GetUtcNow():yyyyMMdd-HHmm}.csv");
-
-    private static bool TryOwner(string? owner, out string? normalized)
-    {
-        normalized = null;
-        if (string.IsNullOrWhiteSpace(owner)) return true;
-        if (AddressParser.TryParse(owner) is not { } parsed) return false;
-        normalized = parsed.Address;
-        return true;
-    }
 
     private static bool TryZone(string? timeZone, out TimeZoneInfo zone)
     {
@@ -66,7 +53,8 @@ public sealed class ExportController(ExportService export, PositionQueryService 
         return string.IsNullOrWhiteSpace(timeZone) || TimeZoneInfo.TryFindSystemTimeZoneById(timeZone, out zone!);
     }
 
-    private ObjectResult InvalidOwner() => Problem(statusCode: StatusCodes.Status400BadRequest, title: "Invalid owner address");
+    private ObjectResult InvalidOwner() =>
+        Problem(statusCode: StatusCodes.Status400BadRequest, title: "Invalid owner", detail: "Pass owner=<wallet address>[,<wallet address>...] (at most 20).");
 
     private ObjectResult InvalidZone() => Problem(statusCode: StatusCodes.Status400BadRequest, title: "Unknown time zone");
 }

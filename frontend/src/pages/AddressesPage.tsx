@@ -1,35 +1,26 @@
 import { useState, type FormEvent } from "react";
-import {
-  useAddAddress,
-  useAddresses,
-  useRemoveAddress,
-  useSyncStatus,
-  useUpdateAddressLabel,
-} from "../api/client";
+import { useAddAddress, useHealth, useSyncStatus } from "../api/client";
 import { ResyncControls } from "../components/ResyncControls";
 import {
   CopyButton,
   Empty,
-  ErrorText,
   ExternalLink,
   Panel,
   SyncErrorList,
-  TableSkeleton,
 } from "../components/ui";
+import { ErrorText } from "../components/ui";
 import { SyncProgressDetails } from "../components/SyncProgress";
 import { formatDate, walletUrl } from "../lib/format";
 import { useOwner } from "../lib/owner";
 
-function LabelCell({ id, label }: { id: number; label: string | null }) {
-  const update = useUpdateAddressLabel();
+function LabelCell({ address, label }: { address: string; label: string }) {
+  const { setLabel } = useOwner();
   const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(label ?? "");
+  const [value, setValue] = useState(label);
 
   const save = () => {
-    update.mutate(
-      { id, label: value },
-      { onSuccess: () => setEditing(false) },
-    );
+    setLabel(address, value);
+    setEditing(false);
   };
 
   if (!editing) {
@@ -39,7 +30,7 @@ function LabelCell({ id, label }: { id: number; label: string | null }) {
         <button
           className="text-xs text-sky-400 hover:underline"
           onClick={() => {
-            setValue(label ?? "");
+            setValue(label);
             setEditing(true);
           }}
         >
@@ -63,8 +54,7 @@ function LabelCell({ id, label }: { id: number; label: string | null }) {
         }}
       />
       <button
-        className="text-xs text-sky-400 hover:underline disabled:opacity-50"
-        disabled={update.isPending}
+        className="text-xs text-sky-400 hover:underline"
         onClick={save}
       >
         Save
@@ -75,17 +65,15 @@ function LabelCell({ id, label }: { id: number; label: string | null }) {
       >
         Cancel
       </button>
-      {update.error && <ErrorText error={update.error} />}
     </span>
   );
 }
 
 export function AddressesPage() {
-  const { data: addresses, error, isLoading } = useAddresses();
   const { data: status } = useSyncStatus();
+  const { data: health } = useHealth();
   const add = useAddAddress();
-  const remove = useRemoveAddress();
-  const { owner, setOwner } = useOwner();
+  const { addresses, selected, setOwner, removeAddress } = useOwner();
   const [address, setAddress] = useState("");
   const [label, setLabel] = useState("");
 
@@ -104,7 +92,19 @@ export function AddressesPage() {
 
   return (
     <div className="space-y-6">
-      <Panel title="Watch a wallet (read-only)">
+      {addresses.length === 0 && (
+        <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 p-4 text-sm text-slate-300">
+          <div className="mb-1 font-medium text-slate-100">
+            Enter a wallet address to get started
+          </div>
+          The dashboard is read-only: it reads positions from the chain for the
+          address you give it. The addresses you follow are remembered in this
+          browser only, so anyone else opening this site starts with an empty
+          list.
+        </div>
+      )}
+
+      <Panel title="Follow a wallet (read-only)">
         <form onSubmit={submit} className="flex flex-wrap gap-2">
           <input
             className="min-w-96 flex-1 rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-mono"
@@ -134,63 +134,66 @@ export function AddressesPage() {
         )}
         <p className="mt-2 text-xs text-slate-500">
           Solana addresses are stored but not synced yet (EVM/Base only for
-          now). The first sync of a wallet can take a while.
+          now). The first sync of a wallet can take a while. Labels are kept in
+          this browser only.
         </p>
       </Panel>
 
-      <Panel title="Watched wallets">
-        {error ? (
-          <ErrorText error={error} />
-        ) : isLoading ? (
-          <TableSkeleton rows={2} />
-        ) : !addresses?.length ? (
+      <Panel title="Your wallets">
+        {!addresses.length ? (
           <Empty>No wallets yet.</Empty>
         ) : (
           <table className="w-full text-sm">
             <tbody className="divide-y divide-slate-800">
-              {addresses.map((a) => (
-                <tr key={a.id}>
-                  <td className="py-2 font-mono text-xs">
-                    {a.address}{" "}
-                    <CopyButton text={a.address} title="Copy address" />{" "}
-                    <ExternalLink href={walletUrl(a.chainFamily, a.address)}>
-                      explorer
-                    </ExternalLink>
-                  </td>
-                  <td className="py-2">
-                    <LabelCell id={a.id} label={a.label} />
-                  </td>
-                  <td className="py-2 text-xs text-slate-500">
-                    {a.chainFamily}
-                  </td>
-                  <td className="py-2 text-xs text-slate-500">
-                    added {formatDate(a.createdAt)}
-                  </td>
-                  <td className="py-2 text-right">
-                    {a.chainFamily === "Evm" && (
-                      <span className="mr-4">
-                        <ResyncControls
-                          what="wallet"
-                          scope={{ owner: a.address }}
-                        />
-                      </span>
-                    )}
-                    <button
-                      className="text-xs text-rose-400 hover:underline disabled:opacity-50"
-                      disabled={remove.isPending}
-                      onClick={() => {
-                        if (!confirm(`Stop watching ${a.address}?`)) return;
-                        remove.mutate(a.id, {
-                          onSuccess: () =>
-                            owner === a.address && setOwner(null),
-                        });
-                      }}
-                    >
-                      Remove
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {addresses.map((a) => {
+                const family = a.address.startsWith("0x") ? "Evm" : "Solana";
+                return (
+                  <tr key={a.address}>
+                    <td className="py-2 font-mono text-xs">
+                      {a.address}{" "}
+                      <CopyButton text={a.address} title="Copy address" />{" "}
+                      <ExternalLink href={walletUrl(family, a.address)}>
+                        explorer
+                      </ExternalLink>
+                    </td>
+                    <td className="py-2">
+                      <LabelCell address={a.address} label={a.label} />
+                    </td>
+                    <td className="py-2 text-xs text-slate-500">{family}</td>
+                    <td className="py-2 text-right">
+                      <button
+                        className="mr-4 text-xs text-sky-400 hover:underline disabled:opacity-50"
+                        disabled={selected === a.address}
+                        onClick={() => setOwner(a.address)}
+                      >
+                        {selected === a.address ? "Showing" : "Show only"}
+                      </button>
+                      {family === "Evm" && (
+                        <span className="mr-4">
+                          <ResyncControls
+                            what="wallet"
+                            scope={{ owner: a.address }}
+                          />
+                        </span>
+                      )}
+                      <button
+                        className="text-xs text-rose-400 hover:underline"
+                        onClick={() => {
+                          if (
+                            !confirm(
+                              `Forget ${a.address} in this browser? Its data stays on the server, so adding it again brings everything back.`,
+                            )
+                          )
+                            return;
+                          removeAddress(a.address);
+                        }}
+                      >
+                        Forget
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
@@ -241,44 +244,22 @@ export function AddressesPage() {
         )}
       </Panel>
 
-      <Panel title="Recent errors">
-        {status?.recentErrors.length ? (
-          <ul className="max-h-72 space-y-2 overflow-y-auto">
-            {[...status.recentErrors].reverse().map((e, i) => (
-              <li
-                key={i}
-                className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200"
-              >
-                <div className="mb-1 text-[11px] text-amber-300/70">
-                  {formatDate(e.at)}
-                </div>
-                <div className="whitespace-pre-wrap break-words font-mono">
-                  {e.message}
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-slate-500">
-            No sync errors since the app started. (Kept in memory, so this
-            clears on restart.)
+      {health?.backupEnabled && (
+        <Panel title="Backup">
+          <p className="mb-3 text-sm text-slate-400">
+            Download a copy of the database. Price history and position
+            snapshots cannot be rebuilt from chain data, so keep a backup
+            before upgrades.
           </p>
-        )}
-      </Panel>
-
-      <Panel title="Backup">
-        <p className="mb-3 text-sm text-slate-400">
-          Download a copy of the database. Price history and position snapshots
-          cannot be rebuilt from chain data, so keep a backup before upgrades.
-        </p>
-        <a
-          href="/api/backup"
-          download
-          className="inline-block rounded-md border border-slate-700 px-3 py-1.5 text-sm hover:bg-slate-800"
-        >
-          Download database backup
-        </a>
-      </Panel>
+          <a
+            href="/api/backup"
+            download
+            className="inline-block rounded-md border border-slate-700 px-3 py-1.5 text-sm hover:bg-slate-800"
+          >
+            Download database backup
+          </a>
+        </Panel>
+      )}
     </div>
   );
 }

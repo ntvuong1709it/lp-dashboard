@@ -14,11 +14,8 @@ export type PositionEventType =
   | "RewardClaim";
 
 export interface WatchedAddress {
-  id: number;
   address: string;
-  label: string | null;
   chainFamily: "Evm" | "Solana";
-  createdAt: string;
 }
 
 export interface TokenDto {
@@ -268,6 +265,7 @@ export interface HealthDto {
   isSyncing: boolean;
   lastSyncFinishedAt: string | null;
   lastSyncErrorCount: number;
+  backupEnabled: boolean;
 }
 
 export interface SyncStatus {

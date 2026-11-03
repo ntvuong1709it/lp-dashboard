@@ -16,8 +16,7 @@ public sealed class PositionsController(PositionQueryService queries) : Controll
     public async Task<IActionResult> List(
         [FromQuery] string? owner, [FromQuery] PositionStatus? status, [FromQuery] Protocol? protocol, [FromQuery] Chain? chain, CancellationToken ct)
     {
-        if (!TryOwner(owner, out var normalized)) return InvalidOwner();
-        var owners = await queries.ResolveOwnersAsync(normalized, ct);
+        if (!OwnerParam.TryParse(owner, out var owners)) return InvalidOwner();
         return Ok(await queries.ListAsync(new PositionFilter(owners, status, protocol, chain), ct));
     }
 
@@ -26,8 +25,7 @@ public sealed class PositionsController(PositionQueryService queries) : Controll
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Events([FromQuery] string? owner, [FromQuery] int? limit, CancellationToken ct)
     {
-        if (!TryOwner(owner, out var normalized)) return InvalidOwner();
-        var owners = await queries.ResolveOwnersAsync(normalized, ct);
+        if (!OwnerParam.TryParse(owner, out var owners)) return InvalidOwner();
         return Ok(await queries.ListActivityAsync(new PositionFilter(owners), Math.Clamp(limit ?? 500, 1, 5000), ct));
     }
 
@@ -64,8 +62,7 @@ public sealed class PositionsController(PositionQueryService queries) : Controll
     public async Task<IActionResult> Summary(
         [FromQuery] string? owner, [FromQuery] PositionStatus? status, [FromQuery] Protocol? protocol, [FromQuery] Chain? chain, CancellationToken ct)
     {
-        if (!TryOwner(owner, out var normalized)) return InvalidOwner();
-        var owners = await queries.ResolveOwnersAsync(normalized, ct);
+        if (!OwnerParam.TryParse(owner, out var owners)) return InvalidOwner();
         return Ok(await queries.GetSummaryAsync(new PositionFilter(owners, status, protocol, chain), ct));
     }
 
@@ -75,8 +72,7 @@ public sealed class PositionsController(PositionQueryService queries) : Controll
     public async Task<IActionResult> PortfolioHistory(
         [FromQuery] string? owner, [FromQuery] DateTime? from, [FromQuery] DateTime? to, CancellationToken ct)
     {
-        if (!TryOwner(owner, out var normalized)) return InvalidOwner();
-        var owners = await queries.ResolveOwnersAsync(normalized, ct);
+        if (!OwnerParam.TryParse(owner, out var owners)) return InvalidOwner();
         return Ok(await queries.GetPortfolioHistoryAsync(new PositionFilter(owners), from?.ToUniversalTime(), to?.ToUniversalTime(), ct));
     }
 
@@ -85,8 +81,7 @@ public sealed class PositionsController(PositionQueryService queries) : Controll
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> PnlHistory([FromQuery] string? owner, CancellationToken ct)
     {
-        if (!TryOwner(owner, out var normalized)) return InvalidOwner();
-        var owners = await queries.ResolveOwnersAsync(normalized, ct);
+        if (!OwnerParam.TryParse(owner, out var owners)) return InvalidOwner();
         return Ok(await queries.GetPnlHistoryAsync(new PositionFilter(owners), ct));
     }
 
@@ -96,15 +91,13 @@ public sealed class PositionsController(PositionQueryService queries) : Controll
     public async Task<IActionResult> WeeklyClaims(
         [FromQuery] string? owner, [FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] string? timeZone, CancellationToken ct)
     {
-        if (!TryOwner(owner, out var normalized)) return InvalidOwner();
+        if (!OwnerParam.TryParse(owner, out var owners)) return InvalidOwner();
 
         var zone = TimeZoneInfo.Utc;
         if (!string.IsNullOrWhiteSpace(timeZone) && !TimeZoneInfo.TryFindSystemTimeZoneById(timeZone, out zone))
         {
             return Problem(statusCode: StatusCodes.Status400BadRequest, title: "Unknown time zone");
         }
-
-        var owners = await queries.ResolveOwnersAsync(normalized, ct);
         return Ok(await queries.GetWeeklyClaimsAsync(new ClaimFilter(owners, from?.ToUniversalTime(), to?.ToUniversalTime()), zone!, ct));
     }
 
@@ -113,27 +106,16 @@ public sealed class PositionsController(PositionQueryService queries) : Controll
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> DailyEarnings([FromQuery] string? owner, [FromQuery] string? timeZone, CancellationToken ct)
     {
-        if (!TryOwner(owner, out var normalized)) return InvalidOwner();
+        if (!OwnerParam.TryParse(owner, out var owners)) return InvalidOwner();
 
         var zone = TimeZoneInfo.Utc;
         if (!string.IsNullOrWhiteSpace(timeZone) && !TimeZoneInfo.TryFindSystemTimeZoneById(timeZone, out zone))
         {
             return Problem(statusCode: StatusCodes.Status400BadRequest, title: "Unknown time zone");
         }
-
-        var owners = await queries.ResolveOwnersAsync(normalized, ct);
         return Ok(await queries.GetDailyEarningsAsync(new PositionFilter(owners), zone!, ct));
     }
 
-    private static bool TryOwner(string? owner, out string? normalized)
-    {
-        normalized = null;
-        if (string.IsNullOrWhiteSpace(owner)) return true;
-        if (AddressParser.TryParse(owner) is not { } parsed) return false;
-        normalized = parsed.Address;
-        return true;
-    }
-
     private ObjectResult InvalidOwner() =>
-        Problem(statusCode: StatusCodes.Status400BadRequest, title: "Invalid owner address");
+        Problem(statusCode: StatusCodes.Status400BadRequest, title: "Invalid owner", detail: "Pass owner=<wallet address>[,<wallet address>...] (at most 20).");
 }

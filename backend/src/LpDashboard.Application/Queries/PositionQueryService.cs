@@ -31,10 +31,6 @@ public sealed class PositionQueryService(
     /// <summary>Snapshots are normally one interval apart; a few missed ones are tolerated, longer holes are not measured.</summary>
     private TimeSpan MaxSnapshotGap => TimeSpan.FromMinutes(Math.Max(1, syncOptions.Value.SnapshotIntervalMinutes) * 3);
 
-    /// <summary>A specific (already normalized) owner, or every watched address when null.</summary>
-    public async Task<IReadOnlyCollection<string>> ResolveOwnersAsync(string? owner, CancellationToken ct) =>
-        owner is not null ? [owner] : (await addresses.ListAsync(ct)).Select(a => a.Address).ToList();
-
     /// <param name="withTimeInRange">
     /// Time in range loads price history for positions it has not seen before (cached afterwards), so callers that only
     /// need totals can skip it.

@@ -16,6 +16,8 @@ services:
       Alerts__Telegram__ChatId: ${TELEGRAM_CHAT_ID:-}
       # WAL does not work on a Windows bind mount; DELETE journaling does.
       Database__SqliteJournalMode: DELETE
+      # The backup download is off by default (it contains every wallet); this instance is local-only.
+      Backup__Enabled: "true"
     volumes:
       # The database is lpdashboard.db in ./data (override the folder with DATA_DIR in .env).
       - ${DATA_DIR:-./data}:/data

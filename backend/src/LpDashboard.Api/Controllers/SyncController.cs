@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace LpDashboard.Api.Controllers;
 
-/// <summary>Optional scope for a manual sync; an empty body is a full sync.</summary>
+/// <summary>Scope of a manual sync. <paramref name="Owner"/> is required: one wallet address or several, comma-separated.</summary>
 public sealed record SyncRequestBody(string? Owner, Chain? Chain, Protocol? Protocol, string? TokenId, long? FromBlock);
 
 [ApiController]
@@ -18,23 +18,21 @@ public sealed class SyncController(SyncCoordinator coordinator, IWatchedAddressR
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Trigger([FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] SyncRequestBody? body, CancellationToken ct)
     {
-        if (body is null)
+        // A full sync of everything is left to the background schedule; a visitor can only sync the wallets they name.
+        if (body is null || !OwnerParam.TryParse(body.Owner, out var owners))
         {
-            coordinator.RequestSync();
-            return Accepted(coordinator.Status);
+            return Problem(statusCode: StatusCodes.Status400BadRequest, title: "Invalid owner", detail: "Pass the wallet address(es) to sync.");
         }
 
-        string? owner = null;
-        if (!string.IsNullOrWhiteSpace(body.Owner))
+        foreach (var owner in owners)
         {
-            owner = AddressParser.TryParse(body.Owner)?.Address;
-            if (owner is null || await addresses.FindAsync(owner, ct) is null)
+            if (await addresses.FindAsync(owner, ct) is null)
             {
                 return Problem(statusCode: StatusCodes.Status400BadRequest, title: "Unknown wallet", detail: "The wallet is not being watched.");
             }
         }
 
-        if (body.TokenId is not null && (owner is null || !body.TokenId.All(char.IsAsciiDigit) || body.TokenId.Length == 0))
+        if (body.TokenId is not null && (owners.Count != 1 || !body.TokenId.All(char.IsAsciiDigit) || body.TokenId.Length == 0))
         {
             return Problem(statusCode: StatusCodes.Status400BadRequest, title: "Invalid position", detail: "A position resync needs a wallet and a numeric token id.");
         }
@@ -44,10 +42,25 @@ public sealed class SyncController(SyncCoordinator coordinator, IWatchedAddressR
             return Problem(statusCode: StatusCodes.Status400BadRequest, title: "Invalid block", detail: "FromBlock must be 0 or greater.");
         }
 
-        coordinator.RequestSync(new SyncRequest(owner, body.Chain, body.Protocol, body.TokenId, body.FromBlock));
-        return Accepted(coordinator.Status);
+        foreach (var owner in owners)
+        {
+            coordinator.RequestSync(new SyncRequest(owner, body.Chain, body.Protocol, body.TokenId, body.FromBlock));
+        }
+        return Accepted(Visible(coordinator.Status, owners));
     }
 
+    /// <summary>Progress of the named wallets only; without a valid owner just the overall state is returned.</summary>
     [HttpGet("status")]
-    public SyncStatus Status() => coordinator.Status;
+    public SyncStatus Status([FromQuery] string? owner)
+    {
+        OwnerParam.TryParse(owner, out var owners);
+        return Visible(coordinator.Status, owners);
+    }
+
+    /// <summary>Tasks and errors name wallets and positions, so a visitor only gets those of their own wallets.</summary>
+    private static SyncStatus Visible(SyncStatus status, IReadOnlyCollection<string> owners)
+    {
+        var tasks = status.Tasks.Where(t => owners.Contains(t.Owner)).ToList();
+        return status with { Tasks = tasks, LastErrors = tasks.SelectMany(t => t.Errors).ToList(), RecentErrors = [] };
+    }
 }

@@ -85,6 +85,7 @@ npm.cmd run dev
 - [ ] Ethereum: add a second entry under `Evm:Chains` (config only)
 - [ ] Solana (Helius): Orca Whirlpools, Raydium CLMM (position NFT → position PDA), Meteora DLMM (program accounts by owner); history via parsed txs. Consider a Node sidecar if Borsh decoding in .NET is too costly
 - [ ] Robinhood Chain once DEXes are known
+- [ ] Public hosting: limit RPC usage from wallets strangers enter. The background sync currently covers every wallet ever entered, and alerts for all of them go to one Telegram chat. Plan: record a per-wallet "last seen" time (new migration) and background-sync only wallets seen in the last N days (catch-up sync on return, cursors are kept); `Sync:PinnedAddresses` config for the operator's own wallets (always synced, alerts); cap on actively synced wallets; per-wallet cooldown on manual sync; per-IP rate limit on `POST /api/addresses` and `POST /api/sync`
 - [ ] Nice-to-have: daily snapshot backfill (archive RPC), CSV export, per-position notes
 
 ## Layout
