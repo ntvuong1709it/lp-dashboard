@@ -1,4 +1,6 @@
+import { chart } from "../lib/chartTheme";
 import { useMemo } from "react";
+import { usePersistentState } from "../lib/usePersistentState";
 import {
   CartesianGrid,
   Legend,
@@ -11,25 +13,39 @@ import {
 } from "recharts";
 import { usePortfolioHistory } from "../api/client";
 import { formatUsd } from "../lib/format";
-import { Empty, ErrorText, Panel, Skeleton } from "./ui";
+import { Empty, ErrorText, Panel, Segmented, Skeleton } from "./ui";
+
+const DAY = 86_400_000;
+const ranges = [
+  { label: "7D", value: 7 },
+  { label: "30D", value: 30 },
+  { label: "90D", value: 90 },
+  { label: "All", value: 0 },
+];
 
 /** Total value of every position (any status) over time, from hourly snapshots. */
 export function PortfolioValueChart({ owner }: { owner: string | null }) {
   const { data, error, isLoading } = usePortfolioHistory(owner);
 
+  const [days, setDays] = usePersistentState<number>("lpdash.overview.range", 0);
   const points = useMemo(
-    () =>
-      (data ?? []).map((p) => ({
+    () => {
+      const from = days ? Date.now() - days * DAY : 0;
+      return (data ?? []).filter((p) => new Date(p.timestamp).getTime() >= from).map((p) => ({
         t: new Date(p.timestamp).getTime(),
         value: p.valueUsd,
         withUnclaimed: p.valueUsd + p.unclaimedUsd,
         count: p.positionCount,
-      })),
-    [data],
+      }));
+    },
+    [data, days],
   );
 
   return (
-    <Panel title="Portfolio value over time">
+    <Panel
+      title="Portfolio value over time"
+      actions={<Segmented label="Time range" options={ranges} value={days} onChange={setDays} />}
+    >
       {error ? (
         <ErrorText error={error} />
       ) : isLoading ? (
@@ -44,26 +60,26 @@ export function PortfolioValueChart({ owner }: { owner: string | null }) {
           <div className="h-64">
             <ResponsiveContainer>
               <LineChart data={points}>
-                <CartesianGrid stroke="#1e293b" />
+                <CartesianGrid stroke={chart.grid} />
                 <XAxis
                   dataKey="t"
                   type="number"
                   domain={["dataMin", "dataMax"]}
                   scale="time"
                   tickFormatter={(t) => new Date(t).toLocaleDateString()}
-                  stroke="#64748b"
+                  stroke={chart.axis}
                   fontSize={11}
                 />
                 <YAxis
-                  stroke="#64748b"
+                  stroke={chart.axis}
                   fontSize={11}
                   tickFormatter={(v) => formatUsd(v)}
                   width={80}
                 />
                 <Tooltip
                   contentStyle={{
-                    background: "#0f172a",
-                    border: "1px solid #334155",
+                    background: chart.tooltip.background,
+                    border: chart.tooltip.border,
                   }}
                   labelFormatter={(t, items) => {
                     const count = items?.[0]?.payload?.count as
@@ -78,14 +94,14 @@ export function PortfolioValueChart({ owner }: { owner: string | null }) {
                   type="stepAfter"
                   dataKey="value"
                   name="Positions"
-                  stroke="#38bdf8"
+                  stroke={chart.a}
                   dot={false}
                 />
                 <Line
                   type="stepAfter"
                   dataKey="withUnclaimed"
                   name="Positions + unclaimed fees"
-                  stroke="#34d399"
+                  stroke={chart.b}
                   dot={false}
                 />
               </LineChart>

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
+  ActivityEventDto,
   DailyEarningsDto,
   HealthDto,
   PortfolioHistoryPoint,
@@ -130,6 +131,13 @@ export const exportUrl = (
   file: "positions" | "events" | "fee-claims" | "daily-earnings",
   params: Record<string, string | undefined | null> = {},
 ) => `/api/export/${file}.csv${query(params)}`;
+
+export const useActivity = (owner: string | null, limit = 500) =>
+  useQuery({
+    queryKey: ["activity", owner, limit],
+    queryFn: () =>
+      request<ActivityEventDto[]>(`/api/events${query({ owner, limit: String(limit) })}`),
+  });
 
 export const usePosition = (id: number) =>
   useQuery({

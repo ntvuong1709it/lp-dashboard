@@ -188,3 +188,77 @@ export function CopyButton({
     </button>
   );
 }
+
+/** One labelled horizontal bar: label, proportional track, value. */
+export function BarRow({
+  label,
+  fraction,
+  value,
+  valueClass = "",
+  barClass = "bg-sky-500",
+  onClick,
+  sub,
+}: {
+  label: ReactNode;
+  /** 0..1 share of the track to fill. */
+  fraction: number;
+  value: ReactNode;
+  valueClass?: string;
+  barClass?: string;
+  onClick?: () => void;
+  sub?: ReactNode;
+}) {
+  return (
+    <div
+      className={`grid grid-cols-[8rem_1fr_6.5rem] items-center gap-3 text-sm ${onClick ? "cursor-pointer hover:bg-slate-800/50" : ""}`}
+      onClick={onClick}
+    >
+      <span className="truncate" title={typeof label === "string" ? label : undefined}>
+        {label}
+      </span>
+      <div className="h-2 overflow-hidden rounded bg-slate-800">
+        <div
+          className={`h-full rounded ${barClass}`}
+          style={{ width: `${Math.max(0, Math.min(1, fraction)) * 100}%` }}
+        />
+      </div>
+      <span className={`text-right num ${valueClass}`}>
+        {value}
+        {sub && <span className="ml-1 text-xs text-slate-500">{sub}</span>}
+      </span>
+    </div>
+  );
+}
+
+/** Compact segmented control (single choice). */
+export function Segmented<T extends string | number | null>({
+  options,
+  value,
+  onChange,
+  label,
+}: {
+  options: { label: string; value: T }[];
+  value: T;
+  onChange: (value: T) => void;
+  label: string;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={label}
+      className="inline-flex overflow-hidden rounded-md border border-slate-700 text-sm"
+    >
+      {options.map((o) => (
+        <button
+          key={String(o.value)}
+          type="button"
+          aria-pressed={o.value === value}
+          onClick={() => onChange(o.value)}
+          className={`border-r border-slate-700 px-2.5 py-1 last:border-r-0 ${o.value === value ? "bg-slate-800 font-semibold text-slate-50" : "text-slate-400 hover:bg-slate-800/60"}`}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}

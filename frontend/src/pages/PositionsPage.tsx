@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { usePositionDrawer } from "../lib/positionDrawer";
 import { exportUrl, usePositions, useSummary } from "../api/client";
 import type {
   PortfolioSummaryDto,
@@ -9,14 +10,12 @@ import type {
 } from "../api/types";
 import { RangeBadge, RangeBar } from "../components/RangeBar";
 import { ExportMenu } from "../components/ExportMenu";
-import { PortfolioValueChart } from "../components/PortfolioValueChart";
 import { UpdatedAgo } from "../components/UpdatedAgo";
 import {
   CopyButton,
   Empty,
   ErrorText,
   ExternalLink,
-  StatCard,
   TableSkeleton,
 } from "../components/ui";
 import {
@@ -34,6 +33,7 @@ import {
   protocolLabels,
   timeInRangeSource,
 } from "../lib/format";
+import { isNearEdge } from "../lib/attention";
 import { useOwner } from "../lib/owner";
 import { useHideBalances } from "../lib/privacy";
 import {
@@ -54,7 +54,7 @@ const statusTabs: {
   { label: "All", value: null, count: (s) => s.openCount + s.closedCount },
 ];
 
-export function PortfolioPage() {
+export function PositionsPage() {
   useHideBalances(); // re-render when the toggle changes; formatters read the flag
   const { owner } = useOwner();
   const [status, setStatus] = usePersistentState<PositionStatus | null>(
@@ -78,11 +78,9 @@ export function PortfolioPage() {
     "lpdash.portfolio.sort",
     { key: "created", dir: "desc" },
   );
-  const summary = useSummary(owner, status);
   // Unfiltered totals so tab counts don't depend on the selected tab.
   const totals = useSummary(owner, null).data;
   const positions = usePositions(owner, status);
-  const s = summary.data;
 
   const protocols = useMemo(
     () => [...new Set((positions.data ?? []).map((p) => p.protocol))],
@@ -106,52 +104,7 @@ export function PortfolioPage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-        <StatCard
-          label="Value"
-          loading={summary.isLoading}
-          value={formatUsd(s?.currentValueUsd)}
-          hint={
-            totals && `${totals.openCount} open · ${totals.closedCount} closed`
-          }
-        />
-        <StatCard
-          label="Fees earned"
-          loading={summary.isLoading}
-          value={formatUsd(s?.feesEarnedUsd)}
-          hint={s && `${formatUsd(s.uncollectedFeesUsd)} unclaimed`}
-        />
-        <StatCard
-          label="P/L"
-          loading={summary.isLoading}
-          value={formatUsd(s?.pnlUsd, true)}
-          valueClass={pnlClass(s?.pnlUsd)}
-          hint={s && `deposited ${formatUsd(s.depositedUsd)}`}
-        />
-        <StatCard
-          label="P/L vs HODL"
-          loading={summary.isLoading}
-          value={formatUsd(s?.pnlVsHodlUsd, true)}
-          valueClass={pnlClass(s?.pnlVsHodlUsd)}
-        />
-        <StatCard
-          label="Impermanent loss"
-          loading={summary.isLoading}
-          value={formatUsd(s?.impermanentLossUsd, true)}
-          valueClass={pnlClass(s?.impermanentLossUsd)}
-          hint="excl. fees"
-        />
-        <StatCard
-          label="Gas"
-          loading={summary.isLoading}
-          value={formatUsd(s?.gasUsd)}
-          hint={s?.hasMissingPrices ? "some prices missing" : undefined}
-        />
-      </div>
-
-      <PortfolioValueChart owner={owner} />
-
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex gap-1 rounded-md border border-slate-800 p-1">
           {statusTabs.map((t) => (
             <button
@@ -300,7 +253,7 @@ function PositionsTable({
   sort: SortState;
   onSort: (key: SortKey) => void;
 }) {
-  const navigate = useNavigate();
+  const drawer = usePositionDrawer();
   const sum = (pick: (m: PositionDto["metrics"]) => number) =>
     positions.reduce((total, p) => total + pick(p.metrics), 0);
 
@@ -336,7 +289,7 @@ function PositionsTable({
               <tr
                 key={p.id}
                 className="cursor-pointer hover:bg-slate-900/70"
-                onClick={() => navigate(`/positions/${p.id}`)}
+                onClick={() => drawer.open(p.id)}
               >
                 <td className="px-3 py-2 text-right num text-slate-500">
                   {index + 1}
@@ -376,6 +329,7 @@ function PositionsTable({
                         <RangeBadge
                           inRange={range.inRange}
                           closed={p.status === "Closed"}
+                          nearEdge={isNearEdge(range)}
                         />
                       </div>
                     </div>

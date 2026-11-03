@@ -138,6 +138,16 @@ export interface PositionEventDto {
   gasUsd: number | null;
 }
 
+/** A position event with enough context to list it across positions. */
+export interface ActivityEventDto {
+  positionId: number;
+  chain: Chain;
+  protocol: Protocol;
+  tokenId: string;
+  pair: string;
+  event: PositionEventDto;
+}
+
 export interface PositionDetailDto {
   position: PositionDto;
   events: PositionEventDto[];

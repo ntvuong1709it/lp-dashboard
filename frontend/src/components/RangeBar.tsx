@@ -34,7 +34,7 @@ export function RangeBar({
         />
         {current != null && (
           <div
-            className="absolute -top-1 h-4 w-0.5 bg-white"
+            className="absolute -top-1 h-4 w-0.5 bg-[var(--marker)]"
             style={{ left: `${Math.min(100, Math.max(0, pct(current)))}%` }}
           />
         )}
@@ -53,9 +53,11 @@ export function RangeBar({
 export function RangeBadge({
   inRange,
   closed,
+  nearEdge,
 }: {
   inRange: boolean | null;
   closed?: boolean;
+  nearEdge?: boolean;
 }) {
   if (closed)
     return (
@@ -64,6 +66,12 @@ export function RangeBadge({
       </span>
     );
   if (inRange == null) return null;
+  if (inRange && nearEdge)
+    return (
+      <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[11px] text-amber-400">
+        Near edge
+      </span>
+    );
   return inRange ? (
     <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[11px] text-emerald-400">
       In range

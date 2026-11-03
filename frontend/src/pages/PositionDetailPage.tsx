@@ -1,3 +1,5 @@
+import { isNearEdge } from "../lib/attention";
+import { chart } from "../lib/chartTheme";
 import { useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
@@ -55,9 +57,17 @@ import {
 } from "../lib/format";
 import { useHideBalances } from "../lib/privacy";
 
-export function PositionDetailPage() {
+export function PositionDetailPage({
+  id: idProp,
+  onClose,
+}: {
+  /** Set when shown in the drawer; otherwise the id comes from the route. */
+  id?: number;
+  onClose?: () => void;
+} = {}) {
   useHideBalances(); // re-render when the toggle changes; formatters read the flag
-  const id = Number(useParams().id);
+  const routeId = Number(useParams().id);
+  const id = idProp ?? routeId;
   const { data, error, isLoading } = usePosition(id);
 
   if (error) return <ErrorText error={error} />;
@@ -69,9 +79,31 @@ export function PositionDetailPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-baseline gap-3">
-        <Link to="/" className="text-sm text-slate-400 hover:text-white">
-          ← Portfolio
-        </Link>
+        {onClose ? (
+          <>
+            <button
+              type="button"
+              className="text-sm text-slate-400 hover:text-slate-50"
+              onClick={onClose}
+            >
+              ✕ Close
+            </button>
+            <Link
+              to={`/positions/${id}`}
+              className="text-sm text-sky-400 hover:underline"
+              onClick={onClose}
+            >
+              Open full page
+            </Link>
+          </>
+        ) : (
+          <Link
+            to="/positions"
+            className="text-sm text-slate-400 hover:text-slate-50"
+          >
+            ← Positions
+          </Link>
+        )}
         <h1 className="text-xl font-semibold">
           {p.token0?.symbol}/{p.token1?.symbol}{" "}
           <span className="text-sm text-slate-500">{formatFee(p.fee)}</span>
@@ -206,7 +238,11 @@ function RangePanel({ position: p }: { position: PositionDto }) {
         <span className="text-slate-400">
           {quote?.symbol} per {base?.symbol}
         </span>
-        <RangeBadge inRange={range.inRange} closed={p.status === "Closed"} />
+        <RangeBadge
+          inRange={range.inRange}
+          closed={p.status === "Closed"}
+          nearEdge={isNearEdge(range)}
+        />
       </div>
       <RangeBar range={range} />
       <dl className="mt-4 grid grid-cols-3 gap-2 text-sm num">
@@ -397,26 +433,26 @@ function ValueChart({ id }: { id: number }) {
         <div className="h-72">
           <ResponsiveContainer>
             <LineChart data={points}>
-              <CartesianGrid stroke="#1e293b" />
+              <CartesianGrid stroke={chart.grid} />
               <XAxis
                 dataKey="t"
                 type="number"
                 domain={["dataMin", "dataMax"]}
                 scale="time"
                 tickFormatter={(t) => new Date(t).toLocaleDateString()}
-                stroke="#64748b"
+                stroke={chart.axis}
                 fontSize={11}
               />
               <YAxis
-                stroke="#64748b"
+                stroke={chart.axis}
                 fontSize={11}
                 tickFormatter={(v) => formatUsd(v)}
                 width={80}
               />
               <Tooltip
                 contentStyle={{
-                  background: "#0f172a",
-                  border: "1px solid #334155",
+                  background: chart.tooltip.background,
+                  border: chart.tooltip.border,
                 }}
                 labelFormatter={(t) => new Date(t as number).toLocaleString()}
                 formatter={(v) => formatUsd(v as number)}
@@ -426,21 +462,21 @@ function ValueChart({ id }: { id: number }) {
                 type="monotone"
                 dataKey="valueUsd"
                 name="Position"
-                stroke="#38bdf8"
+                stroke={chart.a}
                 dot={false}
               />
               <Line
                 type="monotone"
                 dataKey="valueWithFeesUsd"
                 name="Position + fees"
-                stroke="#34d399"
+                stroke={chart.b}
                 dot={false}
               />
               <Line
                 type="monotone"
                 dataKey="hodlValueUsd"
                 name="HODL"
-                stroke="#f59e0b"
+                stroke={chart.c}
                 dot={false}
                 strokeDasharray="4 4"
               />
@@ -479,19 +515,19 @@ function EarningsPerDayPanel({ id }: { id: number }) {
         <div className="h-56">
           <ResponsiveContainer>
             <BarChart data={days}>
-              <CartesianGrid stroke="#1e293b" vertical={false} />
-              <XAxis dataKey="date" stroke="#64748b" fontSize={11} />
+              <CartesianGrid stroke={chart.grid} vertical={false} />
+              <XAxis dataKey="date" stroke={chart.axis} fontSize={11} />
               <YAxis
-                stroke="#64748b"
+                stroke={chart.axis}
                 fontSize={11}
                 tickFormatter={(v) => formatUsd(v)}
                 width={80}
               />
               <Tooltip
-                cursor={{ fill: "#1e293b" }}
+                cursor={{ fill: chart.cursor }}
                 contentStyle={{
-                  background: "#0f172a",
-                  border: "1px solid #334155",
+                  background: chart.tooltip.background,
+                  border: chart.tooltip.border,
                 }}
                 formatter={(v) => formatUsd(v as number)}
               />
@@ -500,13 +536,13 @@ function EarningsPerDayPanel({ id }: { id: number }) {
                 dataKey="feesUsd"
                 name="Swap fees"
                 stackId="a"
-                fill="#34d399"
+                fill={chart.b}
               />
               <Bar
                 dataKey="rewardsUsd"
                 name="Rewards"
                 stackId="a"
-                fill="#38bdf8"
+                fill={chart.a}
               />
             </BarChart>
           </ResponsiveContainer>

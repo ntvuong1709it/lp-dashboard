@@ -1,5 +1,5 @@
+import { chart as theme } from "../lib/chartTheme";
 import { Fragment, useState } from "react";
-import { Link } from "react-router-dom";
 import {
   Bar,
   BarChart,
@@ -29,6 +29,7 @@ import {
   protocolLabels,
   txUrl,
 } from "../lib/format";
+import { usePositionDrawer } from "../lib/positionDrawer";
 import { useOwner } from "../lib/owner";
 import { useHideBalances } from "../lib/privacy";
 
@@ -100,18 +101,18 @@ function DailyEarnings() {
         <div className="h-64">
           <ResponsiveContainer>
             <BarChart data={chart}>
-              <CartesianGrid stroke="#1e293b" vertical={false} />
-              <XAxis dataKey="date" stroke="#64748b" fontSize={11} />
+              <CartesianGrid stroke={theme.grid} vertical={false} />
+              <XAxis dataKey="date" stroke={theme.axis} fontSize={11} />
               <YAxis
-                stroke="#64748b"
+                stroke={theme.axis}
                 fontSize={11}
                 tickFormatter={(v) => formatUsd(v)}
                 width={80}
               />
               <Tooltip
                 contentStyle={{
-                  background: "#0f172a",
-                  border: "1px solid #334155",
+                  background: theme.tooltip.background,
+                  border: theme.tooltip.border,
                 }}
                 formatter={(v) => formatUsd(v as number)}
               />
@@ -120,13 +121,13 @@ function DailyEarnings() {
                 dataKey="feesUsd"
                 name="Swap fees"
                 stackId="a"
-                fill="#34d399"
+                fill={theme.b}
               />
               <Bar
                 dataKey="rewardsUsd"
                 name="Rewards"
                 stackId="a"
-                fill="#38bdf8"
+                fill={theme.a}
               />
             </BarChart>
           </ResponsiveContainer>
@@ -172,6 +173,7 @@ function DailyEarnings() {
 
 function WeeklyClaims() {
   const { owner } = useOwner();
+  const drawer = usePositionDrawer();
   const { data, error, isLoading } = useWeeklyClaims(owner);
   const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -212,28 +214,28 @@ function WeeklyClaims() {
         <div className="h-64">
           <ResponsiveContainer>
             <BarChart data={chart}>
-              <CartesianGrid stroke="#1e293b" vertical={false} />
-              <XAxis dataKey="week" stroke="#64748b" fontSize={11} />
+              <CartesianGrid stroke={theme.grid} vertical={false} />
+              <XAxis dataKey="week" stroke={theme.axis} fontSize={11} />
               <YAxis
-                stroke="#64748b"
+                stroke={theme.axis}
                 fontSize={11}
                 tickFormatter={(v) => formatUsd(v)}
                 width={80}
               />
               <Tooltip
                 contentStyle={{
-                  background: "#0f172a",
-                  border: "1px solid #334155",
+                  background: theme.tooltip.background,
+                  border: theme.tooltip.border,
                 }}
                 formatter={(v) => formatUsd(v as number)}
               />
               <Legend />
-              <Bar dataKey="fees" name="Swap fees" stackId="a" fill="#34d399" />
+              <Bar dataKey="fees" name="Swap fees" stackId="a" fill={theme.b} />
               <Bar
                 dataKey="rewards"
                 name="Rewards"
                 stackId="a"
-                fill="#38bdf8"
+                fill={theme.a}
               />
             </BarChart>
           </ResponsiveContainer>
@@ -292,12 +294,13 @@ function WeeklyClaims() {
                         />
                       </td>
                       <td className="py-1" colSpan={2}>
-                        <Link
+                        <button
+                          type="button"
                           className="text-sky-400 hover:underline"
-                          to={`/positions/${i.positionId}`}
+                          onClick={() => drawer.open(i.positionId)}
                         >
                           {i.pair} #{i.tokenId}
-                        </Link>{" "}
+                        </button>{" "}
                         <span className="text-slate-500">
                           {protocolLabels[i.protocol]}
                         </span>

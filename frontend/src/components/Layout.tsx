@@ -6,29 +6,46 @@ import {
   useSyncStatus,
   useTriggerSync,
 } from "../api/client";
+import { PositionDrawer } from "./PositionDrawer";
 import { SetupScreen } from "./SetupScreen";
 import { UpdatedAgo } from "./UpdatedAgo";
 import { SyncErrorList } from "./ui";
 import { ProgressBar, SyncProgressDetails, describeSync } from "./SyncProgress";
 import { shortAddress } from "../lib/format";
 import { useOwner } from "../lib/owner";
+import { setTheme, useTheme } from "../lib/theme";
 import { setBalancesHidden, useHideBalances } from "../lib/privacy";
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
-  `px-3 py-1.5 rounded-md text-sm ${isActive ? "bg-slate-800 text-white" : "text-slate-400 hover:text-white"}`;
+  `whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ${isActive ? "bg-slate-800 text-slate-50 shadow-[inset_0_-2px_0_var(--color-sky-400)]" : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-50"}`;
 
 export function Layout() {
   return (
     <div className="min-h-screen">
-      <header className="border-b border-slate-800 bg-slate-900/60">
+      <header className="sticky top-0 z-20 border-b border-slate-800 bg-slate-900">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-4 px-4 py-3">
-          <span className="font-semibold tracking-tight">LP Dashboard</span>
-          <nav className="flex gap-1">
+          <span className="flex items-center gap-2 text-lg font-bold tracking-tight">
+            <i className="inline-block h-5 w-5 rounded-[50%_50%_50%_4px] bg-sky-400" />
+            LP Dashboard
+          </span>
+          <nav
+            aria-label="Sections"
+            className="order-last flex w-full gap-1 overflow-x-auto md:order-none md:w-auto"
+          >
             <NavLink to="/" end className={navClass}>
-              Portfolio
+              Overview
+            </NavLink>
+            <NavLink to="/positions" className={navClass}>
+              Positions
+            </NavLink>
+            <NavLink to="/pnl" className={navClass}>
+              Profit &amp; loss
+            </NavLink>
+            <NavLink to="/activity" className={navClass}>
+              Activity
             </NavLink>
             <NavLink to="/fees" className={navClass}>
-              Fee claims
+              Earnings
             </NavLink>
             <NavLink to="/addresses" className={navClass}>
               Addresses
@@ -37,6 +54,7 @@ export function Layout() {
           <div className="ml-auto flex items-center gap-3">
             <OwnerSelect />
             <HideBalancesToggle />
+            <ThemeToggle />
             <SyncIndicator />
           </div>
         </div>
@@ -44,6 +62,7 @@ export function Layout() {
       <main className="mx-auto max-w-7xl px-4 py-6">
         <Content />
       </main>
+      <PositionDrawer />
     </div>
   );
 }
@@ -56,6 +75,21 @@ function Content() {
 
   if (needsSetup && pathname !== "/addresses") return <SetupScreen />;
   return <Outlet />;
+}
+
+function ThemeToggle() {
+  const theme = useTheme();
+  const next = theme === "dark" ? "light" : "dark";
+  return (
+    <button
+      className="rounded-md border border-slate-700 px-2 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
+      title={`Switch to ${next} theme`}
+      aria-label={`Switch to ${next} theme`}
+      onClick={() => setTheme(next)}
+    >
+      {theme === "dark" ? "Light" : "Dark"}
+    </button>
+  );
 }
 
 function HideBalancesToggle() {
@@ -198,7 +232,7 @@ function SyncIndicator() {
                   : "Sync"}
             </span>
             <button
-              className="px-1 text-base leading-none text-slate-400 hover:text-white"
+              className="px-1 text-base leading-none text-slate-400 hover:text-slate-50"
               aria-label="Close"
               onClick={() => setOpen(false)}
             >
