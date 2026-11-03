@@ -14,6 +14,7 @@ public static class DependencyInjection
         services.AddScoped<SyncService>();
         services.AddScoped<PriceService>();
         services.AddScoped<PositionQueryService>();
+        services.AddScoped<Export.ExportService>();
         return services;
     }
 }

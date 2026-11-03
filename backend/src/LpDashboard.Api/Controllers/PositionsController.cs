@@ -59,6 +59,17 @@ public sealed class PositionsController(PositionQueryService queries) : Controll
         return Ok(await queries.GetSummaryAsync(new PositionFilter(owners, status, protocol, chain), ct));
     }
 
+    [HttpGet("portfolio/history")]
+    [ProducesResponseType<IReadOnlyList<PortfolioHistoryPointDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> PortfolioHistory(
+        [FromQuery] string? owner, [FromQuery] DateTime? from, [FromQuery] DateTime? to, CancellationToken ct)
+    {
+        if (!TryOwner(owner, out var normalized)) return InvalidOwner();
+        var owners = await queries.ResolveOwnersAsync(normalized, ct);
+        return Ok(await queries.GetPortfolioHistoryAsync(new PositionFilter(owners), from?.ToUniversalTime(), to?.ToUniversalTime(), ct));
+    }
+
     [HttpGet("fees/claims")]
     [ProducesResponseType<IReadOnlyList<WeeklyClaimsDto>>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
