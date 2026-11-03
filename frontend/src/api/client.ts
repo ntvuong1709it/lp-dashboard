@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   DailyEarningsDto,
   HealthDto,
+  PortfolioHistoryPoint,
   SyncRequestBody,
   PortfolioSummaryDto,
   PositionDetailDto,
@@ -114,6 +115,21 @@ export const useSummary = (
         `/api/portfolio/summary${query({ owner, status })}`,
       ),
   });
+
+export const usePortfolioHistory = (owner: string | null) =>
+  useQuery({
+    queryKey: ["portfolio-history", owner],
+    queryFn: () =>
+      request<PortfolioHistoryPoint[]>(
+        `/api/portfolio/history${query({ owner })}`,
+      ),
+  });
+
+/** URL of a CSV download (served by the API); filters mirror what the page shows. */
+export const exportUrl = (
+  file: "positions" | "events" | "fee-claims" | "daily-earnings",
+  params: Record<string, string | undefined | null> = {},
+) => `/api/export/${file}.csv${query(params)}`;
 
 export const usePosition = (id: number) =>
   useQuery({

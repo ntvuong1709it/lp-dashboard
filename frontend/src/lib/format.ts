@@ -33,6 +33,19 @@ export function formatPercent(
   return `${sign}${value.toFixed(2)}%`;
 }
 
+/**
+ * A share of time: two decimals, but never "100.00%" unless it is exactly 100 (or "0.00%" unless exactly 0),
+ * so a position that was out of range for a short while does not look perfect.
+ */
+export function formatShare(value: number): string {
+  if (value >= 100) return "100.00%";
+  if (value <= 0) return "0.00%";
+  const text = value.toFixed(2);
+  if (text === "100.00") return "99.99%";
+  if (text === "0.00") return "0.01%";
+  return `${text}%`;
+}
+
 export function formatAmount(value: number | null | undefined): string {
   if (value == null) return "—";
   if (balancesHidden()) return maskedBalance;
@@ -58,6 +71,25 @@ export function formatAge(days: number | null | undefined): string {
   if (days < 1) return `${Math.max(1, Math.round(days * 24))}h`;
   if (days < 60) return `${Math.floor(days)}d ${Math.round((days % 1) * 24)}h`;
   return `${Math.floor(days)}d`;
+}
+
+/** "~" when part of a time-in-range figure is estimated rather than measured. */
+export const estimateMark = (t: { estimatedHours: number }) =>
+  t.estimatedHours > 0 ? "~" : "";
+
+/** Explains where a time-in-range figure comes from. */
+export const timeInRangeSource = (t: {
+  measuredHours: number;
+  estimatedHours: number;
+}) =>
+  t.estimatedHours > 0
+    ? `${formatHours(t.measuredHours)} measured from snapshots + ${formatHours(t.estimatedHours)} estimated from historical token prices`
+    : `${formatHours(t.measuredHours)} measured from snapshots`;
+
+/** "12h", "3.5d" for a duration given in hours. */
+export function formatHours(hours: number): string {
+  if (hours < 48) return `${Math.max(1, Math.round(hours))}h`;
+  return `${(hours / 24).toFixed(1)}d`;
 }
 
 export function formatDate(iso: string | null | undefined): string {

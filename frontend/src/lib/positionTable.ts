@@ -11,7 +11,8 @@ export type SortKey =
   | "pnl"
   | "il"
   | "vsHodl"
-  | "apr";
+  | "apr"
+  | "inRange";
 
 export interface SortState {
   key: SortKey;
@@ -34,6 +35,7 @@ const sortValue: Record<SortKey, (p: PositionDto) => number | string | null> = {
   il: (p) => p.metrics.impermanentLossUsd,
   vsHodl: (p) => p.metrics.pnlVsHodlUsd,
   apr: (p) => p.metrics.feeAprPercent,
+  inRange: (p) => p.timeInRange?.percent ?? null,
 };
 
 /** Rows with no value for the sort key always go last, regardless of direction. */

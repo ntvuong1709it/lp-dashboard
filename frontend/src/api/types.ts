@@ -64,6 +64,26 @@ export interface PositionMetrics {
   hasEstimatedPrices: boolean;
 }
 
+/**
+ * Measured from snapshots (the real pool tick); time without snapshots is estimated from the tick implied by
+ * historical token prices, so `estimatedHours > 0` means the percentage is partly an estimate.
+ */
+export interface TimeInRangeDto {
+  percent: number;
+  measuredHours: number;
+  estimatedHours: number;
+  /** measuredHours + estimatedHours */
+  trackedHours: number;
+  spanHours: number;
+}
+
+export interface PortfolioHistoryPoint {
+  timestamp: string;
+  valueUsd: number;
+  unclaimedUsd: number;
+  positionCount: number;
+}
+
 export interface PositionDto {
   id: number;
   chain: Chain;
@@ -93,6 +113,8 @@ export interface PositionDto {
   price1Usd: number | null;
   valuedAt: string | null;
   metrics: PositionMetrics;
+  /** Null until at least two snapshots exist for the position. */
+  timeInRange: TimeInRangeDto | null;
 }
 
 export interface PositionEventDto {

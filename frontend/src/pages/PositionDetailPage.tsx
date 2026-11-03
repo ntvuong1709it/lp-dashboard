@@ -39,15 +39,18 @@ import {
   formatAge,
   formatAmount,
   formatDate,
+  estimateMark,
   formatFee,
   formatPercent,
   formatPrice,
+  formatShare,
   formatUsd,
   invertRange,
   pnlClass,
   poolLinks,
   protocolLabels,
   shortAddress,
+  timeInRangeSource,
   txUrl,
 } from "../lib/format";
 import { useHideBalances } from "../lib/privacy";
@@ -58,7 +61,7 @@ export function PositionDetailPage() {
   const { data, error, isLoading } = usePosition(id);
 
   if (error) return <ErrorText error={error} />;
-  if (isLoading || !data) return <PageSkeleton cards={7} />;
+  if (isLoading || !data) return <PageSkeleton cards={8} />;
 
   const p = data.position;
   const m = p.metrics;
@@ -113,7 +116,7 @@ export function PositionDetailPage() {
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-8">
         <StatCard label="Value" value={formatUsd(m.currentValueUsd)} />
         <StatCard
           label="Fees earned"
@@ -146,6 +149,19 @@ export function PositionDetailPage() {
           hint={`opened ${formatDate(p.openedAt)}`}
         />
         <StatCard label="Gas" value={formatUsd(m.gasUsd)} />
+        <StatCard
+          label="Time in range"
+          value={
+            p.timeInRange
+              ? `${estimateMark(p.timeInRange)}${formatShare(p.timeInRange.percent)}`
+              : "n/a"
+          }
+          hint={
+            p.timeInRange
+              ? timeInRangeSource(p.timeInRange)
+              : "no snapshots or price history"
+          }
+        />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
