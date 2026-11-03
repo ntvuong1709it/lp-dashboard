@@ -103,3 +103,20 @@ backend/
   tests/LpDashboard.Domain.Tests/
 frontend/                          React 19, Vite, TanStack Query, Recharts, Tailwind
 ```
+
+## Deploying to Azure
+
+`deploy/azure.ps1` builds the Docker image in Azure Container Registry and runs it on App Service (Linux, B1, one instance). It needs the Azure CLI and your RPC URL in the environment:
+
+```powershell
+az login
+$env:BASE_RPC_URL = "https://base-mainnet.g.alchemy.com/v2/<key>"
+./deploy/azure.ps1 -Name lpdash-yourname
+```
+
+Things to know before exposing it:
+
+- **No authentication.** Anyone with the URL can use it and trigger syncs (RPC quota). Put App Service Authentication (Entra ID) in front, or restrict access by IP, unless you want it public; see "Wallets and privacy".
+- **SQLite on `/home`** (persistent, SMB-backed) with `DELETE` journaling. Keep the app at **one instance** (no scale-out); the background sync and the file are single-writer. For more than that, Postgres needs a migrations assembly first (not built).
+- `Backup:Enabled` is `false` there. Secrets (RPC URL, Telegram) are app settings, not in the image or repo.
+- Health probe: `/health`.
