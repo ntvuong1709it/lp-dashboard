@@ -21,6 +21,16 @@ public sealed class PositionsController(PositionQueryService queries) : Controll
         return Ok(await queries.ListAsync(new PositionFilter(owners, status, protocol, chain), ct));
     }
 
+    [HttpGet("events")]
+    [ProducesResponseType<IReadOnlyList<ActivityEventDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Events([FromQuery] string? owner, [FromQuery] int? limit, CancellationToken ct)
+    {
+        if (!TryOwner(owner, out var normalized)) return InvalidOwner();
+        var owners = await queries.ResolveOwnersAsync(normalized, ct);
+        return Ok(await queries.ListActivityAsync(new PositionFilter(owners), Math.Clamp(limit ?? 500, 1, 5000), ct));
+    }
+
     [HttpGet("positions/{id:int}")]
     [ProducesResponseType<PositionDetailDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

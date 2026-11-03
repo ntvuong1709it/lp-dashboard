@@ -73,6 +73,20 @@ public sealed class PositionQueryService(
         return new PositionDetailDto(dto, eventDtos);
     }
 
+    /// <summary>Events of the matching positions, newest first, capped at <paramref name="limit"/>.</summary>
+    public async Task<IReadOnlyList<ActivityEventDto>> ListActivityAsync(PositionFilter filter, int limit, CancellationToken ct) =>
+        (await positions.QueryAsync(filter, ct))
+            .SelectMany(p => p.Events.Select(e => (Position: p, Event: e)))
+            .OrderByDescending(x => x.Event.Timestamp)
+            .ThenByDescending(x => x.Event.BlockNumber)
+            .ThenByDescending(x => x.Event.LogIndex)
+            .Take(limit)
+            .Select(x => new ActivityEventDto(
+                x.Position.Id, x.Position.Chain, x.Position.Protocol, x.Position.TokenId,
+                $"{x.Position.Pool?.Token0?.Symbol ?? "?"}/{x.Position.Pool?.Token1?.Symbol ?? "?"}",
+                ToEventDto(x.Event)))
+            .ToList();
+
     public async Task<PortfolioSummaryDto> GetSummaryAsync(PositionFilter filter, CancellationToken ct)
     {
         var list = await ListAsync(filter, ct, withTimeInRange: false);

@@ -68,6 +68,15 @@ public sealed record PositionEventDto(
     decimal? ValueUsd,
     decimal? GasUsd);
 
+/// <summary>A position event with enough context to list it across positions.</summary>
+public sealed record ActivityEventDto(
+    int PositionId,
+    Chain Chain,
+    Protocol Protocol,
+    string TokenId,
+    string Pair,
+    PositionEventDto Event);
+
 public sealed record PositionDetailDto(PositionDto Position, IReadOnlyList<PositionEventDto> Events);
 
 public sealed record PortfolioSummaryDto(
