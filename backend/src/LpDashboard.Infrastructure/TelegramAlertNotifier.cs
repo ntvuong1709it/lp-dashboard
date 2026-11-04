@@ -27,7 +27,8 @@ public sealed class TelegramAlertNotifier(HttpClient http, IOptions<TelegramOpti
         try
         {
             using var response = await http.PostAsJsonAsync(
-                $"bot{options.Value.BotToken}/sendMessage",
+                // Leading slash: without it the token's "id:secret" colon makes the relative URI parse as a scheme.
+                $"/bot{options.Value.BotToken}/sendMessage",
                 new { chat_id = options.Value.ChatId, text = message, disable_web_page_preview = true },
                 ct);
             if (response.IsSuccessStatusCode) return null;
