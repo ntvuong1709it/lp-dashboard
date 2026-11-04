@@ -29,6 +29,10 @@ public sealed record PositionMetrics
     public decimal UncollectedFeesUsd { get; init; }
     public decimal ClaimedRewardsUsd { get; init; }
     public decimal PendingRewardsUsd { get; init; }
+    /// <summary>Reward tokens claimed so far, as an amount rather than dollars.</summary>
+    public decimal ClaimedRewardAmount { get; init; }
+    /// <summary>Current USD price of the reward token, when known.</summary>
+    public decimal? RewardPriceUsd { get; init; }
     public decimal FeesEarnedUsd { get; init; }
     public decimal CurrentValueUsd { get; init; }
     public decimal GasUsd { get; init; }
@@ -74,7 +78,7 @@ public static class PositionMetricsCalculator
         }
 
         decimal dep0 = 0, dep1 = 0, wd0 = 0, wd1 = 0, fee0 = 0, fee1 = 0;
-        decimal depositedUsd = 0, withdrawnUsd = 0, collectedUsd = 0, rewardsUsd = 0, gasUsd = 0;
+        decimal depositedUsd = 0, withdrawnUsd = 0, collectedUsd = 0, rewardsUsd = 0, gasUsd = 0, rewardAmount = 0;
         decimal capital = 0;
         double capitalDays = 0;
         DateTime? previous = null;
@@ -128,6 +132,7 @@ public static class PositionMetricsCalculator
                         estimated |= rewardPrice is not null;
                     }
                     rewardsUsd += Usd(e.RewardAmount, rewardPrice);
+                    rewardAmount += e.RewardAmount;
                     break;
             }
         }
@@ -175,6 +180,8 @@ public static class PositionMetricsCalculator
             UncollectedFeesUsd = uncollectedUsd,
             ClaimedRewardsUsd = rewardsUsd,
             PendingRewardsUsd = pendingUsd,
+            ClaimedRewardAmount = rewardAmount,
+            RewardPriceUsd = current?.RewardPriceUsd,
             FeesEarnedUsd = feesEarned,
             CurrentValueUsd = currentValue,
             GasUsd = gasUsd,

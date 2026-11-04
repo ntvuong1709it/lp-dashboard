@@ -16,7 +16,9 @@ public sealed record PoolStats(
     decimal? Volume1dUsd,
     decimal? Volume7dUsd,
     decimal? FeeApr1d,
-    decimal? RewardApr)
+    decimal? RewardApr,
+    /// <summary>Mean daily fee APR of the last 30 days at <see cref="FeePercent"/>; the list endpoint has no 30-day volume, so it is filled in from the pool's history.</summary>
+    decimal? FeeApr30d = null)
 {
     /// <summary>Fee in hundredths of a bip, the unit <c>Pool.Fee</c> uses (0.3% = 3000).</summary>
     public int? FeeHundredthsBip => FeePercent is { } f ? (int)Math.Round(f * 10000) : null;
@@ -27,6 +29,7 @@ public sealed record PoolStats(
         {
             FeePercent = feePercent,
             FeeApr1d = Volume1dUsd is { } v && TvlUsd > 0 ? v * feePercent / 100 * 365 / TvlUsd * 100 : FeeApr1d,
+            FeeApr30d = FeeApr30d is { } a && FeePercent is > 0 ? a * feePercent / FeePercent : FeeApr30d,
         };
 
     /// <summary>Average daily volume of the last 7 days.</summary>
@@ -42,4 +45,7 @@ public sealed record PoolStats(
 public interface IPoolStatsSource
 {
     Task<IReadOnlyList<PoolStats>> GetPoolsAsync(Chain chain, CancellationToken ct);
+
+    /// <summary>Mean daily fee APR of the pool over the last 30 days, at the fee the source lists; null when the history is missing or too short.</summary>
+    Task<decimal?> GetFeeApr30dAsync(string poolId, CancellationToken ct);
 }

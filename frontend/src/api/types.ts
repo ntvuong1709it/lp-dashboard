@@ -47,6 +47,8 @@ export interface PositionMetrics {
   uncollectedFeesUsd: number;
   claimedRewardsUsd: number;
   pendingRewardsUsd: number;
+  claimedRewardAmount: number;
+  rewardPriceUsd: number | null;
   feesEarnedUsd: number;
   currentValueUsd: number;
   gasUsd: number;

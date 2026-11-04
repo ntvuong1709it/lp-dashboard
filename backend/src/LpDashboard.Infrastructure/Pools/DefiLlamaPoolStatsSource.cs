@@ -51,6 +51,19 @@ internal sealed partial class DefiLlamaPoolStatsSource(HttpClient http) : IPoolS
         return result;
     }
 
+    public async Task<decimal?> GetFeeApr30dAsync(string poolId, CancellationToken ct)
+    {
+        using var response = await http.GetAsync($"chart/{Uri.EscapeDataString(poolId)}", ct);
+        if (!response.IsSuccessStatusCode) return null;
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+        if (!document.RootElement.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Array) return null;
+
+        // One point a day, oldest first.
+        var rates = data.EnumerateArray().Select(p => Num(p, "apyBase")).Where(r => r.HasValue).Select(r => r!.Value).TakeLast(30).ToList();
+        return rates.Count >= 10 ? rates.Average() : null;
+    }
+
     /// <summary>Uniswap: "0.3%". Slipstream: "CL100 - 0.3%" (tick spacing, then fee).</summary>
     internal static (decimal? FeePercent, int? TickSpacing) ParseMeta(string? meta)
     {

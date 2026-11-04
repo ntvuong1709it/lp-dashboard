@@ -99,6 +99,7 @@ public sealed class PoolExplorerService(
 
     private static readonly SemaphoreSlim FetchLock = new(1, 1);
     private static readonly ConcurrentDictionary<Chain, (IReadOnlyList<PoolStats> Pools, DateTimeOffset At)> StatsCache = new();
+    private static readonly ConcurrentDictionary<string, (decimal? Apr, DateTimeOffset At)> Apr30Cache = new();
     private static readonly ConcurrentDictionary<string, (IReadOnlyList<double> Prices, DateTimeOffset At)> SeriesCache = new();
 
     public async Task<PoolListDto> ListAsync(PoolQuery query, CancellationToken ct)
@@ -136,33 +137,31 @@ public sealed class PoolExplorerService(
         var capital = Math.Max(0, request.CapitalUsd);
 
         var pool = FindCached(poolId) ?? throw new EstimateException(EstimateFailure.PoolNotFound, "Pool not found. Reload the pool list and try again.");
+        pool = await WithFeeApr30dAsync(pool, ct);
         if (request.FeePercent is > 0 and <= 10) pool = pool.WithFee(request.FeePercent.Value);
-        var apr7 = pool.FeeApr7d;
-        var apr1 = pool.FeeApr1d;
-        if ((apr7 ?? apr1) is not { } basis)
+        if (Rates(pool) is not var (basis, rateLow, rateHigh, basisLabel))
             throw new EstimateException(EstimateFailure.NoVolumeData, "This pool has no volume data, so its fee APR cannot be estimated.");
 
-        var rates = new[] { apr7, apr1 }.Where(r => r.HasValue).Select(r => (double)r!.Value).ToArray();
         var series = await GetPriceSeriesAsync(pool, ct);
         var volatility = AprEstimator.AnnualisedVolatility(series);
-        var e = AprEstimator.Estimate((double)basis, rates.Min(), rates.Max(), halfWidth, volatility, days, capital, (double)pool.TvlUsd);
+        var e = AprEstimator.Estimate(basis, rateLow, rateHigh, halfWidth, volatility, days, capital, (double)pool.TvlUsd);
 
         var price = series[^1];
         var feeFraction = e.Apr / 100 * days / 365;
         var history = AprEstimator.Backtest(series, halfWidth);
 
         return new PoolEstimateDto(
-            pool.Id, apr7.HasValue ? "7d" : "24h", volatility, e.ReferenceHalfWidth * 100, e.Concentration, e.TimeInRange,
+            pool.Id, basisLabel, volatility, e.ReferenceHalfWidth * 100, e.Concentration, e.TimeInRange,
             e.Apr, e.AprLow, e.AprHigh, capital * e.Apr / 100 * days / 365, e.DepositShare * 100, pool.RewardApr,
             price, price * (1 - halfWidth), price * (1 + halfWidth), feeFraction * 100,
             AprEstimator.BreakEvenMove(halfWidth, feeFraction, up: false) * 100,
             AprEstimator.BreakEvenMove(halfWidth, feeFraction, up: true) * 100,
             new PoolHistoryDto(history.DaysInRange, history.Days, history.FirstExitDay, history.LowMove * 100, history.HighMove * 100),
-            Alternatives(pool, volatility, halfWidth, days, capital, request.KnownFees));
+            await AlternativesAsync(pool, volatility, halfWidth, days, capital, request.KnownFees, ct));
     }
 
     /// <summary>The same token pair in other pools, estimated at the same range; the pool being estimated is always included.</summary>
-    private static IReadOnlyList<PoolAlternativeDto> Alternatives(PoolStats selected, double volatility, double halfWidth, int days, double capital, IReadOnlyDictionary<string, decimal>? knownFees)
+    private async Task<IReadOnlyList<PoolAlternativeDto>> AlternativesAsync(PoolStats selected, double volatility, double halfWidth, int days, double capital, IReadOnlyDictionary<string, decimal>? knownFees, CancellationToken ct)
     {
         const decimal MinTvlUsd = 250_000;
         const int Max = 8;
@@ -170,21 +169,54 @@ public sealed class PoolExplorerService(
         if (!StatsCache.TryGetValue(selected.Chain, out var cached)) return [];
 
         var result = new List<PoolAlternativeDto>();
-        foreach (var listed in cached.Pools.Where(p => p.Id != selected.Id && PairKey(p) == pair && p.TvlUsd >= MinTvlUsd).Prepend(selected))
+        var others = cached.Pools.Where(p => p.Id != selected.Id && PairKey(p) == pair && p.TvlUsd >= MinTvlUsd).ToList();
+        var withHistory = await Task.WhenAll(others.Select(p => WithFeeApr30dAsync(p, ct)));
+        foreach (var listed in withHistory.Prepend(selected))
         {
             // A held pool's on-chain fee beats the source's (dynamic-fee pools), as in the pool list.
             var p = listed.Id != selected.Id && knownFees is not null && knownFees.TryGetValue(listed.Id, out var fee) && fee is > 0 and <= 10
                 ? listed.WithFee(fee)
                 : listed;
-            if ((p.FeeApr7d ?? p.FeeApr1d) is not { } basis) continue;
-            var rates = new[] { p.FeeApr7d, p.FeeApr1d }.Where(r => r.HasValue).Select(r => (double)r!.Value).ToArray();
-            var est = AprEstimator.Estimate((double)basis, rates.Min(), rates.Max(), halfWidth, volatility, days, capital, (double)p.TvlUsd);
+            if (Rates(p) is not var (basis, rateLow, rateHigh, _)) continue;
+            var est = AprEstimator.Estimate(basis, rateLow, rateHigh, halfWidth, volatility, days, capital, (double)p.TvlUsd);
             result.Add(new PoolAlternativeDto(p.Id, p.Protocol, p.FeePercent, p.TickSpacing, p.TvlUsd, est.Apr, p.Id == selected.Id));
         }
 
         var top = result.OrderByDescending(a => a.Apr).Take(Max).ToList();
         if (top.All(a => !a.IsSelected) && result.FirstOrDefault(a => a.IsSelected) is { } self) top[^1] = self;
         return top.OrderByDescending(a => a.Apr).ToList();
+    }
+
+    /// <summary>The rate an estimate is based on (30-day mean when there is history, else 7-day, else 24h) and the lowest and highest of the rates known.</summary>
+    private static (double Basis, double Low, double High, string Label)? Rates(PoolStats p)
+    {
+        var all = new[] { p.FeeApr30d, p.FeeApr7d, p.FeeApr1d }.Where(r => r.HasValue).Select(r => (double)r!.Value).ToArray();
+        if (all.Length == 0) return null;
+        var label = p.FeeApr30d.HasValue ? "30d" : p.FeeApr7d.HasValue ? "7d" : "24h";
+        return ((double)(p.FeeApr30d ?? p.FeeApr7d ?? p.FeeApr1d)!.Value, all.Min(), all.Max(), label);
+    }
+
+    /// <summary>Fills in the 30-day fee APR from the pool's history (cached); without it the pool keeps its 7-day and 24h rates.</summary>
+    private async Task<PoolStats> WithFeeApr30dAsync(PoolStats pool, CancellationToken ct)
+    {
+        var now = time.GetUtcNow();
+        if (!Apr30Cache.TryGetValue(pool.Id, out var cached) || now - cached.At >= SeriesTtl)
+        {
+            decimal? apr = null;
+            try
+            {
+                apr = await source.GetFeeApr30dAsync(pool.Id, ct);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
+            {
+                logger.LogWarning(ex, "Could not load fee history for pool {PoolId}; using its 7-day and 24h rates", pool.Id);
+                if (cached.At == default) return pool;
+                apr = cached.Apr;
+            }
+            cached = (apr, now);
+            Apr30Cache[pool.Id] = cached;
+        }
+        return cached.Apr is { } a ? pool with { FeeApr30d = a } : pool;
     }
 
     private static string PairKey(PoolStats p)

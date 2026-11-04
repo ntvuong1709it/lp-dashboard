@@ -26,6 +26,7 @@ const compactUsd = new Intl.NumberFormat("en-US", {
   notation: "compact",
   maximumFractionDigits: 1,
 });
+const perDay = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fullUsd = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -83,17 +84,29 @@ function realisedByPool(positions: PositionDto[] | undefined) {
   return map;
 }
 
+/** What a staked position's gauge pays: reward tokens per day per dollar deposited, valued at today's token price. */
+interface Emissions {
+  symbol: string;
+  /** Reward tokens earned per day for each dollar deposited (claimed plus pending, over the position's age). */
+  tokensPerDayPerUsd: number;
+  priceUsd: number;
+  apr: number;
+}
+
 /**
- * Gauge emissions the first open staked position in each pool has earned so far (claimed plus pending AERO), as an APR on
- * its deposit. The pool source has no emission rate for most pools, so the rate you actually got is the best figure there is.
+ * The first open staked position in each pool. The pool source has no emission rate for most pools, so the rate this
+ * position actually earned, in tokens, is the best figure there is. Tokens, not dollars, so it can be valued at today's price.
  */
 function emissionsByPool(positions: PositionDto[] | undefined) {
-  const map = new Map<string, number>();
+  const map = new Map<string, Emissions>();
   for (const p of positions ?? []) {
     const m = p.metrics;
-    if (!p.isStaked || !p.token0 || !p.token1 || !m.ageDays || m.ageDays < 1 || m.depositedUsd <= 0) continue;
+    const price = m.rewardPriceUsd;
+    if (!p.isStaked || !p.token0 || !p.token1 || !m.ageDays || m.ageDays < 1 || m.depositedUsd <= 0 || !price) continue;
     const key = matchKey(p.protocol, p.token0.address, p.token1.address, p.fee, p.tickSpacing);
-    if (!map.has(key)) map.set(key, ((m.claimedRewardsUsd + m.pendingRewardsUsd) / m.depositedUsd / m.ageDays) * 365 * 100);
+    if (map.has(key)) continue;
+    const tokensPerDayPerUsd = (m.claimedRewardAmount + p.pendingReward) / m.ageDays / m.depositedUsd;
+    map.set(key, { symbol: p.rewardTokenSymbol ?? "AERO", tokensPerDayPerUsd, priceUsd: price, apr: tokensPerDayPerUsd * price * 365 * 100 });
   }
   return map;
 }
@@ -358,7 +371,7 @@ export function PoolsPage() {
               key={selected.id}
               pool={selected}
               initialWidth={carried?.id === selected.id ? carried.width : undefined}
-              myEmissionsApr={emissions.get(poolKey(selected)) ?? null}
+              myEmissions={emissions.get(poolKey(selected)) ?? null}
               knownFees={Object.fromEntries(
                 data.pools.filter((p) => p.held && p.feePercent != null).map((p) => [p.id, p.feePercent as number]),
               )}
@@ -478,10 +491,10 @@ function Estimator({
   onSelectPool,
   initialWidth,
   knownFees,
-  myEmissionsApr,
+  myEmissions,
 }: {
   knownFees: Record<string, number>;
-  myEmissionsApr: number | null;
+  myEmissions: Emissions | null;
   pool: PoolDto;
   onClose: () => void;
   onSelectPool: (id: string, width?: number, pool?: PoolDto) => void;
@@ -594,34 +607,52 @@ function Estimator({
                   />
                 </div>
                 <div className="num text-xs text-slate-500">
-                  24h to 7d rates: {apr(data.aprLow)} to {apr(data.aprHigh)}
+                  Range across 24h, 7d and 30d rates: {apr(data.aprLow)} to {apr(data.aprHigh)}
                 </div>
               </div>
-              <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-sm">
-                <dt className="text-slate-400">
-                  Fees on {fullUsd.format(cap)} over {days} days
-                </dt>
-                <dd className="num text-right">{fullUsd.format(data.feesUsd)}</dd>
-                {data.rewardApr ? (
+              {(() => {
+                const emissionsApr = data.rewardApr || myEmissions?.apr;
+                const own = data.rewardApr ? null : myEmissions;
+                const emissionsUsd = emissionsApr ? (cap * emissionsApr * days) / 36500 : null;
+                const tokensTotal = own ? cap * own.tokensPerDayPerUsd * days : null;
+                return (
                   <>
-                    <dt className="text-slate-400">Gauge emissions if staked</dt>
-                    <dd className="num text-right">+ {apr(data.rewardApr)}</dd>
+                    <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-sm">
+                      <dt className="text-slate-400">
+                        {emissionsApr ? "Not staked: swap fees" : "Swap fees"} on {fullUsd.format(cap)} over {days} days
+                      </dt>
+                      <dd className="num text-right">
+                        {fullUsd.format(data.feesUsd)}
+                        <span className="block text-xs text-slate-500">{perDay.format(data.feesUsd / days)} / day</span>
+                      </dd>
+                      {emissionsApr && emissionsUsd != null ? (
+                        <>
+                          <dt className="text-slate-400">
+                            Staked: {own?.symbol ?? "AERO"} emissions, {apr(emissionsApr)} over {days} days
+                            {own && tokensTotal != null && (
+                              <span className="block text-xs text-slate-500">
+                                about {tokensTotal.toFixed(1)} {own.symbol} at today's ${own.priceUsd.toFixed(3)}
+                              </span>
+                            )}
+                          </dt>
+                          <dd className="num text-right">
+                            {fullUsd.format(emissionsUsd)}
+                            <span className="block text-xs text-slate-500">{perDay.format(emissionsUsd / days)} / day</span>
+                          </dd>
+                        </>
+                      ) : null}
+                    </dl>
+                    {emissionsApr ? (
+                      <p className="text-xs text-slate-500">
+                        Pick one: a staked position earns AERO and its swap fees go to the gauge, while an unstaked one keeps the swap fees and earns no AERO.
+                        {data.rewardApr
+                          ? " The emission rate is the pool's published one."
+                          : ` The token amount is what your position has earned so far per dollar deposited, valued at today's price, so the dollars move with the ${own?.symbol ?? "AERO"} price. It is not a forecast: the gauge's share of emissions changes every week.`}
+                      </p>
+                    ) : null}
                   </>
-                ) : myEmissionsApr != null ? (
-                  <>
-                    <dt className="text-slate-400">Gauge emissions at your current rate</dt>
-                    <dd className="num text-right">+ {apr(myEmissionsApr)}</dd>
-                    <dt className="text-slate-400">Fees plus emissions</dt>
-                    <dd className="num text-right font-medium text-slate-50">{apr(data.apr + myEmissionsApr)}</dd>
-                  </>
-                ) : null}
-              </dl>
-              {!data.rewardApr && myEmissionsApr != null && (
-                <p className="text-xs text-slate-500">
-                  Staked in a gauge, your position earns AERO instead of swap fees. The rate is what yours has earned so far per dollar deposited,
-                  not a forecast; it moves with the AERO price and the gauge&apos;s share of emissions.
-                </p>
-              )}
+                );
+              })()}
 
               <Section title="Your range in prices">
                 <div className="num text-sm">
