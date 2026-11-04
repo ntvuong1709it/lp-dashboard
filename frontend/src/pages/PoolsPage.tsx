@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { usePoolEstimate, usePools, usePositions } from "../api/client";
@@ -35,6 +36,14 @@ const usd = (v: number | null | undefined) => (v == null ? "—" : compactUsd.fo
 const apr = (v: number | null | undefined) =>
   v == null ? "—" : `${v >= 1000 ? v.toFixed(0) : v.toFixed(1)}%`;
 const feeLabel = (f: number | null) => (f == null ? "—" : `${Number(f.toFixed(4))}%`);
+const priceLabel = (v: number) =>
+  v >= 1000
+    ? v.toLocaleString("en-US", { maximumFractionDigits: 0 })
+    : v >= 1
+      ? v.toFixed(2)
+      : v >= 0.01
+        ? v.toFixed(4)
+        : v.toPrecision(3);
 const poolRate = (p: PoolDto) => p.feeApr7d ?? p.feeApr1d;
 
 const MIN_TVL_OPTIONS = [
@@ -74,6 +83,21 @@ function realisedByPool(positions: PositionDto[] | undefined) {
   return map;
 }
 
+/**
+ * Gauge emissions the first open staked position in each pool has earned so far (claimed plus pending AERO), as an APR on
+ * its deposit. The pool source has no emission rate for most pools, so the rate you actually got is the best figure there is.
+ */
+function emissionsByPool(positions: PositionDto[] | undefined) {
+  const map = new Map<string, number>();
+  for (const p of positions ?? []) {
+    const m = p.metrics;
+    if (!p.isStaked || !p.token0 || !p.token1 || !m.ageDays || m.ageDays < 1 || m.depositedUsd <= 0) continue;
+    const key = matchKey(p.protocol, p.token0.address, p.token1.address, p.fee, p.tickSpacing);
+    if (!map.has(key)) map.set(key, ((m.claimedRewardsUsd + m.pendingRewardsUsd) / m.depositedUsd / m.ageDays) * 365 * 100);
+  }
+  return map;
+}
+
 function sortValue(p: PoolDto, key: SortKey): string | number {
   if (key === "symbol") return `${p.symbol} ${p.protocol}`;
   // Pools with no 7-day volume rank by their 24h rate instead of sinking to the bottom.
@@ -88,6 +112,7 @@ export function PoolsPage() {
   const [params, setParams] = useSearchParams();
   const positions = usePositions(owner, "Open");
   const realised = useMemo(() => realisedByPool(positions.data), [positions.data]);
+  const emissions = useMemo(() => emissionsByPool(positions.data), [positions.data]);
 
   const [query, setQuery] = useState("");
   const [protocol, setProtocol] = useState<Protocol | null>(null);
@@ -95,6 +120,7 @@ export function PoolsPage() {
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "feeApr7d", dir: -1 });
   const [show, setShow] = useState(PAGE_SIZE);
   const [sheetOpen, setSheetOpen] = useState(true);
+  const [carried, setCarried] = useState<{ id: string; width: number; pool?: PoolDto } | null>(null);
 
   const feeTiers = useMemo(
     () => [...new Set((data?.pools ?? []).map((p) => p.feePercent).filter((f): f is number => f != null))].sort((a, b) => a - b),
@@ -124,8 +150,15 @@ export function PoolsPage() {
 
   const yours = data.pools.filter((p) => p.held);
   const selectedParam = params.get("pool");
-  const selected = data.pools.find((p) => p.id === selectedParam) ?? rows[0] ?? null;
-  const select = (id: string) => {
+  const selected =
+    data.pools.find((p) => p.id === selectedParam) ??
+    (carried?.pool && carried.id === selectedParam ? carried.pool : null) ??
+    rows[0] ??
+    null;
+  const select = (id: string, width?: number, pool?: PoolDto) => {
+    // Picking an alternative from the estimator keeps the range being compared; picking a row starts from that pool's own.
+    // The alternative may be under the table's TVL filter, so its stub is kept to open it anyway.
+    setCarried(width == null ? null : { id, width, pool });
     setParams({ pool: id }, { replace: true });
     setSheetOpen(true);
   };
@@ -321,7 +354,15 @@ export function PoolsPage() {
           className={`lg:sticky lg:top-20 max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-30 max-lg:max-h-[55vh] max-lg:overflow-auto max-lg:rounded-t-xl max-lg:shadow-[0_-8px_24px_rgba(0,0,0,.45)] ${selected && sheetOpen ? "" : "max-lg:hidden"}`}
         >
           {selected ? (
-            <Estimator key={selected.id} pool={selected} onClose={() => setSheetOpen(false)} />
+            <Estimator
+              key={selected.id}
+              pool={selected}
+              initialWidth={carried?.id === selected.id ? carried.width : undefined}
+              myEmissionsApr={emissions.get(poolKey(selected)) ?? null}
+              knownFees={Object.fromEntries(
+                data.pools.filter((p) => p.held && p.feePercent != null).map((p) => [p.id, p.feePercent as number]),
+              )}
+              onClose={() => setSheetOpen(false)} onSelectPool={select} />
           ) : (
             <Empty>Select a pool to estimate the fee APR of a price range.</Empty>
           )}
@@ -431,15 +472,30 @@ function useDebounced<T>(value: T, ms = 250): T {
   return debounced;
 }
 
-function Estimator({ pool, onClose }: { pool: PoolDto; onClose: () => void }) {
+function Estimator({
+  pool,
+  onClose,
+  onSelectPool,
+  initialWidth,
+  knownFees,
+  myEmissionsApr,
+}: {
+  knownFees: Record<string, number>;
+  myEmissionsApr: number | null;
+  pool: PoolDto;
+  onClose: () => void;
+  onSelectPool: (id: string, width?: number, pool?: PoolDto) => void;
+  initialWidth?: number;
+}) {
+  const [base, quote] = pool.symbol.split("-");
   const mine = pool.myHalfWidthPercent == null ? null : Math.round(pool.myHalfWidthPercent * 10) / 10;
-  const [width, setWidth] = useState(mine ?? 10);
+  const [width, setWidth] = useState(initialWidth ?? mine ?? 10);
   const [capital, setCapital] = useState(DEFAULT_CAPITAL);
   const [days, setDays] = useState(30);
   const dWidth = useDebounced(width);
   const dCapital = useDebounced(capital);
   const cap = Math.max(100, dCapital || 0);
-  const { data, error, isFetching } = usePoolEstimate(pool.id, dWidth, cap, days, pool.feePercent);
+  const { data, error, isFetching } = usePoolEstimate(pool.id, dWidth, cap, days, pool.feePercent, knownFees);
   const scaleMax = data ? Math.max(data.aprHigh * 1.15, 1) : 1;
   const presets = [2, 5, 10, 25, 50];
 
@@ -546,35 +602,141 @@ function Estimator({ pool, onClose }: { pool: PoolDto; onClose: () => void }) {
                   Fees on {fullUsd.format(cap)} over {days} days
                 </dt>
                 <dd className="num text-right">{fullUsd.format(data.feesUsd)}</dd>
-                <dt className="text-slate-400">Concentration vs full range</dt>
-                <dd className="num text-right">× {data.concentration.toFixed(1)}</dd>
-                <dt className="text-slate-400">Expected time in range</dt>
-                <dd className="num text-right">{(data.timeInRange * 100).toFixed(0)}%</dd>
-                <dt className="text-slate-400">Price volatility (30d)</dt>
-                <dd className="num text-right">{(data.volatility * 100).toFixed(0)}%</dd>
-                <dt className="text-slate-400">Typical LP range assumed</dt>
-                <dd className="num text-right">±{data.referenceHalfWidthPercent.toFixed(1)}%</dd>
                 {data.rewardApr ? (
                   <>
                     <dt className="text-slate-400">Gauge emissions if staked</dt>
                     <dd className="num text-right">+ {apr(data.rewardApr)}</dd>
                   </>
+                ) : myEmissionsApr != null ? (
+                  <>
+                    <dt className="text-slate-400">Gauge emissions at your current rate</dt>
+                    <dd className="num text-right">+ {apr(myEmissionsApr)}</dd>
+                    <dt className="text-slate-400">Fees plus emissions</dt>
+                    <dd className="num text-right font-medium text-slate-50">{apr(data.apr + myEmissionsApr)}</dd>
+                  </>
                 ) : null}
               </dl>
+              {!data.rewardApr && myEmissionsApr != null && (
+                <p className="text-xs text-slate-500">
+                  Staked in a gauge, your position earns AERO instead of swap fees. The rate is what yours has earned so far per dollar deposited,
+                  not a forecast; it moves with the AERO price and the gauge&apos;s share of emissions.
+                </p>
+              )}
+
+              <Section title="Your range in prices">
+                <div className="num text-sm">
+                  {priceLabel(data.priceLower)} to {priceLabel(data.priceUpper)}
+                </div>
+                <p className="text-xs text-slate-500">
+                  {quote} per {base}. Now {priceLabel(data.priceCurrent)}, so the edges are {width}% either side.
+                </p>
+              </Section>
+
+              <Section title="What fees cover">
+                <p className="text-sm">
+                  {days} days of fees is about {data.feesPercentOfCapital.toFixed(1)}% of your capital. They cover a
+                  price {" "}
+                  <b className="font-medium">
+                    {data.breakEvenDownPercent == null ? "fall of any size" : `fall of about ${data.breakEvenDownPercent.toFixed(1)}%`}
+                  </b>{" "}
+                  or{" "}
+                  <b className="font-medium">
+                    {data.breakEvenUpPercent == null ? "rise of any size" : `rise of about ${data.breakEvenUpPercent.toFixed(1)}%`}
+                  </b>{" "}
+                  before impermanent loss cancels them.
+                </p>
+              </Section>
+
+              <Section title={`Last ${data.history.days} days`}>
+                <p className="text-sm">
+                  Opened {data.history.days} days ago, this range would have been in range{" "}
+                  <b className="font-medium">
+                    {data.history.daysInRange} of {data.history.days} days
+                  </b>
+                  {data.history.firstExitDay == null
+                    ? " and never left it."
+                    : ` and first left it on day ${data.history.firstExitDay}.`}
+                </p>
+                <p className="text-xs text-slate-500">
+                  Price moved between {data.history.lowPercent.toFixed(1)}% and +{data.history.highPercent.toFixed(1)}% (daily
+                  closes, so brief moves are missed).
+                </p>
+              </Section>
+
+              {data.alternatives.length > 1 && (
+                <Section title={`${base}/${quote} in other pools, same range`}>
+                  <ul className="divide-y divide-slate-800 text-sm">
+                    {data.alternatives.map((a) => (
+                      <li key={a.id}>
+                        <button
+                          type="button"
+                          disabled={a.isSelected}
+                          onClick={() =>
+                            onSelectPool(a.id, width, {
+                              ...pool,
+                              id: a.id,
+                              protocol: a.protocol,
+                              feePercent: a.feePercent,
+                              tickSpacing: a.tickSpacing,
+                              tvlUsd: a.tvlUsd,
+                              volume1dUsd: null,
+                              volume7dAvgUsd: null,
+                              volumeToTvl: null,
+                              feeApr1d: null,
+                              feeApr7d: null,
+                              rewardApr: null,
+                              held: false,
+                              myHalfWidthPercent: null,
+                            })
+                          }
+                          className={`flex w-full items-center justify-between gap-3 py-1.5 text-left ${a.isSelected ? "font-semibold text-slate-50" : "text-slate-300 hover:text-sky-400"}`}
+                        >
+                          <span>
+                            {protocolLabels[a.protocol]} {feeLabel(a.feePercent)}
+                            <span className="ml-2 text-xs font-normal text-slate-500">{usd(a.tvlUsd)} TVL</span>
+                          </span>
+                          <span className="num">{apr(a.apr)}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </Section>
+              )}
+
               {data.depositSharePercent > 5 && (
                 <p className="text-xs text-amber-400">
                   About {data.depositSharePercent.toFixed(0)}% of the liquidity at this range: it would dilute its own
                   fees. Treat the estimate as high.
                 </p>
               )}
+
+              <details className="text-xs text-slate-500">
+                <summary className="cursor-pointer text-slate-400">How this is estimated</summary>
+                <p className="mt-1">
+                  The pool's {data.basis} fee APR is scaled by how much more liquidity per dollar your range gives than a
+                  typical LP's (concentration ×{data.concentration.toFixed(1)} versus full range), and by how long the price
+                  is expected to stay inside it ({(data.timeInRange * 100).toFixed(0)}% of the {days} days). A typical LP
+                  range is assumed to be ±{data.referenceHalfWidthPercent.toFixed(1)}%, taken from the pool's 30-day price
+                  volatility of {(data.volatility * 100).toFixed(0)}% a year.
+                </p>
+              </details>
             </>
           )}
         </div>
         <p className="text-xs text-slate-500">
-          Fees only. Based on recent volume and 30 days of price movement. Impermanent loss is not subtracted and past
-          volume is not a forecast.
+          The APR is fees only; the break-even above is how impermanent loss compares. Based on recent volume, so it is not
+          a forecast.
         </p>
       </div>
     </Panel>
+  );
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="space-y-1 border-t border-slate-800 pt-3">
+      <h3 className="text-xs font-medium uppercase tracking-[.05em] text-slate-400">{title}</h3>
+      {children}
+    </div>
   );
 }

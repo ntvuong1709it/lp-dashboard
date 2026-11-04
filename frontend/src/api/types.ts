@@ -332,4 +332,30 @@ export interface PoolEstimateDto {
   feesUsd: number;
   depositSharePercent: number;
   rewardApr: number | null;
+  priceCurrent: number;
+  priceLower: number;
+  priceUpper: number;
+  feesPercentOfCapital: number;
+  breakEvenDownPercent: number | null;
+  breakEvenUpPercent: number | null;
+  history: PoolHistoryDto;
+  alternatives: PoolAlternativeDto[];
+}
+
+export interface PoolHistoryDto {
+  daysInRange: number;
+  days: number;
+  firstExitDay: number | null;
+  lowPercent: number;
+  highPercent: number;
+}
+
+export interface PoolAlternativeDto {
+  id: string;
+  protocol: Protocol;
+  feePercent: number | null;
+  tickSpacing: number | null;
+  tvlUsd: number;
+  apr: number;
+  isSelected: boolean;
 }

@@ -61,6 +61,72 @@ public class AprEstimatorTests
         Assert.True(AprEstimator.HalfWidthFromTicks(-5000, 5000) > AprEstimator.HalfWidthFromTicks(-500, 500));
 
     [Fact]
+    public void ImpermanentLoss_NoMove_IsZero() =>
+        Assert.Equal(0, AprEstimator.ImpermanentLoss(0.1, 0), 10);
+
+    [Fact]
+    public void ImpermanentLoss_GrowsWithMove_AndWithNarrowerRange()
+    {
+        Assert.True(AprEstimator.ImpermanentLoss(0.1, 0.05) > AprEstimator.ImpermanentLoss(0.1, 0.02));
+        Assert.True(AprEstimator.ImpermanentLoss(0.05, 0.04) > AprEstimator.ImpermanentLoss(0.5, 0.04));
+    }
+
+    [Fact]
+    public void ImpermanentLoss_FullyOutOfRange_Saturates_OnTheWayUp()
+    {
+        // Above the range the position is all token1 and the loss against holding keeps growing with the price.
+        Assert.True(AprEstimator.ImpermanentLoss(0.1, 0.5) > AprEstimator.ImpermanentLoss(0.1, 0.2));
+    }
+
+    [Fact]
+    public void ImpermanentLoss_SmallMove_IsConstantProductLossTimesConcentration()
+    {
+        // Full-range (v2) loss for a +5% move is 1 - 2*sqrt(1.05)/2.05 = 0.0297%; a concentrated range multiplies it by about C.
+        var v2 = 1 - 2 * Math.Sqrt(1.05) / 2.05;
+        Assert.Equal(v2 * AprEstimator.Concentration(0.1), AprEstimator.ImpermanentLoss(0.1, 0.05), 3);
+    }
+
+    [Fact]
+    public void BreakEven_MoreFees_AllowsABiggerMove()
+    {
+        var small = AprEstimator.BreakEvenMove(0.1, 0.005, up: false)!.Value;
+        var large = AprEstimator.BreakEvenMove(0.1, 0.02, up: false)!.Value;
+        Assert.True(large > small);
+    }
+
+    [Fact]
+    public void BreakEven_LossEqualsFeesAtTheReturnedMove()
+    {
+        var m = AprEstimator.BreakEvenMove(0.1, 0.01, up: true)!.Value;
+        Assert.Equal(0.01, AprEstimator.ImpermanentLoss(0.1, m), 4);
+    }
+
+    [Fact]
+    public void BreakEven_NoFees_IsZero() =>
+        Assert.Equal(0, AprEstimator.BreakEvenMove(0.1, 0, up: true));
+
+    [Fact]
+    public void Backtest_PriceStaysInside_NeverExits()
+    {
+        var h = AprEstimator.Backtest([100, 101, 99, 102, 98], 0.05);
+        Assert.Equal(4, h.DaysInRange);
+        Assert.Equal(4, h.Days);
+        Assert.Null(h.FirstExitDay);
+        Assert.Equal(0.02, h.HighMove, 10);
+        Assert.Equal(-0.02, h.LowMove, 10);
+    }
+
+    [Fact]
+    public void Backtest_CountsDaysOutsideAndFirstExit()
+    {
+        // +/-5% around 100 is 95..105: days 3 and 4 close outside.
+        var h = AprEstimator.Backtest([100, 102, 110, 111, 103], 0.05);
+        Assert.Equal(2, h.DaysInRange);
+        Assert.Equal(4, h.Days);
+        Assert.Equal(2, h.FirstExitDay);
+    }
+
+    [Fact]
     public void Volatility_ConstantGrowth_IsZero() =>
         Assert.Equal(0, AprEstimator.AnnualisedVolatility([100, 101, 102.01, 103.0301, 104.060401]), 10);
 

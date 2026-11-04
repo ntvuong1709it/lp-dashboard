@@ -10,6 +10,12 @@ public sealed record AprEstimate(
     double AprHigh,
     double DepositShare);
 
+/// <param name="DaysInRange">Days whose closing price was inside the range.</param>
+/// <param name="FirstExitDay">1-based day of the first close outside the range; null if it never left.</param>
+/// <param name="LowMove">Lowest close as a fraction of the starting price, minus 1 (never above 0).</param>
+/// <param name="HighMove">Highest close as a fraction of the starting price, minus 1 (never below 0).</param>
+public sealed record PoolHistory(int DaysInRange, int Days, int? FirstExitDay, double LowMove, double HighMove);
+
 /// <summary>
 /// Estimates the fee APR of a concentrated-liquidity range from pool-wide numbers.
 ///
@@ -102,6 +108,72 @@ public static class AprEstimator
         var scale = c * t / (cRef * tRef);
         var share = tvlUsd > 0 ? capitalUsd * c / (tvlUsd * cRef) : 0;
         return new AprEstimate(c, t, reference, scale, poolApr * scale, Math.Min(poolAprLow, poolApr) * scale, Math.Max(poolAprHigh, poolApr) * scale, share);
+    }
+
+    /// <summary>
+    /// Impermanent loss, as a fraction of the starting value, of a position opened at the centre of a range of
+    /// ±<paramref name="halfWidth"/> once the price has moved by <paramref name="move"/> (0.05 = up 5%, -0.05 = down 5%).
+    /// The loss is measured against simply holding the starting tokens and is never negative.
+    /// </summary>
+    public static double ImpermanentLoss(double halfWidth, double move)
+    {
+        var w = Math.Clamp(halfWidth, MinHalfWidth, MaxHalfWidth);
+        double pa = 1 - w, pb = 1 + w, sa = Math.Sqrt(pa), sb = Math.Sqrt(pb);
+        var p = Math.Max(1 + move, 1e-9);
+
+        var x0 = 1 - 1 / sb;
+        var y0 = 1 - sa;
+        var start = x0 + y0;
+
+        double x, y;
+        if (p <= pa) { x = 1 / sa - 1 / sb; y = 0; }
+        else if (p >= pb) { x = 0; y = sb - sa; }
+        else { x = 1 / Math.Sqrt(p) - 1 / sb; y = Math.Sqrt(p) - sa; }
+
+        var held = x0 * p + y0;
+        var value = x * p + y;
+        return Math.Max(0, (held - value) / start);
+    }
+
+    /// <summary>
+    /// The smallest price move in one direction at which impermanent loss reaches <paramref name="feeFraction"/> (the fees
+    /// earned as a fraction of capital), as a fraction; null when fees outweigh the loss however far the price goes.
+    /// </summary>
+    public static double? BreakEvenMove(double halfWidth, double feeFraction, bool up)
+    {
+        if (feeFraction <= 0) return 0;
+        double lo = 0, hi = up ? 5 : 0.99;
+        double Loss(double m) => ImpermanentLoss(halfWidth, up ? m : -m);
+        if (Loss(hi) < feeFraction) return null;
+
+        for (var i = 0; i < 60; i++)
+        {
+            var mid = (lo + hi) / 2;
+            if (Loss(mid) < feeFraction) lo = mid; else hi = mid;
+        }
+        return hi;
+    }
+
+    /// <summary>How a range of ±<paramref name="halfWidth"/> around the first price would have fared over a daily price series.</summary>
+    public static PoolHistory Backtest(IReadOnlyList<double> dailyPrices, double halfWidth)
+    {
+        var w = Math.Clamp(halfWidth, MinHalfWidth, MaxHalfWidth);
+        var start = dailyPrices[0];
+        double lower = start * (1 - w), upper = start * (1 + w);
+
+        int inRange = 0, days = 0;
+        int? firstExit = null;
+        double low = 0, high = 0;
+        for (var i = 1; i < dailyPrices.Count; i++)
+        {
+            var p = dailyPrices[i];
+            days++;
+            if (p >= lower && p <= upper) inRange++;
+            else firstExit ??= i;
+            low = Math.Min(low, p / start - 1);
+            high = Math.Max(high, p / start - 1);
+        }
+        return new PoolHistory(inRange, days, firstExit, low, high);
     }
 
     private static double NormalCdf(double x) => 0.5 * (1 + Erf(x / Math.Sqrt(2)));

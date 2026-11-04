@@ -40,7 +40,7 @@ public sealed record PoolQuery(
 /// Overrides the source's fee tier. The list already carries the on-chain fee for pools the owner holds, so the client
 /// sends it back here; the analytics source can list a different fee for pools with dynamic fees.
 /// </param>
-public sealed record EstimateRequest(double HalfWidthPercent, double CapitalUsd, int Days, decimal? FeePercent = null);
+public sealed record EstimateRequest(double HalfWidthPercent, double CapitalUsd, int Days, decimal? FeePercent = null, IReadOnlyDictionary<string, decimal>? KnownFees = null);
 
 /// <summary>What an owner's open position in a pool says about it: its range and the pool's on-chain fee.</summary>
 internal sealed record HeldInfo(double HalfWidthPercent, decimal? FeePercent);
@@ -57,7 +57,25 @@ public sealed record PoolEstimateDto(
     double AprHigh,
     double FeesUsd,
     double DepositSharePercent,
-    decimal? RewardApr);
+    decimal? RewardApr,
+    /// <summary>Price of token0 in token1 now, and the edges of the chosen range around it.</summary>
+    double PriceCurrent,
+    double PriceLower,
+    double PriceUpper,
+    /// <summary>Fees over the holding period as a percent of capital.</summary>
+    double FeesPercentOfCapital,
+    /// <summary>How far the price can fall (positive percent) before impermanent loss equals those fees; null when it never does.</summary>
+    double? BreakEvenDownPercent,
+    double? BreakEvenUpPercent,
+    PoolHistoryDto History,
+    IReadOnlyList<PoolAlternativeDto> Alternatives);
+
+/// <param name="FirstExitDay">1-based day of the first close outside the range, or null if the price never left it.</param>
+public sealed record PoolHistoryDto(int DaysInRange, int Days, int? FirstExitDay, double LowPercent, double HighPercent);
+
+/// <summary>Another pool for the same token pair, estimated at the same range and holding period.</summary>
+public sealed record PoolAlternativeDto(
+    string Id, Protocol Protocol, decimal? FeePercent, int? TickSpacing, decimal TvlUsd, double Apr, bool IsSelected);
 
 public enum EstimateFailure { PoolNotFound, NoPriceHistory, NoVolumeData }
 
@@ -75,13 +93,13 @@ public sealed class PoolExplorerService(
     ILogger<PoolExplorerService> logger)
 {
     private static readonly TimeSpan StatsTtl = TimeSpan.FromMinutes(15);
-    private static readonly TimeSpan VolatilityTtl = TimeSpan.FromHours(6);
+    private static readonly TimeSpan SeriesTtl = TimeSpan.FromHours(6);
     private const int VolatilityDays = 30;
     private const double MaxHorizonDays = 365;
 
     private static readonly SemaphoreSlim FetchLock = new(1, 1);
     private static readonly ConcurrentDictionary<Chain, (IReadOnlyList<PoolStats> Pools, DateTimeOffset At)> StatsCache = new();
-    private static readonly ConcurrentDictionary<string, (double Volatility, DateTimeOffset At)> VolatilityCache = new();
+    private static readonly ConcurrentDictionary<string, (IReadOnlyList<double> Prices, DateTimeOffset At)> SeriesCache = new();
 
     public async Task<PoolListDto> ListAsync(PoolQuery query, CancellationToken ct)
     {
@@ -125,12 +143,54 @@ public sealed class PoolExplorerService(
             throw new EstimateException(EstimateFailure.NoVolumeData, "This pool has no volume data, so its fee APR cannot be estimated.");
 
         var rates = new[] { apr7, apr1 }.Where(r => r.HasValue).Select(r => (double)r!.Value).ToArray();
-        var volatility = await GetVolatilityAsync(pool, ct);
+        var series = await GetPriceSeriesAsync(pool, ct);
+        var volatility = AprEstimator.AnnualisedVolatility(series);
         var e = AprEstimator.Estimate((double)basis, rates.Min(), rates.Max(), halfWidth, volatility, days, capital, (double)pool.TvlUsd);
+
+        var price = series[^1];
+        var feeFraction = e.Apr / 100 * days / 365;
+        var history = AprEstimator.Backtest(series, halfWidth);
 
         return new PoolEstimateDto(
             pool.Id, apr7.HasValue ? "7d" : "24h", volatility, e.ReferenceHalfWidth * 100, e.Concentration, e.TimeInRange,
-            e.Apr, e.AprLow, e.AprHigh, capital * e.Apr / 100 * days / 365, e.DepositShare * 100, pool.RewardApr);
+            e.Apr, e.AprLow, e.AprHigh, capital * e.Apr / 100 * days / 365, e.DepositShare * 100, pool.RewardApr,
+            price, price * (1 - halfWidth), price * (1 + halfWidth), feeFraction * 100,
+            AprEstimator.BreakEvenMove(halfWidth, feeFraction, up: false) * 100,
+            AprEstimator.BreakEvenMove(halfWidth, feeFraction, up: true) * 100,
+            new PoolHistoryDto(history.DaysInRange, history.Days, history.FirstExitDay, history.LowMove * 100, history.HighMove * 100),
+            Alternatives(pool, volatility, halfWidth, days, capital, request.KnownFees));
+    }
+
+    /// <summary>The same token pair in other pools, estimated at the same range; the pool being estimated is always included.</summary>
+    private static IReadOnlyList<PoolAlternativeDto> Alternatives(PoolStats selected, double volatility, double halfWidth, int days, double capital, IReadOnlyDictionary<string, decimal>? knownFees)
+    {
+        const decimal MinTvlUsd = 250_000;
+        const int Max = 8;
+        var pair = PairKey(selected);
+        if (!StatsCache.TryGetValue(selected.Chain, out var cached)) return [];
+
+        var result = new List<PoolAlternativeDto>();
+        foreach (var listed in cached.Pools.Where(p => p.Id != selected.Id && PairKey(p) == pair && p.TvlUsd >= MinTvlUsd).Prepend(selected))
+        {
+            // A held pool's on-chain fee beats the source's (dynamic-fee pools), as in the pool list.
+            var p = listed.Id != selected.Id && knownFees is not null && knownFees.TryGetValue(listed.Id, out var fee) && fee is > 0 and <= 10
+                ? listed.WithFee(fee)
+                : listed;
+            if ((p.FeeApr7d ?? p.FeeApr1d) is not { } basis) continue;
+            var rates = new[] { p.FeeApr7d, p.FeeApr1d }.Where(r => r.HasValue).Select(r => (double)r!.Value).ToArray();
+            var est = AprEstimator.Estimate((double)basis, rates.Min(), rates.Max(), halfWidth, volatility, days, capital, (double)p.TvlUsd);
+            result.Add(new PoolAlternativeDto(p.Id, p.Protocol, p.FeePercent, p.TickSpacing, p.TvlUsd, est.Apr, p.Id == selected.Id));
+        }
+
+        var top = result.OrderByDescending(a => a.Apr).Take(Max).ToList();
+        if (top.All(a => !a.IsSelected) && result.FirstOrDefault(a => a.IsSelected) is { } self) top[^1] = self;
+        return top.OrderByDescending(a => a.Apr).ToList();
+    }
+
+    private static string PairKey(PoolStats p)
+    {
+        var (lo, hi) = string.CompareOrdinal(p.Token0, p.Token1) <= 0 ? (p.Token0, p.Token1) : (p.Token1, p.Token0);
+        return $"{lo}|{hi}";
     }
 
     private static PoolDto ToDto(PoolStats p, double? myHalfWidthPercent) => new(
@@ -203,10 +263,14 @@ public sealed class PoolExplorerService(
         return $"{protocol}|{lo}|{hi}|{tier}";
     }
 
-    private async Task<double> GetVolatilityAsync(PoolStats pool, CancellationToken ct)
+    /// <summary>Daily price of token0 in token1 over the last 30 days, oldest first.</summary>
+    // Keyed by tokens, not pool, so every pool of a pair is measured on the same price history and volatility.
+    private static string SeriesKey(PoolStats p) => $"{p.Chain}:{p.Token0}:{p.Token1}";
+
+    private async Task<IReadOnlyList<double>> GetPriceSeriesAsync(PoolStats pool, CancellationToken ct)
     {
         var now = time.GetUtcNow();
-        if (VolatilityCache.TryGetValue(pool.Id, out var cached) && now - cached.At < VolatilityTtl) return cached.Volatility;
+        if (SeriesCache.TryGetValue(SeriesKey(pool), out var cached) && now - cached.At < SeriesTtl) return cached.Prices;
 
         var chainKey = pool.Chain.ToString().ToLowerInvariant();
         string[] keys = [$"{chainKey}:{pool.Token0}", $"{chainKey}:{pool.Token1}"];
@@ -224,8 +288,7 @@ public sealed class PoolExplorerService(
         if (ratios.Count < 10)
             throw new EstimateException(EstimateFailure.NoPriceHistory, "Too little price history for this pool's tokens to measure volatility.");
 
-        var volatility = AprEstimator.AnnualisedVolatility(ratios);
-        VolatilityCache[pool.Id] = (volatility, now);
-        return volatility;
+        SeriesCache[SeriesKey(pool)] = (ratios, now);
+        return ratios;
     }
 }

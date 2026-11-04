@@ -231,9 +231,11 @@ export const usePoolEstimate = (
   capitalUsd: number,
   days: number,
   feePercent: number | null,
+  /** On-chain fees of pools you hold, so the "other pools" list uses the same fee the table does (dynamic-fee pools differ from the source's). */
+  knownFees: Record<string, number> = {},
 ) =>
   useQuery({
-    queryKey: ["pool-estimate", poolId, halfWidthPercent, capitalUsd, days, feePercent],
+    queryKey: ["pool-estimate", poolId, halfWidthPercent, capitalUsd, days, feePercent, JSON.stringify(knownFees)],
     enabled: poolId != null,
     placeholderData: keepPreviousData,
     retry: false,
@@ -242,7 +244,7 @@ export const usePoolEstimate = (
         `/api/pools/${encodeURIComponent(poolId!)}/estimate`,
         {
           method: "POST",
-          body: JSON.stringify({ halfWidthPercent, capitalUsd, days, feePercent }),
+          body: JSON.stringify({ halfWidthPercent, capitalUsd, days, feePercent, knownFees }),
         },
       ),
   });
