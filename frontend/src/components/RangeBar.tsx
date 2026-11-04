@@ -26,7 +26,7 @@ export function RangeBar({
         : "bg-rose-500/70";
 
   return (
-    <div className="w-full min-w-32">
+    <div className={`w-full ${showLabels ? "min-w-48" : "min-w-32"}`}>
       <div className="relative h-2 rounded bg-slate-800">
         <div
           className={`absolute h-2 rounded ${color}`}
@@ -50,7 +50,7 @@ export function RangeBar({
         )}
       </div>
       {showLabels && (
-        <div className="mt-1 flex justify-between text-[11px] text-slate-400 num">
+        <div className="mt-1 flex justify-between gap-2 whitespace-nowrap text-[11px] text-slate-400 num">
           <span>{formatPrice(lower)}</span>
           <span className="text-slate-200">{formatPrice(current)}</span>
           <span>{formatPrice(upper)}</span>

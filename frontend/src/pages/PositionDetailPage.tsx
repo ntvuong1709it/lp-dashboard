@@ -27,6 +27,7 @@ import type {
 import { RangeBadge, RangeBar } from "../components/RangeBar";
 import { ResyncControls } from "../components/ResyncControls";
 import { UpdatedAgo } from "../components/UpdatedAgo";
+import { UnclaimedCard } from "../components/Unclaimed";
 import {
   CopyButton,
   Empty,
@@ -165,7 +166,7 @@ export function PositionDetailPage({
               valueClass={pnlClass(m.pnlUsd)}
             />
             <MiniStat
-              label="Unclaimed fees"
+              label="Unclaimed (fees + rewards)"
               value={formatUsd(m.uncollectedFeesUsd + m.pendingRewardsUsd)}
             />
             <MiniStat label="Fee APR" value={formatPercent(m.feeAprPercent)} />
@@ -191,7 +192,17 @@ export function PositionDetailPage({
           </Panel>
         </>
       ) : (
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-8">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <UnclaimedCard
+          fees={m.uncollectedFeesUsd}
+          rewards={m.pendingRewardsUsd}
+          note={
+            m.feesEarnedUsd > 0
+              ? `${(((m.uncollectedFeesUsd + m.pendingRewardsUsd) / m.feesEarnedUsd) * 100).toFixed(0)}% of fees earned`
+              : undefined
+          }
+          className="col-span-2 md:col-span-4"
+        />
         <StatCard label="Value" value={formatUsd(m.currentValueUsd)} />
         <StatCard
           label="Fees earned"

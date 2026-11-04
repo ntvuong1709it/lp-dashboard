@@ -11,6 +11,7 @@ import type {
 import { RangeBadge, RangeBar } from "../components/RangeBar";
 import { ExportMenu } from "../components/ExportMenu";
 import { UpdatedAgo } from "../components/UpdatedAgo";
+import { SplitBar } from "../components/Unclaimed";
 import {
   CopyButton,
   Empty,
@@ -217,7 +218,7 @@ function SortHeader({
       <button
         type="button"
         onClick={() => onSort(k)}
-        className={`uppercase hover:text-white ${active ? "text-white" : ""}`}
+        className={`uppercase hover:text-slate-50 ${active ? "text-slate-50" : ""}`}
       >
         {label}
         <span className="ml-1 inline-block w-2">
@@ -242,6 +243,12 @@ function PositionsTable({
   const drawer = usePositionDrawer();
   const sum = (pick: (m: PositionDto["metrics"]) => number) =>
     positions.reduce((total, p) => total + pick(p.metrics), 0);
+  const maxUnclaimed = Math.max(
+    0,
+    ...positions.map(
+      (p) => p.metrics.uncollectedFeesUsd + p.metrics.pendingRewardsUsd,
+    ),
+  );
 
   return (
     <div className="overflow-x-auto rounded-lg border border-slate-800">
@@ -252,10 +259,9 @@ function PositionsTable({
             <SortHeader label="Position" k="position" sort={sort} onSort={onSort} />
             <th className="px-3 py-2 w-64">Range</th>
             <SortHeader label="Age" k="age" sort={sort} onSort={onSort} />
-            <SortHeader label="Created" k="created" sort={sort} onSort={onSort} />
-            <SortHeader label="Withdrawn" k="closed" sort={sort} onSort={onSort} />
             <SortHeader label="Value" k="value" right sort={sort} onSort={onSort} />
             <SortHeader label="Fees" k="fees" right sort={sort} onSort={onSort} />
+            <SortHeader label="Unclaimed" k="unclaimed" right sort={sort} onSort={onSort} />
             <SortHeader label="P/L" k="pnl" right sort={sort} onSort={onSort} />
             <SortHeader label="IL" k="il" right sort={sort} onSort={onSort} />
             <SortHeader label="vs HODL" k="vsHodl" right sort={sort} onSort={onSort} />
@@ -323,22 +329,48 @@ function PositionsTable({
                     "—"
                   )}
                 </td>
-                <td className="px-3 py-2 num">{formatAge(m.ageDays)}</td>
-                <td className="px-3 py-2 num whitespace-nowrap text-slate-400">
-                  {formatDate(p.openedAt)}
-                </td>
-                <td className="px-3 py-2 num whitespace-nowrap text-slate-400">
-                  {formatDate(p.closedAt)}
+                <td
+                  className="cursor-help px-3 py-2 num"
+                  title={
+                    `Created ${formatDate(p.openedAt)}` +
+                    (p.closedAt ? `\nWithdrawn ${formatDate(p.closedAt)}` : "")
+                  }
+                >
+                  {formatAge(m.ageDays)}
                 </td>
                 <td className="px-3 py-2 text-right num">
                   {formatUsd(m.currentValueUsd)}
                 </td>
                 <td className="px-3 py-2 text-right num">
-                  <div>{formatUsd(m.feesEarnedUsd)}</div>
-                  <div className="text-xs text-slate-500">
-                    {formatUsd(m.uncollectedFeesUsd + m.pendingRewardsUsd)}{" "}
-                    unclaimed
-                  </div>
+                  {formatUsd(m.feesEarnedUsd)}
+                </td>
+                <td className="border-x border-sky-900 bg-sky-950/30 px-3 py-2 text-right num">
+                  {m.uncollectedFeesUsd + m.pendingRewardsUsd > 0 ? (
+                    <>
+                      <div className="font-semibold text-sky-400">
+                        {formatUsd(m.uncollectedFeesUsd + m.pendingRewardsUsd)}
+                      </div>
+                      <div className="ml-auto mt-1 w-24">
+                        <SplitBar
+                          fees={m.uncollectedFeesUsd}
+                          rewards={m.pendingRewardsUsd}
+                          fraction={
+                            maxUnclaimed > 0
+                              ? (m.uncollectedFeesUsd + m.pendingRewardsUsd) /
+                                maxUnclaimed
+                              : 0
+                          }
+                          className="h-1.5"
+                        />
+                      </div>
+                      <div className="mt-0.5 text-[11px] text-slate-400">
+                        {formatUsd(m.uncollectedFeesUsd)} fees ·{" "}
+                        {formatUsd(m.pendingRewardsUsd)} rewards
+                      </div>
+                    </>
+                  ) : (
+                    <span className="text-slate-500">—</span>
+                  )}
                 </td>
                 <td
                   className={`px-3 py-2 text-right num ${pnlClass(m.pnlUsd)}`}
@@ -406,7 +438,7 @@ function PositionsTable({
         </tbody>
         <tfoot className="border-t border-slate-700 bg-slate-900 font-medium">
           <tr>
-            <td colSpan={6} className="px-3 py-2 text-slate-400">
+            <td colSpan={4} className="px-3 py-2 text-slate-400">
               Total · {positions.length}{" "}
               {positions.length === 1 ? "position" : "positions"}
             </td>
@@ -414,12 +446,17 @@ function PositionsTable({
               {formatUsd(sum((m) => m.currentValueUsd))}
             </td>
             <td className="px-3 py-2 text-right num">
-              <div>{formatUsd(sum((m) => m.feesEarnedUsd))}</div>
-              <div className="text-xs font-normal text-slate-500">
+              {formatUsd(sum((m) => m.feesEarnedUsd))}
+            </td>
+            <td className="border-x border-sky-900 bg-sky-950/30 px-3 py-2 text-right num">
+              <div className="font-semibold text-sky-400">
                 {formatUsd(
                   sum((m) => m.uncollectedFeesUsd + m.pendingRewardsUsd),
-                )}{" "}
-                unclaimed
+                )}
+              </div>
+              <div className="text-[11px] font-normal text-slate-400">
+                {formatUsd(sum((m) => m.uncollectedFeesUsd))} fees ·{" "}
+                {formatUsd(sum((m) => m.pendingRewardsUsd))} rewards
               </div>
             </td>
             <td

@@ -157,6 +157,7 @@ export interface PortfolioSummaryDto {
   depositedUsd: number;
   feesEarnedUsd: number;
   uncollectedFeesUsd: number;
+  pendingRewardsUsd: number;
   pnlUsd: number;
   pnlVsHodlUsd: number;
   impermanentLossUsd: number;

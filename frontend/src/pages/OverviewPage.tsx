@@ -4,6 +4,7 @@ import { usePositionDrawer } from "../lib/positionDrawer";
 import { usePositions, useSummary } from "../api/client";
 import { PortfolioValueChart } from "../components/PortfolioValueChart";
 import { UpdatedAgo } from "../components/UpdatedAgo";
+import { ReadyToClaimPanel, UnclaimedCard } from "../components/Unclaimed";
 import {
   BarRow,
   Empty,
@@ -12,7 +13,12 @@ import {
   Skeleton,
   StatCard,
 } from "../components/ui";
-import { buildAlerts, type AlertKind } from "../lib/attention";
+import type { PortfolioSummaryDto, PositionDto } from "../api/types";
+import {
+  UNCLAIMED_ALERT_USD,
+  buildAlerts,
+  type AlertKind,
+} from "../lib/attention";
 import {
   formatPercent,
   formatPrice,
@@ -83,7 +89,7 @@ export function OverviewPage() {
         <UpdatedAgo />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[repeat(4,minmax(0,1fr))_minmax(0,1.3fr)]">
         <StatCard
           label="Portfolio value"
           loading={summary.isLoading}
@@ -107,7 +113,7 @@ export function OverviewPage() {
           label="Fees earned"
           loading={summary.isLoading}
           value={formatUsd(s?.feesEarnedUsd)}
-          hint={s && `${formatUsd(s.uncollectedFeesUsd)} unclaimed`}
+          hint={s && "claimed + unclaimed"}
         />
         <StatCard
           label="Impermanent loss"
@@ -118,16 +124,25 @@ export function OverviewPage() {
             s?.hasMissingPrices ? "some prices missing" : "excluding fees"
           }
         />
+        <UnclaimedCard
+          fees={s?.uncollectedFeesUsd ?? 0}
+          rewards={s?.pendingRewardsUsd ?? 0}
+          note={s && unclaimedNote(s, open.data ?? [])}
+          loading={summary.isLoading || open.isLoading}
+          className="sm:col-span-2 lg:col-span-1"
+        />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
-        <PortfolioValueChart owner={owner} />
+        <ReadyToClaimPanel open={open.data ?? []} loading={open.isLoading} />
         <AttentionPanel
           loading={open.isLoading}
           error={open.error}
           alerts={alerts}
         />
       </div>
+
+      <PortfolioValueChart owner={owner} />
 
       <div className="grid gap-4 md:grid-cols-2">
         <AllocationPanel
@@ -144,6 +159,24 @@ export function OverviewPage() {
         />
       </div>
     </div>
+  );
+}
+
+function unclaimedNote(
+  s: PortfolioSummaryDto,
+  open: PositionDto[],
+): string {
+  const total = s.uncollectedFeesUsd + s.pendingRewardsUsd;
+  const worthClaiming = open.filter(
+    (p) =>
+      p.metrics.uncollectedFeesUsd + p.metrics.pendingRewardsUsd >=
+      UNCLAIMED_ALERT_USD,
+  ).length;
+  return (
+    `${worthClaiming} of ${open.length} open above ${formatUsd(UNCLAIMED_ALERT_USD)}` +
+    (s.feesEarnedUsd > 0
+      ? ` · ${((total / s.feesEarnedUsd) * 100).toFixed(0)}% of fees earned`
+      : "")
   );
 }
 

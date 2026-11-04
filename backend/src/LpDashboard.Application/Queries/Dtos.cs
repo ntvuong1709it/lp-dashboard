@@ -92,6 +92,7 @@ public sealed record PortfolioSummaryDto(
     decimal DepositedUsd,
     decimal FeesEarnedUsd,
     decimal UncollectedFeesUsd,
+    decimal PendingRewardsUsd,
     decimal PnlUsd,
     decimal PnlVsHodlUsd,
     decimal ImpermanentLossUsd,

@@ -8,6 +8,7 @@ export type SortKey =
   | "closed"
   | "value"
   | "fees"
+  | "unclaimed"
   | "pnl"
   | "il"
   | "vsHodl"
@@ -31,6 +32,7 @@ const sortValue: Record<SortKey, (p: PositionDto) => number | string | null> = {
   closed: (p) => time(p.closedAt),
   value: (p) => p.metrics.currentValueUsd,
   fees: (p) => p.metrics.feesEarnedUsd,
+  unclaimed: (p) => p.metrics.uncollectedFeesUsd + p.metrics.pendingRewardsUsd,
   pnl: (p) => p.metrics.pnlUsd,
   il: (p) => p.metrics.impermanentLossUsd,
   vsHodl: (p) => p.metrics.pnlVsHodlUsd,
