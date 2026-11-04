@@ -9,10 +9,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { exportUrl, useDailyEarnings, usePositions } from "../api/client";
+import { useDailyEarnings, usePositions } from "../api/client";
 import type { PositionDto } from "../api/types";
 import { MonthlyPnlChart } from "../components/PnlHistoryChart";
-import { ExportMenu } from "../components/ExportMenu";
 import { UpdatedAgo } from "../components/UpdatedAgo";
 import {
   BarRow,
@@ -35,7 +34,6 @@ const sum = (positions: PositionDto[], pick: (p: PositionDto) => number) =>
 export function PnlPage() {
   useHideBalances(); // re-render when the toggle changes; formatters read the flag
   const { owner } = useOwner();
-  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const { data, error, isLoading } = usePositions(owner, null);
 
   const t = useMemo(() => {
@@ -73,12 +71,6 @@ export function PnlPage() {
         </div>
         <div className="flex items-center gap-3 text-sm text-slate-400">
           <UpdatedAgo />
-          <ExportMenu
-            items={[
-              { label: "Positions (all)", href: exportUrl("positions", { owner }) },
-              { label: "Daily earnings", href: exportUrl("daily-earnings", { owner, timeZone }) },
-            ]}
-          />
         </div>
       </div>
 

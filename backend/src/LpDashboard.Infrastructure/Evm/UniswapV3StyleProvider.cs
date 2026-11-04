@@ -499,9 +499,19 @@ internal sealed class UniswapV3StyleProvider : IPositionProvider
     {
         var calls = new List<RpcCall> { EvmRpcClient.EthCall(pool, Abi.Selector("slot0()")) };
         var needParams = !_poolParams.ContainsKey(pool);
+        // Uniswap v3 fees never change, so they are read once. Slipstream fees are dynamic (a fee module can change them
+        // at any time), so they are read on every call; the tick spacing is fixed either way.
+        var needFee = needParams || _protocol.Protocol == Protocol.AerodromeSlipstream;
+        var feeIndex = -1;
+        var spacingIndex = -1;
+        if (needFee)
+        {
+            feeIndex = calls.Count;
+            calls.Add(EvmRpcClient.EthCall(pool, Abi.Selector("fee()")));
+        }
         if (needParams)
         {
-            calls.Add(EvmRpcClient.EthCall(pool, Abi.Selector("fee()")));
+            spacingIndex = calls.Count;
             calls.Add(EvmRpcClient.EthCall(pool, Abi.Selector("tickSpacing()")));
         }
 
@@ -509,15 +519,15 @@ internal sealed class UniswapV3StyleProvider : IPositionProvider
         if (results[0].Error is { } error) throw error;
         var slot0 = Abi.Words(results[0].Result.GetString());
 
-        if (needParams)
-        {
-            int? fee = results[1].Error is null ? (int)Abi.ToUInt(Abi.Words(results[1].Result.GetString())[0]) : null;
-            var spacing = results[2].Error is null ? (int)Abi.ToInt(Abi.Words(results[2].Result.GetString())[0]) : 0;
-            _poolParams[pool] = (fee, spacing);
-        }
+        var (knownFee, knownSpacing) = _poolParams.TryGetValue(pool, out var known) ? known : (null, 0);
+        var fee = knownFee;
+        if (needFee) fee = results[feeIndex].Error is null ? (int)Abi.ToUInt(Abi.Words(results[feeIndex].Result.GetString())[0]) : knownFee;
+        var spacing = needParams
+            ? (results[spacingIndex].Error is null ? (int)Abi.ToInt(Abi.Words(results[spacingIndex].Result.GetString())[0]) : 0)
+            : knownSpacing;
+        _poolParams[pool] = (fee, spacing);
 
-        var (poolFee, tickSpacing) = _poolParams[pool];
-        return (Abi.ToUInt(slot0[0]), (int)Abi.ToInt(slot0[1]), poolFee, tickSpacing);
+        return (Abi.ToUInt(slot0[0]), (int)Abi.ToInt(slot0[1]), fee, spacing);
     }
 
     private async Task<TokenInfo> GetTokenAsync(string address, CancellationToken ct)

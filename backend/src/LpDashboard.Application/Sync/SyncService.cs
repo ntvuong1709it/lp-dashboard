@@ -328,7 +328,11 @@ public sealed class SyncService(
     private async Task<Pool> UpsertPoolAsync(IPositionProvider provider, PositionChainState state, Token token0, Token token1, CancellationToken ct)
     {
         var address = state.PoolAddress.ToLowerInvariant();
-        if (_pools.TryGetValue(address, out var cached)) return cached;
+        if (_pools.TryGetValue(address, out var cached))
+        {
+            RefreshFee(cached, state);
+            return cached;
+        }
 
         var pool = await pools.FindAsync(provider.Chain, address, ct);
         if (pool is null)
@@ -345,8 +349,18 @@ public sealed class SyncService(
             };
             pools.Add(pool);
         }
+        else
+        {
+            RefreshFee(pool, state);
+        }
         _pools[address] = pool;
         return pool;
+    }
+
+    /// <summary>Slipstream fees are dynamic, so the stored fee follows the pool's current one instead of staying at the value first seen.</summary>
+    private static void RefreshFee(Pool pool, PositionChainState state)
+    {
+        if (state.Fee is { } fee && pool.Fee != fee) pool.Fee = fee;
     }
 
     /// <summary>
