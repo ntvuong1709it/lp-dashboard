@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { usePositionDrawer } from "../lib/positionDrawer";
-import { exportUrl, usePositions, useSummary } from "../api/client";
+import { usePositions, useSummary } from "../api/client";
 import type {
 
   PositionDto,
@@ -9,7 +9,6 @@ import type {
   Protocol,
 } from "../api/types";
 import { RangeBadge, RangeBar } from "../components/RangeBar";
-import { ExportMenu } from "../components/ExportMenu";
 import { UpdatedAgo } from "../components/UpdatedAgo";
 import { SplitBar } from "../components/Unclaimed";
 import {
@@ -120,18 +119,6 @@ export function PositionsPage() {
         />
         <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
           <UpdatedAgo />
-          <ExportMenu
-            items={[
-              {
-                label: "Positions (all)",
-                href: exportUrl("positions", { owner }),
-              },
-              {
-                label: "All events (transactions)",
-                href: exportUrl("events", { owner }),
-              },
-            ]}
-          />
           <input
             type="search"
             value={search}

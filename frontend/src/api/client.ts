@@ -106,12 +106,6 @@ export const usePortfolioHistory = (owner: string | null) =>
       ),
   });
 
-/** URL of a CSV download (served by the API); filters mirror what the page shows. */
-export const exportUrl = (
-  file: "positions" | "events" | "fee-claims" | "daily-earnings",
-  params: Record<string, string | undefined | null> = {},
-) => `/api/export/${file}.csv${query(params)}`;
-
 export const usePnlHistory = (owner: string | null) =>
   useQuery({
     queryKey: ["pnl-history", owner],

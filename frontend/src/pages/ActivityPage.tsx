@@ -1,7 +1,6 @@
 import { useMemo } from "react";
-import { exportUrl, useActivity } from "../api/client";
+import { useActivity } from "../api/client";
 import type { PositionEventType } from "../api/types";
-import { ExportMenu } from "../components/ExportMenu";
 import { UpdatedAgo } from "../components/UpdatedAgo";
 import {
   CopyButton,
@@ -67,14 +66,6 @@ export function ActivityPage() {
         </div>
         <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
           <UpdatedAgo />
-          <ExportMenu
-            items={[
-              {
-                label: "All events (transactions)",
-                href: exportUrl("events", { owner }),
-              },
-            ]}
-          />
           <Segmented
             label="Event type"
             options={filters}
@@ -154,7 +145,7 @@ export function ActivityPage() {
           </table>
           {(data?.length ?? 0) >= 500 && (
             <p className="border-t border-slate-800 px-3 py-2 text-xs text-slate-500">
-              Showing the most recent 500 events; the CSV export has all of them.
+              Showing the most recent 500 events.
             </p>
           )}
         </div>
