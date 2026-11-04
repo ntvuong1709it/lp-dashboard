@@ -1,0 +1,231 @@
+using System.Collections.Concurrent;
+using LpDashboard.Application.Abstractions;
+using LpDashboard.Domain;
+using LpDashboard.Domain.Metrics;
+using Microsoft.Extensions.Logging;
+
+namespace LpDashboard.Application.Pools;
+
+public sealed record PoolDto(
+    string Id,
+    Chain Chain,
+    Protocol Protocol,
+    string Symbol,
+    string Token0,
+    string Token1,
+    decimal? FeePercent,
+    int? TickSpacing,
+    decimal TvlUsd,
+    decimal? Volume1dUsd,
+    decimal? Volume7dAvgUsd,
+    decimal? VolumeToTvl,
+    decimal? FeeApr1d,
+    decimal? FeeApr7d,
+    decimal? RewardApr,
+    bool Held,
+    /// <summary>Half-width in percent of the range of the first open position the owner has in this pool, as if centred on the price.</summary>
+    double? MyHalfWidthPercent);
+
+public sealed record PoolListDto(IReadOnlyList<PoolDto> Pools, int Total, DateTime FetchedAt);
+
+public sealed record PoolQuery(
+    Chain Chain = Chain.Base,
+    Protocol? Protocol = null,
+    decimal MinTvlUsd = 0,
+    string? Sort = null,
+    int Limit = 200,
+    IReadOnlyCollection<string>? Owners = null);
+
+/// <param name="FeePercent">
+/// Overrides the source's fee tier. The list already carries the on-chain fee for pools the owner holds, so the client
+/// sends it back here; the analytics source can list a different fee for pools with dynamic fees.
+/// </param>
+public sealed record EstimateRequest(double HalfWidthPercent, double CapitalUsd, int Days, decimal? FeePercent = null);
+
+/// <summary>What an owner's open position in a pool says about it: its range and the pool's on-chain fee.</summary>
+internal sealed record HeldInfo(double HalfWidthPercent, decimal? FeePercent);
+
+public sealed record PoolEstimateDto(
+    string PoolId,
+    string Basis,
+    double Volatility,
+    double ReferenceHalfWidthPercent,
+    double Concentration,
+    double TimeInRange,
+    double Apr,
+    double AprLow,
+    double AprHigh,
+    double FeesUsd,
+    double DepositSharePercent,
+    decimal? RewardApr);
+
+public enum EstimateFailure { PoolNotFound, NoPriceHistory, NoVolumeData }
+
+public sealed class EstimateException(EstimateFailure failure, string message) : Exception(message)
+{
+    public EstimateFailure Failure { get; } = failure;
+}
+
+/// <summary>Lists pools from the analytics source (cached) and estimates the fee APR of a range in one of them.</summary>
+public sealed class PoolExplorerService(
+    IPoolStatsSource source,
+    IPriceSource prices,
+    IPositionRepository positions,
+    TimeProvider time,
+    ILogger<PoolExplorerService> logger)
+{
+    private static readonly TimeSpan StatsTtl = TimeSpan.FromMinutes(15);
+    private static readonly TimeSpan VolatilityTtl = TimeSpan.FromHours(6);
+    private const int VolatilityDays = 30;
+    private const double MaxHorizonDays = 365;
+
+    private static readonly SemaphoreSlim FetchLock = new(1, 1);
+    private static readonly ConcurrentDictionary<Chain, (IReadOnlyList<PoolStats> Pools, DateTimeOffset At)> StatsCache = new();
+    private static readonly ConcurrentDictionary<string, (double Volatility, DateTimeOffset At)> VolatilityCache = new();
+
+    public async Task<PoolListDto> ListAsync(PoolQuery query, CancellationToken ct)
+    {
+        var (all, fetchedAt) = await GetStatsAsync(query.Chain, ct);
+        var held = await HeldRangesAsync(query, ct);
+
+        // Pools the owner holds are always listed, whatever the TVL filter, so they never disappear from the page.
+        var rows = all
+            .Where(p => query.Protocol is null || p.Protocol == query.Protocol)
+            .Select(p =>
+            {
+                if (!held.TryGetValue(MatchKey(p.Protocol, p.Token0, p.Token1, p.FeeHundredthsBip, p.TickSpacing), out var h)) return ToDto(p, null);
+                // The position's on-chain fee beats the source's, which can be stale for dynamic-fee pools.
+                return ToDto(h.FeePercent is { } fee ? p.WithFee(fee) : p, h.HalfWidthPercent);
+            })
+            .Where(p => p.Held || p.TvlUsd >= query.MinTvlUsd)
+            .ToList();
+
+        IEnumerable<PoolDto> sorted = query.Sort?.ToLowerInvariant() switch
+        {
+            "tvl" => rows.OrderByDescending(p => p.Held).ThenByDescending(p => p.TvlUsd),
+            "volume" => rows.OrderByDescending(p => p.Held).ThenByDescending(p => p.Volume1dUsd ?? 0),
+            "feeapr1d" => rows.OrderByDescending(p => p.Held).ThenByDescending(p => p.FeeApr1d ?? -1),
+            _ => rows.OrderByDescending(p => p.Held).ThenByDescending(p => p.FeeApr7d ?? p.FeeApr1d ?? -1),
+        };
+
+        return new PoolListDto(sorted.Take(Math.Clamp(query.Limit, 1, 1000)).ToList(), rows.Count, fetchedAt.UtcDateTime);
+    }
+
+    public async Task<PoolEstimateDto> EstimateAsync(string poolId, EstimateRequest request, CancellationToken ct)
+    {
+        var halfWidth = Math.Clamp(request.HalfWidthPercent / 100, AprEstimator.MinHalfWidth, AprEstimator.MaxHalfWidth);
+        var days = (int)Math.Clamp(request.Days, 1, MaxHorizonDays);
+        var capital = Math.Max(0, request.CapitalUsd);
+
+        var pool = FindCached(poolId) ?? throw new EstimateException(EstimateFailure.PoolNotFound, "Pool not found. Reload the pool list and try again.");
+        if (request.FeePercent is > 0 and <= 10) pool = pool.WithFee(request.FeePercent.Value);
+        var apr7 = pool.FeeApr7d;
+        var apr1 = pool.FeeApr1d;
+        if ((apr7 ?? apr1) is not { } basis)
+            throw new EstimateException(EstimateFailure.NoVolumeData, "This pool has no volume data, so its fee APR cannot be estimated.");
+
+        var rates = new[] { apr7, apr1 }.Where(r => r.HasValue).Select(r => (double)r!.Value).ToArray();
+        var volatility = await GetVolatilityAsync(pool, ct);
+        var e = AprEstimator.Estimate((double)basis, rates.Min(), rates.Max(), halfWidth, volatility, days, capital, (double)pool.TvlUsd);
+
+        return new PoolEstimateDto(
+            pool.Id, apr7.HasValue ? "7d" : "24h", volatility, e.ReferenceHalfWidth * 100, e.Concentration, e.TimeInRange,
+            e.Apr, e.AprLow, e.AprHigh, capital * e.Apr / 100 * days / 365, e.DepositShare * 100, pool.RewardApr);
+    }
+
+    private static PoolDto ToDto(PoolStats p, double? myHalfWidthPercent) => new(
+        p.Id, p.Chain, p.Protocol, p.Symbol, p.Token0, p.Token1, p.FeePercent, p.TickSpacing, p.TvlUsd,
+        p.Volume1dUsd, p.Volume7dAvgUsd, p.Volume1dUsd / p.TvlUsd, p.FeeApr1d, p.FeeApr7d, p.RewardApr,
+        myHalfWidthPercent.HasValue, myHalfWidthPercent);
+
+    private async Task<(IReadOnlyList<PoolStats> Pools, DateTimeOffset At)> GetStatsAsync(Chain chain, CancellationToken ct)
+    {
+        var now = time.GetUtcNow();
+        if (StatsCache.TryGetValue(chain, out var cached) && now - cached.At < StatsTtl) return cached;
+
+        await FetchLock.WaitAsync(ct);
+        try
+        {
+            if (StatsCache.TryGetValue(chain, out cached) && now - cached.At < StatsTtl) return cached;
+            try
+            {
+                var fresh = (await source.GetPoolsAsync(chain, ct), time.GetUtcNow());
+                StatsCache[chain] = fresh;
+                return fresh;
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
+            {
+                // Serve the last good copy rather than an empty page when the source is down.
+                if (cached.Pools is not null)
+                {
+                    logger.LogWarning(ex, "Pool analytics source failed; serving cached data from {At}", cached.At);
+                    return cached;
+                }
+                throw;
+            }
+        }
+        finally
+        {
+            FetchLock.Release();
+        }
+    }
+
+    private static PoolStats? FindCached(string id) =>
+        StatsCache.Values.SelectMany(v => v.Pools).FirstOrDefault(p => p.Id == id);
+
+    /// <summary>Match key of every pool the owners hold an open position in, with that position's range half-width in percent.</summary>
+    private async Task<Dictionary<string, HeldInfo>> HeldRangesAsync(PoolQuery query, CancellationToken ct)
+    {
+        var held = new Dictionary<string, HeldInfo>();
+        if (query.Owners is not { Count: > 0 } owners) return held;
+
+        var open = await positions.QueryAsync(new PositionFilter(owners, PositionStatus.Open, query.Protocol, query.Chain), ct);
+        foreach (var p in open.Where(p => p.Pool is not null))
+        {
+            var key = MatchKey(p.Protocol, p.Pool!.Token0.Address, p.Pool.Token1.Address, p.Pool.Fee, p.Pool.TickSpacing);
+            held.TryAdd(key, new HeldInfo(
+                AprEstimator.HalfWidthFromTicks(p.TickLower, p.TickUpper) * 100,
+                p.Pool.Fee is { } f ? f / 10000m : null));
+        }
+        return held;
+    }
+
+    /// <summary>
+    /// Uniswap pools are told apart by token pair and fee, Slipstream pools by token pair and tick spacing (their fee
+    /// can be dynamic, so the source's fee is not a reliable key there).
+    /// </summary>
+    public static string MatchKey(Protocol protocol, string token0, string token1, int? fee, int? tickSpacing)
+    {
+        var a = token0.ToLowerInvariant();
+        var b = token1.ToLowerInvariant();
+        var (lo, hi) = string.CompareOrdinal(a, b) <= 0 ? (a, b) : (b, a);
+        var tier = protocol == Protocol.AerodromeSlipstream ? $"ts{tickSpacing}" : $"fee{fee}";
+        return $"{protocol}|{lo}|{hi}|{tier}";
+    }
+
+    private async Task<double> GetVolatilityAsync(PoolStats pool, CancellationToken ct)
+    {
+        var now = time.GetUtcNow();
+        if (VolatilityCache.TryGetValue(pool.Id, out var cached) && now - cached.At < VolatilityTtl) return cached.Volatility;
+
+        var chainKey = pool.Chain.ToString().ToLowerInvariant();
+        string[] keys = [$"{chainKey}:{pool.Token0}", $"{chainKey}:{pool.Token1}"];
+        var start = now.AddDays(-VolatilityDays).ToUnixTimeSeconds();
+        var charts = await prices.GetChartAsync(keys, start, 86400, VolatilityDays + 1, ct);
+
+        if (!charts.TryGetValue(keys[0], out var s0) || !charts.TryGetValue(keys[1], out var s1))
+            throw new EstimateException(EstimateFailure.NoPriceHistory, "No price history for this pool's tokens, so its volatility is unknown.");
+
+        // Pair the two series by day; the price of token0 in token1 is what moves the pool.
+        var byDay1 = s1.ToDictionary(p => p.Timestamp / 86400, p => p.Price);
+        var ratios = s0.Where(p => byDay1.TryGetValue(p.Timestamp / 86400, out var d) && d > 0)
+            .Select(p => (double)(p.Price / byDay1[p.Timestamp / 86400]))
+            .ToList();
+        if (ratios.Count < 10)
+            throw new EstimateException(EstimateFailure.NoPriceHistory, "Too little price history for this pool's tokens to measure volatility.");
+
+        var volatility = AprEstimator.AnnualisedVolatility(ratios);
+        VolatilityCache[pool.Id] = (volatility, now);
+        return volatility;
+    }
+}

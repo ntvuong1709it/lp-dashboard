@@ -291,3 +291,45 @@ export interface PnlHistoryDto {
   points: { timestamp: string; cumulativePnlUsd: number }[];
   months: { month: string; netPnlUsd: number }[];
 }
+
+export interface PoolDto {
+  id: string;
+  chain: Chain;
+  protocol: Protocol;
+  symbol: string;
+  token0: string;
+  token1: string;
+  feePercent: number | null;
+  tickSpacing: number | null;
+  tvlUsd: number;
+  volume1dUsd: number | null;
+  volume7dAvgUsd: number | null;
+  volumeToTvl: number | null;
+  feeApr1d: number | null;
+  feeApr7d: number | null;
+  rewardApr: number | null;
+  held: boolean;
+  /** Half-width of your open position in this pool, as if centred on the price. */
+  myHalfWidthPercent: number | null;
+}
+
+export interface PoolListDto {
+  pools: PoolDto[];
+  total: number;
+  fetchedAt: string;
+}
+
+export interface PoolEstimateDto {
+  poolId: string;
+  basis: "7d" | "24h";
+  volatility: number;
+  referenceHalfWidthPercent: number;
+  concentration: number;
+  timeInRange: number;
+  apr: number;
+  aprLow: number;
+  aprHigh: number;
+  feesUsd: number;
+  depositSharePercent: number;
+  rewardApr: number | null;
+}

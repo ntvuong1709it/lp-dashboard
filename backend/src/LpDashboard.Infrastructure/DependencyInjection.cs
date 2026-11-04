@@ -21,6 +21,7 @@ public static class DependencyInjection
     {
         services.AddPersistence(configuration, contentRoot);
         services.AddPricing(configuration);
+        services.AddPoolStats(configuration);
         services.AddEvmProviders(configuration);
         services.AddAlerts(configuration);
         return services;
@@ -85,6 +86,16 @@ public static class DependencyInjection
         {
             client.BaseAddress = new Uri("https://api.telegram.org/");
             client.Timeout = TimeSpan.FromSeconds(15);
+        });
+    }
+
+    private static void AddPoolStats(this IServiceCollection services, IConfiguration configuration)
+    {
+        var baseUrl = configuration["Pools:DefiLlamaYieldsBaseUrl"] ?? "https://yields.llama.fi/";
+        services.AddHttpClient<LpDashboard.Application.Pools.IPoolStatsSource, LpDashboard.Infrastructure.Pools.DefiLlamaPoolStatsSource>(client =>
+        {
+            client.BaseAddress = new Uri(baseUrl);
+            client.Timeout = TimeSpan.FromSeconds(60);
         });
     }
 

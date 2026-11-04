@@ -15,7 +15,7 @@ const features: { phase: Phase; title: string; body: string; data: string; done?
   { phase: "Next", title: "Historical value chart", body: "Portfolio value over time, built from hourly snapshots.", data: "Snapshots", done: true },
   { phase: "Next", title: "Compare against holding", body: "See whether providing liquidity beat holding the same tokens.", data: "Derived", done: true },
   { phase: "Next", title: "Out-of-range alerts", body: "Telegram message when a position leaves or returns to its range (built). Fee thresholds, Discord, email and browser alerts are planned.", data: "Scheduled checks", done: true },
-  { phase: "Later", title: "Pool explorer and APR estimates", body: "Browse pools by fee APR, volume and TVL before you commit capital.", data: "Pool analytics API" },
+  { phase: "Later", title: "Pool explorer and APR estimates", body: "Browse pools by fee APR, volume and TVL, and estimate what a price range could earn before you commit capital.", data: "Pool analytics API", done: true },
   { phase: "Later", title: "Rebalance simulator", body: "Test a new range against past price action and see projected fees.", data: "Historical swaps" },
   { phase: "Later", title: "Multiple wallets", body: "Combine several addresses into one portfolio with per-wallet filters.", data: "Wallet addresses", done: true },
 ];

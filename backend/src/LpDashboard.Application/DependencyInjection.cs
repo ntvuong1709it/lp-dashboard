@@ -17,6 +17,7 @@ public static class DependencyInjection
         services.AddScoped<SyncService>();
         services.AddScoped<PriceService>();
         services.AddScoped<PositionQueryService>();
+        services.AddScoped<LpDashboard.Application.Pools.PoolExplorerService>();
         return services;
     }
 }

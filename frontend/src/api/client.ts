@@ -1,10 +1,17 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useOwner } from "../lib/owner";
 import type {
   ActivityEventDto,
   DailyEarningsDto,
   HealthDto,
   PnlHistoryDto,
+  PoolEstimateDto,
+  PoolListDto,
   PortfolioHistoryPoint,
   SyncRequestBody,
   PortfolioSummaryDto,
@@ -207,3 +214,35 @@ export function useTriggerSync() {
     },
   });
 }
+
+export const usePools = (owner: string | null, minTvl: number) =>
+  useQuery({
+    queryKey: ["pools", owner, minTvl],
+    staleTime: 5 * 60_000,
+    queryFn: () =>
+      request<PoolListDto>(
+        `/api/pools${query({ owner, minTvl: String(minTvl), limit: "500" })}`,
+      ),
+  });
+
+export const usePoolEstimate = (
+  poolId: string | null,
+  halfWidthPercent: number,
+  capitalUsd: number,
+  days: number,
+  feePercent: number | null,
+) =>
+  useQuery({
+    queryKey: ["pool-estimate", poolId, halfWidthPercent, capitalUsd, days, feePercent],
+    enabled: poolId != null,
+    placeholderData: keepPreviousData,
+    retry: false,
+    queryFn: () =>
+      request<PoolEstimateDto>(
+        `/api/pools/${encodeURIComponent(poolId!)}/estimate`,
+        {
+          method: "POST",
+          body: JSON.stringify({ halfWidthPercent, capitalUsd, days, feePercent }),
+        },
+      ),
+  });
