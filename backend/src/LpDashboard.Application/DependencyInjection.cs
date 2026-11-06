@@ -16,6 +16,7 @@ public static class DependencyInjection
         services.TryAddSingleton<IAlertNotifier, NullAlertNotifier>();
         services.AddScoped<SyncService>();
         services.AddScoped<PriceService>();
+        services.AddScoped<MarketTickerService>();
         services.AddScoped<PositionQueryService>();
         services.AddScoped<LpDashboard.Application.Pools.PoolExplorerService>();
         return services;

@@ -269,6 +269,17 @@ export interface SyncRequestBody {
   fromBlock?: number;
 }
 
+export interface TickerPriceDto {
+  symbol: string;
+  priceUsd: number;
+  change24hPercent: number | null;
+}
+
+export interface TickerDto {
+  prices: TickerPriceDto[];
+  fetchedAt: string;
+}
+
 export interface HealthDto {
   status: "Healthy" | "Degraded" | "Unhealthy";
   databaseOk: boolean;

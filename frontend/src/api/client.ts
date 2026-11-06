@@ -25,6 +25,7 @@ import type {
   ProblemDetails,
   SnapshotPointDto,
   SyncStatus,
+  TickerDto,
   WatchedAddress,
   WeeklyClaimsDto,
 } from "./types";
@@ -176,6 +177,15 @@ export const useHealth = () =>
     queryKey: ["health"],
     queryFn: () => request<HealthDto>("/api/health"),
     refetchInterval: 60000,
+  });
+
+/** Headline asset prices for the header; the server caches them for a minute. */
+export const usePriceTicker = () =>
+  useQuery({
+    queryKey: ["price-ticker"],
+    queryFn: () => request<TickerDto>("/api/prices/ticker"),
+    refetchInterval: 60_000,
+    retry: false,
   });
 
 export function useSyncStatus() {

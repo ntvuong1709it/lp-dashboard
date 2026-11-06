@@ -6,6 +6,7 @@ import {
   useTriggerSync,
 } from "../api/client";
 import { PositionDrawer } from "./PositionDrawer";
+import { PriceTicker } from "./PriceTicker";
 import { SetupScreen } from "./SetupScreen";
 import { UpdatedAgo } from "./UpdatedAgo";
 import { SyncErrorList } from "./ui";
@@ -64,6 +65,11 @@ export function Layout() {
             <HideBalancesToggle />
             <ThemeToggle />
             <SyncIndicator />
+          </div>
+        </div>
+        <div className="border-t border-slate-800">
+          <div className={`mx-auto ${width} px-4 py-2`}>
+            <PriceTicker />
           </div>
         </div>
       </header>
