@@ -314,6 +314,8 @@ export interface PoolDto {
   tvlUsd: number;
   volume1dUsd: number | null;
   volume7dAvgUsd: number | null;
+  /** Swap fees paid over the last 7 days (7-day volume × fee). */
+  fees7dUsd: number | null;
   volumeToTvl: number | null;
   feeApr1d: number | null;
   feeApr7d: number | null;
@@ -331,7 +333,7 @@ export interface PoolListDto {
 
 export interface PoolEstimateDto {
   poolId: string;
-  basis: "7d" | "24h";
+  basis: "30d" | "7d" | "24h";
   volatility: number;
   referenceHalfWidthPercent: number;
   concentration: number;
@@ -358,6 +360,34 @@ export interface PoolHistoryDto {
   firstExitDay: number | null;
   lowPercent: number;
   highPercent: number;
+}
+
+/** One day of a pool's history. Fees and volume are derived from TVL and the fee APR, not measured. */
+export interface PoolHistoryPointDto {
+  /** yyyy-MM-dd */
+  date: string;
+  tvlUsd: number;
+  feeApr: number | null;
+  rewardApr: number | null;
+  feesUsd: number | null;
+  volumeUsd: number | null;
+}
+
+export interface PoolHistorySeriesDto {
+  poolId: string;
+  feePercent: number | null;
+  points: PoolHistoryPointDto[];
+  /** Mean fee APR of the days that have one; null with fewer than 10. */
+  apr30d: number | null;
+  fees7dUsd: number | null;
+  fees30dUsd: number | null;
+  volume30dUsd: number | null;
+  /**
+   * Set when the pool's TVL was read on-chain instead of from the data source: the TVL now, and the one the source
+   * reports. The daily series is the source's own, so days where it differs from the chain are off by that gap.
+   */
+  tvlUsd?: number | null;
+  sourceTvlUsd?: number | null;
 }
 
 export interface PoolAlternativeDto {

@@ -80,6 +80,13 @@ public interface IPositionProvider
 
     /// <param name="knownTxHashes">Tx hashes of this position's events; used to resolve burned positions.</param>
     Task<PositionChainState> GetStateAsync(string owner, DiscoveredPosition position, IReadOnlyCollection<string> knownTxHashes, CancellationToken ct);
+
+    /// <summary>
+    /// ERC-20 balance (raw units) each <c>Holder</c> has of each <c>Token</c>, in query order; null where a read failed.
+    /// A pool's token balances are its on-chain TVL. Providers that cannot read balances answer null for every query.
+    /// </summary>
+    Task<IReadOnlyList<BigInteger?>> GetTokenBalancesAsync(IReadOnlyList<(string Holder, string Token)> queries, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<BigInteger?>>(queries.Select(_ => (BigInteger?)null).ToList());
 }
 
 public sealed record PricePoint(long Timestamp, decimal Price);

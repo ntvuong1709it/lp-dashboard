@@ -7,10 +7,12 @@ import {
 import { useOwner } from "../lib/owner";
 import type {
   ActivityEventDto,
+  Chain,
   DailyEarningsDto,
   HealthDto,
   PnlHistoryDto,
   PoolEstimateDto,
+  PoolHistorySeriesDto,
   PoolListDto,
   PortfolioHistoryPoint,
   PortfolioInsightsDto,
@@ -217,13 +219,26 @@ export function useTriggerSync() {
   });
 }
 
-export const usePools = (owner: string | null, minTvl: number) =>
+export const usePools = (owner: string | null, minTvl: number, chain: Chain = "Base") =>
   useQuery({
-    queryKey: ["pools", owner, minTvl],
+    queryKey: ["pools", owner, minTvl, chain],
     staleTime: 5 * 60_000,
     queryFn: () =>
       request<PoolListDto>(
-        `/api/pools${query({ owner, minTvl: String(minTvl), limit: "500" })}`,
+        `/api/pools${query({ owner, chain, minTvl: String(minTvl), limit: "1000" })}`,
+      ),
+  });
+
+/** Last 30 days of TVL, fee APR and derived fees and volume. `feePercent` is the fee the list shows for the pool. */
+export const usePoolHistory = (poolId: string | null, feePercent: number | null) =>
+  useQuery({
+    queryKey: ["pool-history", poolId, feePercent],
+    enabled: poolId != null,
+    staleTime: 30 * 60_000,
+    retry: false,
+    queryFn: () =>
+      request<PoolHistorySeriesDto>(
+        `/api/pools/${encodeURIComponent(poolId!)}/history${query({ feePercent: feePercent == null ? null : String(feePercent) })}`,
       ),
   });
 

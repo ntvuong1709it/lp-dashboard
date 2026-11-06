@@ -36,6 +36,28 @@ public sealed class PoolsController(PoolExplorerService pools) : ControllerBase
         }
     }
 
+    /// <summary>Last 30 days of TVL, fee APR and derived fees and volume. <c>feePercent</c> is the fee the list shows for the pool.</summary>
+    [HttpGet("{id}/history")]
+    [ProducesResponseType<PoolHistorySeriesDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status502BadGateway)]
+    public async Task<IActionResult> History(string id, [FromQuery] decimal? feePercent, CancellationToken ct)
+    {
+        try
+        {
+            return Ok(await pools.GetHistoryAsync(id, feePercent, ct));
+        }
+        catch (EstimateException ex) when (ex.Failure == EstimateFailure.PoolNotFound)
+        {
+            return Problem(statusCode: StatusCodes.Status404NotFound, title: "Pool not found", detail: ex.Message);
+        }
+        catch (HttpRequestException)
+        {
+            return Problem(statusCode: StatusCodes.Status502BadGateway, title: "Pool history unavailable",
+                detail: "The pool analytics source did not answer. Try again in a minute.");
+        }
+    }
+
     [HttpPost("{id}/estimate")]
     [ProducesResponseType<PoolEstimateDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

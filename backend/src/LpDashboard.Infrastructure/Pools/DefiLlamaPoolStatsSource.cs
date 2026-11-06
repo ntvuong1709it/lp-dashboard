@@ -51,17 +51,29 @@ internal sealed partial class DefiLlamaPoolStatsSource(HttpClient http) : IPoolS
         return result;
     }
 
-    public async Task<decimal?> GetFeeApr30dAsync(string poolId, CancellationToken ct)
+    public async Task<IReadOnlyList<PoolChartPoint>> GetChartAsync(string poolId, CancellationToken ct)
     {
         using var response = await http.GetAsync($"chart/{Uri.EscapeDataString(poolId)}", ct);
-        if (!response.IsSuccessStatusCode) return null;
+        if (!response.IsSuccessStatusCode) return [];
         await using var stream = await response.Content.ReadAsStreamAsync(ct);
         using var document = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
-        if (!document.RootElement.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Array) return null;
+        return ParseChart(document.RootElement);
+    }
 
-        // One point a day, oldest first.
-        var rates = data.EnumerateArray().Select(p => Num(p, "apyBase")).Where(r => r.HasValue).Select(r => r!.Value).TakeLast(30).ToList();
-        return rates.Count >= 10 ? rates.Average() : null;
+    /// <summary>One point a day, oldest first; only the last 90 are kept. Points without a date or TVL are dropped.</summary>
+    internal static IReadOnlyList<PoolChartPoint> ParseChart(JsonElement root)
+    {
+        if (!root.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Array) return [];
+
+        var points = new List<PoolChartPoint>();
+        foreach (var p in data.EnumerateArray())
+        {
+            if (Str(p, "timestamp") is not { } ts
+                || !DateTime.TryParse(ts, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var date)
+                || Num(p, "tvlUsd") is not { } tvl) continue;
+            points.Add(new PoolChartPoint(date, tvl, Num(p, "apyBase"), Num(p, "apyReward")));
+        }
+        return points.OrderBy(p => p.Date).TakeLast(90).ToList();
     }
 
     /// <summary>Uniswap: "0.3%". Slipstream: "CL100 - 0.3%" (tick spacing, then fee).</summary>

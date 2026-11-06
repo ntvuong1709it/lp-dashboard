@@ -19,10 +19,13 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
   `whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ${isActive ? "bg-slate-800 text-slate-50 shadow-[inset_0_-2px_0_var(--color-sky-400)]" : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-50"}`;
 
 export function Layout() {
+  // The pool explorer is a table next to a side panel, so it gets more of a wide screen than the other pages.
+  const wide = useLocation().pathname.startsWith("/pools");
+  const width = wide ? "max-w-[110rem]" : "max-w-7xl";
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-20 border-b border-slate-800 bg-slate-900">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-4 px-4 py-3">
+        <div className={`mx-auto flex ${width} flex-wrap items-center gap-4 px-4 py-3`}>
           <span className="flex items-center gap-2 text-lg font-bold tracking-tight">
             <i className="inline-block h-5 w-5 rounded-[50%_50%_50%_4px] bg-sky-400" />
             LP Dashboard
@@ -64,7 +67,7 @@ export function Layout() {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-7xl px-4 py-6">
+      <main className={`mx-auto ${width} px-4 py-6`}>
         <Content />
       </main>
       <PositionDrawer />

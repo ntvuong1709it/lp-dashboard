@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Numerics;
 using LpDashboard.Application.Abstractions;
 using LpDashboard.Domain;
 using LpDashboard.Domain.Entities;
@@ -19,6 +20,8 @@ public sealed record PoolDto(
     decimal TvlUsd,
     decimal? Volume1dUsd,
     decimal? Volume7dAvgUsd,
+    /// <summary>Swap fees paid over the last 7 days (7-day volume × fee).</summary>
+    decimal? Fees7dUsd,
     decimal? VolumeToTvl,
     decimal? FeeApr1d,
     decimal? FeeApr7d,
@@ -43,8 +46,11 @@ public sealed record PoolQuery(
 /// </param>
 public sealed record EstimateRequest(double HalfWidthPercent, double CapitalUsd, int Days, decimal? FeePercent = null, IReadOnlyDictionary<string, decimal>? KnownFees = null);
 
-/// <summary>What an owner's open position in a pool says about it: its range and the pool's on-chain fee.</summary>
-internal sealed record HeldInfo(double HalfWidthPercent, decimal? FeePercent);
+/// <summary>What an owner's open position in a pool says about it: its range, the pool's on-chain fee and where to read its balances.</summary>
+internal sealed record HeldInfo(double HalfWidthPercent, decimal? FeePercent, HeldPool Pool);
+
+/// <summary>A pool an owner holds, with what is needed to read its token balances (its on-chain TVL) and key the result.</summary>
+internal sealed record HeldPool(string Key, Chain Chain, Protocol Protocol, string Address, TokenInfo Token0, TokenInfo Token1);
 
 public sealed record PoolEstimateDto(
     string PoolId,
@@ -90,27 +96,33 @@ public sealed class PoolExplorerService(
     IPoolStatsSource source,
     IPriceSource prices,
     IPositionRepository positions,
+    IEnumerable<IPositionProvider> providers,
     TimeProvider time,
     ILogger<PoolExplorerService> logger)
 {
     private static readonly TimeSpan StatsTtl = TimeSpan.FromMinutes(15);
     private static readonly TimeSpan SeriesTtl = TimeSpan.FromHours(6);
+    private static readonly TimeSpan OnChainTvlTtl = TimeSpan.FromMinutes(10);
     private const int VolatilityDays = 30;
     private const double MaxHorizonDays = 365;
 
     private static readonly SemaphoreSlim FetchLock = new(1, 1);
     private static readonly ConcurrentDictionary<Chain, (IReadOnlyList<PoolStats> Pools, DateTimeOffset At)> StatsCache = new();
-    private static readonly ConcurrentDictionary<string, (decimal? Apr, DateTimeOffset At)> Apr30Cache = new();
+    private static readonly ConcurrentDictionary<string, (IReadOnlyList<PoolChartPoint> Points, DateTimeOffset At)> ChartCache = new();
+    // TVL read from the pools' own token balances, by match key; the analytics source can be far off for a single pool.
+    private static readonly ConcurrentDictionary<string, (decimal TvlUsd, DateTimeOffset At)> OnChainTvl = new();
     private static readonly ConcurrentDictionary<string, (IReadOnlyList<double> Prices, DateTimeOffset At)> SeriesCache = new();
 
     public async Task<PoolListDto> ListAsync(PoolQuery query, CancellationToken ct)
     {
         var (all, fetchedAt) = await GetStatsAsync(query.Chain, ct);
         var held = await HeldRangesAsync(query, ct);
+        await RefreshOnChainTvlAsync(held.Values.Select(h => h.Pool), ct);
 
         // Pools the owner holds are always listed, whatever the TVL filter, so they never disappear from the page.
         var rows = all
             .Where(p => query.Protocol is null || p.Protocol == query.Protocol)
+            .Select(Tuned)
             .Select(p =>
             {
                 if (!held.TryGetValue(MatchKey(p.Protocol, p.Token0, p.Token1, p.FeeHundredthsBip, p.TickSpacing), out var h)) return ToDto(p, null);
@@ -184,8 +196,10 @@ public sealed class PoolExplorerService(
                 continue;
             }
 
+            await RefreshOnChainTvlAsync(
+                chain.Where(p => p.Pool is not null).Select(p => HeldPoolOf(p)).DistinctBy(h => h.Key), ct);
             var listed = new Dictionary<string, PoolStats>();
-            foreach (var s in stats) listed.TryAdd(MatchKey(s.Protocol, s.Token0, s.Token1, s.FeeHundredthsBip, s.TickSpacing), s);
+            foreach (var s in stats) listed.TryAdd(MatchKey(s.Protocol, s.Token0, s.Token1, s.FeeHundredthsBip, s.TickSpacing), Tuned(s));
 
             foreach (var p in chain)
             {
@@ -226,7 +240,7 @@ public sealed class PoolExplorerService(
         if (!StatsCache.TryGetValue(selected.Chain, out var cached)) return [];
 
         var result = new List<PoolAlternativeDto>();
-        var others = cached.Pools.Where(p => p.Id != selected.Id && PairKey(p) == pair && p.TvlUsd >= MinTvlUsd).ToList();
+        var others = cached.Pools.Select(Tuned).Where(p => p.Id != selected.Id && PairKey(p) == pair && p.TvlUsd >= MinTvlUsd).ToList();
         var withHistory = await Task.WhenAll(others.Select(p => WithFeeApr30dAsync(p, ct)));
         foreach (var listed in withHistory.Prepend(selected))
         {
@@ -256,24 +270,52 @@ public sealed class PoolExplorerService(
     /// <summary>Fills in the 30-day fee APR from the pool's history (cached); without it the pool keeps its 7-day and 24h rates.</summary>
     private async Task<PoolStats> WithFeeApr30dAsync(PoolStats pool, CancellationToken ct)
     {
-        var now = time.GetUtcNow();
-        if (!Apr30Cache.TryGetValue(pool.Id, out var cached) || now - cached.At >= SeriesTtl)
+        try
         {
-            decimal? apr = null;
-            try
-            {
-                apr = await source.GetFeeApr30dAsync(pool.Id, ct);
-            }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
-            {
-                logger.LogWarning(ex, "Could not load fee history for pool {PoolId}; using its 7-day and 24h rates", pool.Id);
-                if (cached.At == default) return pool;
-                apr = cached.Apr;
-            }
-            cached = (apr, now);
-            Apr30Cache[pool.Id] = cached;
+            var apr = PoolHistory.MeanFeeApr(await GetChartAsync(pool.Id, ct));
+            // Not for a pool whose TVL was replaced: the history was recorded at the source's TVL, which is what was wrong.
+            return apr is { } a && pool.SourceTvlUsd is null ? pool with { FeeApr30d = a } : pool;
         }
-        return cached.Apr is { } a ? pool with { FeeApr30d = a } : pool;
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
+        {
+            logger.LogWarning(ex, "Could not load fee history for pool {PoolId}; using its 7-day and 24h rates", pool.Id);
+            return pool;
+        }
+    }
+
+    /// <summary>
+    /// The pool's daily history (cached), shared by the 30-day APR and the history series so one source call serves both.
+    /// A stale copy is served when the source fails; with no copy at all the failure is thrown.
+    /// </summary>
+    private async Task<IReadOnlyList<PoolChartPoint>> GetChartAsync(string poolId, CancellationToken ct)
+    {
+        var now = time.GetUtcNow();
+        if (ChartCache.TryGetValue(poolId, out var cached) && now - cached.At < SeriesTtl) return cached.Points;
+
+        try
+        {
+            var points = await source.GetChartAsync(poolId, ct);
+            ChartCache[poolId] = (points, now);
+            return points;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
+        {
+            if (cached.Points is null) throw;
+            logger.LogWarning(ex, "Could not refresh history for pool {PoolId}; serving the copy from {At}", poolId, cached.At);
+            return cached.Points;
+        }
+    }
+
+    /// <summary>
+    /// Last 30 days of TVL, APR, fees and volume for a pool. <paramref name="feePercent"/> is the fee the client shows
+    /// for the pool (its on-chain fee when held); the source's own fee is used when it is absent or out of range.
+    /// </summary>
+    public async Task<PoolHistorySeriesDto> GetHistoryAsync(string poolId, decimal? feePercent, CancellationToken ct)
+    {
+        var pool = FindCached(poolId) ?? throw new EstimateException(EstimateFailure.PoolNotFound, "Pool not found. Reload the pool list and try again.");
+        var fee = feePercent is > 0 and <= 10 ? feePercent : null;
+        var series = PoolHistory.Build(pool.Id, await GetChartAsync(pool.Id, ct), pool.FeePercent, fee);
+        return pool.SourceTvlUsd is { } source ? series with { TvlUsd = pool.TvlUsd, SourceTvlUsd = source } : series;
     }
 
     private static string PairKey(PoolStats p)
@@ -284,7 +326,7 @@ public sealed class PoolExplorerService(
 
     private static PoolDto ToDto(PoolStats p, double? myHalfWidthPercent) => new(
         p.Id, p.Chain, p.Protocol, p.Symbol, p.Token0, p.Token1, p.FeePercent, p.TickSpacing, p.TvlUsd,
-        p.Volume1dUsd, p.Volume7dAvgUsd, p.Volume1dUsd / p.TvlUsd, p.FeeApr1d, p.FeeApr7d, p.RewardApr,
+        p.Volume1dUsd, p.Volume7dAvgUsd, p.Fees7dUsd, p.Volume1dUsd / p.TvlUsd, p.FeeApr1d, p.FeeApr7d, p.RewardApr,
         myHalfWidthPercent.HasValue, myHalfWidthPercent);
 
     private async Task<(IReadOnlyList<PoolStats> Pools, DateTimeOffset At)> GetStatsAsync(Chain chain, CancellationToken ct)
@@ -320,7 +362,71 @@ public sealed class PoolExplorerService(
     }
 
     private static PoolStats? FindCached(string id) =>
-        StatsCache.Values.SelectMany(v => v.Pools).FirstOrDefault(p => p.Id == id);
+        StatsCache.Values.SelectMany(v => v.Pools).FirstOrDefault(p => p.Id == id) is { } p ? Tuned(p) : null;
+
+    private static string TvlKey(PoolStats p) => MatchKey(p.Protocol, p.Token0, p.Token1, p.FeeHundredthsBip, p.TickSpacing);
+
+    /// <summary>The pool with its TVL replaced by the on-chain reading, when there is one.</summary>
+    private static PoolStats Tuned(PoolStats p) =>
+        OnChainTvl.TryGetValue(TvlKey(p), out var onChain) ? p.WithTvl(onChain.TvlUsd) : p;
+
+    /// <summary>
+    /// Reads the TVL of pools the owner holds from their token balances (cached for 10 minutes). DefiLlama's TVL can be
+    /// several times off for a pool, and a held pool is the one the user checks against the DEX. Pools whose chain has no
+    /// RPC provider, and any read or price failure, leave the source's TVL in place.
+    /// </summary>
+    private async Task RefreshOnChainTvlAsync(IEnumerable<HeldPool> pools, CancellationToken ct)
+    {
+        var now = time.GetUtcNow();
+        foreach (var group in pools.GroupBy(p => (p.Chain, p.Protocol)))
+        {
+            var provider = providers.FirstOrDefault(x => x.Chain == group.Key.Chain && x.Protocol == group.Key.Protocol);
+            var stale = group.Where(p => !OnChainTvl.TryGetValue(p.Key, out var c) || now - c.At >= OnChainTvlTtl).ToList();
+            if (provider is null || stale.Count == 0) continue;
+
+            try
+            {
+                var balances = await provider.GetTokenBalancesAsync(
+                    stale.SelectMany(p => new[] { (p.Address, p.Token0.Address), (p.Address, p.Token1.Address) }).ToList(), ct);
+                var priceKeys = stale.SelectMany(p => new[] { provider.GetPriceKey(p.Token0.Address), provider.GetPriceKey(p.Token1.Address) }).Distinct().ToList();
+                var priced = await prices.GetCurrentAsync(priceKeys, ct);
+
+                for (var i = 0; i < stale.Count; i++)
+                {
+                    var p = stale[i];
+                    decimal? price0 = priced.TryGetValue(provider.GetPriceKey(p.Token0.Address), out var v0) ? v0 : null;
+                    decimal? price1 = priced.TryGetValue(provider.GetPriceKey(p.Token1.Address), out var v1) ? v1 : null;
+                    if (TvlFromBalances(balances[2 * i], p.Token0.Decimals, price0, balances[2 * i + 1], p.Token1.Decimals, price1) is { } tvl)
+                        OnChainTvl[p.Key] = (tvl, now);
+                }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogWarning(ex, "Could not read on-chain TVL for {Chain} {Protocol} pools; using the analytics source's", group.Key.Chain, group.Key.Protocol);
+            }
+        }
+    }
+
+    /// <summary>A pool's two token balances (raw units) at today's prices; null when a balance or price is missing, or the pool is empty.</summary>
+    public static decimal? TvlFromBalances(BigInteger? balance0, int decimals0, decimal? price0, BigInteger? balance1, int decimals1, decimal? price1)
+    {
+        if (balance0 is null || balance1 is null || price0 is null || price1 is null) return null;
+        if (Units(balance0.Value, decimals0) is not { } a0 || Units(balance1.Value, decimals1) is not { } a1) return null;
+        var tvl = a0 * price0.Value + a1 * price1.Value;
+        return tvl > 0 ? tvl : null;
+    }
+
+    private static decimal? Units(BigInteger raw, int decimals)
+    {
+        try
+        {
+            return (decimal)raw / (decimal)BigInteger.Pow(10, decimals);
+        }
+        catch (OverflowException)
+        {
+            return null;
+        }
+    }
 
     /// <summary>Match key of every pool the owners hold an open position in, with that position's range half-width in percent.</summary>
     private async Task<Dictionary<string, HeldInfo>> HeldRangesAsync(PoolQuery query, CancellationToken ct)
@@ -331,12 +437,23 @@ public sealed class PoolExplorerService(
         var open = await positions.QueryAsync(new PositionFilter(owners, PositionStatus.Open, query.Protocol, query.Chain), ct);
         foreach (var p in open.Where(p => p.Pool is not null))
         {
-            var key = MatchKey(p.Protocol, p.Pool!.Token0.Address, p.Pool.Token1.Address, p.Pool.Fee, p.Pool.TickSpacing);
-            held.TryAdd(key, new HeldInfo(
+            var pool = HeldPoolOf(p);
+            held.TryAdd(pool.Key, new HeldInfo(
                 AprEstimator.HalfWidthFromTicks(p.TickLower, p.TickUpper) * 100,
-                p.Pool.Fee is { } f ? f / 10000m : null));
+                p.Pool!.Fee is { } f ? f / 10000m : null,
+                pool));
         }
         return held;
+    }
+
+    private static HeldPool HeldPoolOf(Position p)
+    {
+        var pool = p.Pool!;
+        return new HeldPool(
+            MatchKey(p.Protocol, pool.Token0.Address, pool.Token1.Address, pool.Fee, pool.TickSpacing),
+            p.Chain, p.Protocol, pool.Address,
+            new TokenInfo(pool.Token0.Address, pool.Token0.Symbol, pool.Token0.Decimals),
+            new TokenInfo(pool.Token1.Address, pool.Token1.Symbol, pool.Token1.Decimals));
     }
 
     /// <summary>

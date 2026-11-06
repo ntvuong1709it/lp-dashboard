@@ -65,6 +65,15 @@ internal sealed class UniswapV3StyleProvider : IPositionProvider
 
     public Task<long> GetLatestBlockAsync(CancellationToken ct) => _rpc.GetBlockNumberAsync(ct);
 
+    public async Task<IReadOnlyList<BigInteger?>> GetTokenBalancesAsync(IReadOnlyList<(string Holder, string Token)> queries, CancellationToken ct)
+    {
+        var selector = Abi.Selector("balanceOf(address)");
+        var results = await _rpc.BatchAsync(queries.Select(q => EvmRpcClient.EthCall(q.Token, selector + Abi.Word(q.Holder))).ToList(), ct);
+        return results
+            .Select(r => r.Error is null && Abi.Words(r.Result.GetString()) is [var word, ..] ? (BigInteger?)Abi.ToUInt(word) : null)
+            .ToList();
+    }
+
     public async Task<IReadOnlyList<DiscoveredPosition>> DiscoverAsync(string owner, CancellationToken ct)
     {
         owner = owner.ToLowerInvariant();
