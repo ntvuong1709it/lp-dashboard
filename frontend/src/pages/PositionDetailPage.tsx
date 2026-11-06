@@ -60,6 +60,8 @@ import {
 } from "../lib/format";
 import { useHideBalances } from "../lib/privacy";
 import { claimInsight } from "../lib/claimInsight";
+import { PerformancePanel } from "../components/PerformancePanel";
+import { PositionBreakEven } from "../components/BreakEvenCallout";
 
 export function PositionDetailPage({
   id: idProp,
@@ -157,6 +159,8 @@ export function PositionDetailPage({
         </span>
       </div>
 
+      <PositionBreakEven position={p} />
+
       {onClose ? (
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -209,6 +213,7 @@ export function PositionDetailPage({
               ]}
             />
           </Panel>
+          <PerformancePanel position={p} />
         </>
       ) : (
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -266,6 +271,8 @@ export function PositionDetailPage({
         />
       </div>
       )}
+
+      {!onClose && <PerformancePanel position={p} />}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <RangePanel position={p} events={data.events} />

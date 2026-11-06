@@ -1,11 +1,10 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { usePositionDrawer } from "../lib/positionDrawer";
-import { usePositions, useSummary } from "../api/client";
+import { usePerformance, usePositions, useSummary } from "../api/client";
 import type {
-
+  HodlBreakEvenDto,
   PositionDto,
-
   Protocol,
 } from "../api/types";
 import { RangeBadge, RangeBar } from "../components/RangeBar";
@@ -32,9 +31,11 @@ import {
   pnlClass,
   poolLinks,
   protocolLabels,
+  timeInRangeBand,
   timeInRangeSource,
 } from "../lib/format";
 import { isNearEdge } from "../lib/attention";
+import { catchUpCell } from "../lib/performance";
 import { useOwner } from "../lib/owner";
 import { useHideBalances } from "../lib/privacy";
 import {
@@ -82,6 +83,17 @@ export function PositionsPage() {
   );
   const totals = useSummary(owner, null).data;
   const positions = usePositions(owner, null);
+  // Break-even comes from a separate, slower endpoint; the table renders without it and fills the column in when it arrives.
+  const performance = usePerformance(owner);
+  const breakEven = useMemo(
+    () =>
+      new Map<number, HodlBreakEvenDto>(
+        (performance.data?.positions ?? []).flatMap((r) =>
+          r.breakEven ? [[r.positionId, r.breakEven] as const] : [],
+        ),
+      ),
+    [performance.data],
+  );
 
   const protocols = useMemo(
     () => [...new Set((positions.data ?? []).map((p) => p.protocol))],
@@ -97,8 +109,9 @@ export function PositionsPage() {
           false,
         ),
         sort,
+        { catchUpDays: new Map([...breakEven].map(([id, b]) => [id, b.daysToBreakEven])) },
       ),
-    [positions.data, status, search, protocol, sort],
+    [positions.data, status, search, protocol, sort, breakEven],
   );
   const filtered = !!search.trim() || !!protocol || status !== "all";
   const toggleSort = (key: SortKey) =>
@@ -175,6 +188,7 @@ export function PositionsPage() {
           inverted={inverted}
           sort={sort}
           onSort={toggleSort}
+          breakEven={breakEven}
         />
       )}
     </div>
@@ -221,11 +235,13 @@ function PositionsTable({
   inverted,
   sort,
   onSort,
+  breakEven,
 }: {
   positions: PositionDto[];
   inverted: boolean;
   sort: SortState;
   onSort: (key: SortKey) => void;
+  breakEven: ReadonlyMap<number, HodlBreakEvenDto>;
 }) {
   const drawer = usePositionDrawer();
   const sum = (pick: (m: PositionDto["metrics"]) => number) =>
@@ -252,6 +268,7 @@ function PositionsTable({
             <SortHeader label="P/L" k="pnl" right sort={sort} onSort={onSort} />
             <SortHeader label="IL" k="il" right sort={sort} onSort={onSort} />
             <SortHeader label="vs HODL" k="vsHodl" right sort={sort} onSort={onSort} />
+            <SortHeader label="Catches up" k="catchUp" right sort={sort} onSort={onSort} />
             <SortHeader label="Fee APR" k="apr" right sort={sort} onSort={onSort} />
             <SortHeader label="In range" k="inRange" right sort={sort} onSort={onSort} />
           </tr>
@@ -377,6 +394,17 @@ function PositionsTable({
                 >
                   {formatUsd(m.pnlVsHodlUsd, true)}
                 </td>
+                {(() => {
+                  const c = catchUpCell(breakEven.get(p.id));
+                  return (
+                    <td
+                      className={`cursor-help whitespace-nowrap px-3 py-2 text-right num ${c.className}`}
+                      title={c.title}
+                    >
+                      {c.text}
+                    </td>
+                  );
+                })()}
                 <td className="px-3 py-2 text-right num">
                   {formatPercent(m.feeAprPercent)}
                   {m.hasMissingPrices && (
@@ -409,6 +437,14 @@ function PositionsTable({
                       >
                         of {formatHours(p.timeInRange.trackedHours)}
                       </div>
+                      {timeInRangeBand(p.timeInRange) && (
+                        <div
+                          className="text-[11px] text-amber-400/80"
+                          title={timeInRangeSource(p.timeInRange)}
+                        >
+                          {timeInRangeBand(p.timeInRange)}
+                        </div>
+                      )}
                     </>
                   ) : (
                     <span
@@ -461,7 +497,7 @@ function PositionsTable({
             >
               {formatUsd(sum((m) => m.pnlVsHodlUsd), true)}
             </td>
-            <td colSpan={2} className="px-3 py-2" />
+            <td colSpan={3} className="px-3 py-2" />
           </tr>
         </tfoot>
       </table>

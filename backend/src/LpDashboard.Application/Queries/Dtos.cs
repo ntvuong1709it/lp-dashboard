@@ -103,6 +103,22 @@ public sealed record PortfolioSummaryDto(
 /// <summary>Portfolio-wide views that need more than one position at a time: what is held per token, and how reward tokens fared after being claimed.</summary>
 public sealed record PortfolioInsightsDto(PortfolioExposure Exposure, IReadOnlyList<RewardTokenSummary> Rewards);
 
+/// <param name="InRangeAprPercent">Lifetime rate per day spent in range.</param>
+/// <param name="Apr7d">Open positions older than a week only.</param>
+/// <param name="Apr30d">Open positions older than 30 days only.</param>
+/// <param name="VsPool">Null when the analytics source does not list the pool.</param>
+/// <param name="BreakEven">Open positions only.</param>
+public sealed record PositionPerformanceDto(
+    int PositionId,
+    decimal? InRangeAprPercent,
+    TrailingApr? Apr7d,
+    TrailingApr? Apr30d,
+    PoolComparison? VsPool,
+    HodlBreakEven? BreakEven);
+
+/// <param name="Portfolio">All positions' LP-vs-HODL gap against the combined earning rate of the open ones.</param>
+public sealed record PortfolioPerformanceDto(IReadOnlyList<PositionPerformanceDto> Positions, HodlBreakEven? Portfolio);
+
 public sealed record SnapshotPointDto(
     DateTime Timestamp,
     decimal ValueUsd,

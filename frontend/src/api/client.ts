@@ -14,6 +14,7 @@ import type {
   PoolListDto,
   PortfolioHistoryPoint,
   PortfolioInsightsDto,
+  PortfolioPerformanceDto,
   SyncRequestBody,
   PortfolioSummaryDto,
   PositionDetailDto,
@@ -255,4 +256,13 @@ export const usePortfolioInsights = (owner: string | null) =>
     queryKey: ["portfolio-insights", owner],
     queryFn: () =>
       request<PortfolioInsightsDto>(`/api/portfolio/insights${query({ owner })}`),
+  });
+
+export const usePerformance = (owner: string | null) =>
+  useQuery({
+    queryKey: ["performance", owner],
+    // Pool rates come from an external source; a slow answer should not retrigger on every focus.
+    staleTime: 60_000,
+    queryFn: () =>
+      request<PortfolioPerformanceDto>(`/api/portfolio/performance${query({ owner })}`),
   });

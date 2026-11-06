@@ -74,6 +74,12 @@ export interface TimeInRangeDto {
   /** measuredHours + estimatedHours */
   trackedHours: number;
   spanHours: number;
+  /** Estimated hours whose inferred tick was close enough to a range edge that the in/out call could be wrong. */
+  uncertainHours: number;
+  /** The result if every uncertain stretch were out of range / in range. */
+  percentLow: number;
+  percentHigh: number;
+  confidence: "High" | "Medium" | "Low";
 }
 
 export interface PortfolioHistoryPoint {
@@ -411,4 +417,48 @@ export interface RewardTokenSummaryDto {
 export interface PortfolioInsightsDto {
   exposure: PortfolioExposureDto;
   rewards: RewardTokenSummaryDto[];
+}
+
+export interface TrailingAprDto {
+  days: number;
+  totalAprPercent: number;
+  swapFeeAprPercent: number;
+  earnedUsd: number;
+  averageCapitalUsd: number;
+}
+
+export interface PoolComparisonDto {
+  poolAprPercent: number;
+  /** "30d", "7d", "24h", or "now" for a spot emission rate. */
+  poolBasis: string;
+  positionAprPercent: number;
+  /** "30d", "7d" or "lifetime". */
+  positionBasis: string;
+  /** Which side of the pool's income was compared. */
+  incomeKind: "fees" | "rewards";
+  ratio: number;
+}
+
+export interface HodlBreakEvenDto {
+  /** LP minus HODL today; negative means holding would have been better. */
+  gapUsd: number;
+  dailyEarningsUsd: number;
+  /** "30d", "lifetime", "mixed" or "none". */
+  rateBasis: string;
+  /** 0 when already ahead; null when the gap never closes at this rate. */
+  daysToBreakEven: number | null;
+}
+
+export interface PositionPerformanceDto {
+  positionId: number;
+  inRangeAprPercent: number | null;
+  apr7d: TrailingAprDto | null;
+  apr30d: TrailingAprDto | null;
+  vsPool: PoolComparisonDto | null;
+  breakEven: HodlBreakEvenDto | null;
+}
+
+export interface PortfolioPerformanceDto {
+  positions: PositionPerformanceDto[];
+  portfolio: HodlBreakEvenDto | null;
 }

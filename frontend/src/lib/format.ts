@@ -77,14 +77,34 @@ export function formatAge(days: number | null | undefined): string {
 export const estimateMark = (t: { estimatedHours: number }) =>
   t.estimatedHours > 0 ? "~" : "";
 
+/** The range the true figure most likely lies in, or null when the estimate is solid (always for measured data). */
+export const timeInRangeBand = (t: {
+  confidence: string;
+  percentLow: number;
+  percentHigh: number;
+}) =>
+  t.confidence === "High"
+    ? null
+    : `${formatShare(t.percentLow)} to ${formatShare(t.percentHigh)}`;
+
 /** Explains where a time-in-range figure comes from. */
 export const timeInRangeSource = (t: {
   measuredHours: number;
   estimatedHours: number;
-}) =>
-  t.estimatedHours > 0
-    ? `${formatHours(t.measuredHours)} measured from snapshots + ${formatHours(t.estimatedHours)} estimated from historical token prices`
-    : `${formatHours(t.measuredHours)} measured from snapshots`;
+  uncertainHours: number;
+  confidence: string;
+  percentLow: number;
+  percentHigh: number;
+}) => {
+  const base =
+    t.estimatedHours > 0
+      ? `${formatHours(t.measuredHours)} measured from snapshots + ${formatHours(t.estimatedHours)} estimated from historical token prices`
+      : `${formatHours(t.measuredHours)} measured from snapshots`;
+  const band = timeInRangeBand(t);
+  return band
+    ? `${base}. ${formatHours(t.uncertainHours)} of the estimate sat close to a range edge, where the price-implied tick can land on the wrong side, so the true figure is likely within ${band}.`
+    : base;
+};
 
 /** "12h", "3.5d" for a duration given in hours. */
 export function formatHours(hours: number): string {

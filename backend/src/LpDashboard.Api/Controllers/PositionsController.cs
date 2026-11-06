@@ -75,6 +75,15 @@ public sealed class PositionsController(PositionQueryService queries) : Controll
         return Ok(await queries.GetPortfolioInsightsAsync(new PositionFilter(owners), ct));
     }
 
+    [HttpGet("portfolio/performance")]
+    [ProducesResponseType<PortfolioPerformanceDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Performance([FromQuery] string? owner, CancellationToken ct)
+    {
+        if (!OwnerParam.TryParse(owner, out var owners)) return InvalidOwner();
+        return Ok(await queries.GetPerformanceAsync(new PositionFilter(owners), ct));
+    }
+
     [HttpGet("portfolio/history")]
     [ProducesResponseType<IReadOnlyList<PortfolioHistoryPointDto>>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

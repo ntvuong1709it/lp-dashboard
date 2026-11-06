@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { usePositionDrawer } from "../lib/positionDrawer";
 import { usePositions, useSummary } from "../api/client";
+import { PortfolioBreakEven } from "../components/BreakEvenCallout";
 import { PortfolioValueChart } from "../components/PortfolioValueChart";
 import { ExposurePanel, RewardTokensPanel } from "../components/PortfolioInsights";
 import { UpdatedAgo } from "../components/UpdatedAgo";
@@ -135,6 +136,8 @@ export function OverviewPage() {
           className="sm:col-span-2 lg:col-span-1"
         />
       </div>
+
+      <PortfolioBreakEven owner={owner} />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
         <ReadyToClaimPanel open={open.data ?? []} loading={open.isLoading} />

@@ -9,7 +9,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { useDailyEarnings, usePositions } from "../api/client";
+import { useDailyEarnings, usePerformance, usePositions } from "../api/client";
 import type { PositionDto } from "../api/types";
 import { MonthlyPnlChart } from "../components/PnlHistoryChart";
 import { UpdatedAgo } from "../components/UpdatedAgo";
@@ -25,6 +25,7 @@ import {
 import { pairLabel } from "../lib/attention";
 import { chart } from "../lib/chartTheme";
 import { formatUsd, pnlClass } from "../lib/format";
+import { breakEvenHint } from "../lib/performance";
 import { useOwner } from "../lib/owner";
 import { useHideBalances } from "../lib/privacy";
 
@@ -35,6 +36,7 @@ export function PnlPage() {
   useHideBalances(); // re-render when the toggle changes; formatters read the flag
   const { owner } = useOwner();
   const { data, error, isLoading } = usePositions(owner, null);
+  const performance = usePerformance(owner);
 
   const t = useMemo(() => {
     const all = data ?? [];
@@ -108,7 +110,11 @@ export function PnlPage() {
               loading={isLoading}
               value={formatUsd(t.vsHodl, true)}
               valueClass={pnlClass(t.vsHodl)}
-              hint="Impermanent loss + fees − gas"
+              hint={
+                performance.data?.portfolio
+                  ? `${breakEvenHint(performance.data.portfolio)} (price held)`
+                  : "Impermanent loss + fees − gas"
+              }
             />
           </div>
 

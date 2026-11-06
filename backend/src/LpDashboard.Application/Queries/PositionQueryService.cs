@@ -17,6 +17,7 @@ public sealed class PositionQueryService(
     IPositionEventRepository events,
     IEnumerable<IPositionProvider> providers,
     PriceService prices,
+    LpDashboard.Application.Pools.PoolExplorerService pools,
     IUnitOfWork unitOfWork,
     IOptions<SyncOptions> syncOptions,
     TimeProvider time,
@@ -107,6 +108,89 @@ public sealed class PositionQueryService(
     {
         var list = await positions.QueryAsync(filter, ct);
         return new PortfolioInsightsDto(PortfolioExposureCalculator.Calculate(list), RewardPnlCalculator.Calculate(list));
+    }
+
+    /// <summary>
+    /// Rates that need more than the lifetime figures: trailing 7/30-day APR, APR per day in range, the pool comparison
+    /// and a break-even against holding. Separate from the position list so a slow or unavailable pool source never
+    /// delays the table.
+    /// </summary>
+    public async Task<PortfolioPerformanceDto> GetPerformanceAsync(PositionFilter filter, CancellationToken ct)
+    {
+        var now = time.GetUtcNow().UtcDateTime;
+        var today = DateOnly.FromDateTime(now);
+        var dtos = await ListAsync(filter, ct);
+        var entities = (await positions.QueryAsync(filter, ct)).ToDictionary(p => p.Id);
+        var open = entities.Values.Where(p => p.Status == PositionStatus.Open).ToList();
+
+        var snapshotsByPosition = (await snapshots.ListForPositionsAsync(open.Select(p => p.Id).ToList(), ct)).ToLookup(s => s.PositionId);
+        IReadOnlyDictionary<int, PoolRates> poolRates;
+        try
+        {
+            poolRates = await pools.GetPoolRatesAsync(open, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Could not load pool rates for the performance view");
+            poolRates = new Dictionary<int, PoolRates>();
+        }
+
+        var rows = new List<PositionPerformanceDto>(dtos.Count);
+        decimal totalRate = 0;
+        var rateBases = new HashSet<string>();
+        foreach (var p in dtos)
+        {
+            var m = p.Metrics;
+            var inRangeApr = PerformanceCalculator.InRangeApr(m.FeeAprPercent, p.TimeInRange, m.AgeDays);
+
+            if (p.Status != PositionStatus.Open || !entities.TryGetValue(p.Id, out var entity))
+            {
+                rows.Add(new PositionPerformanceDto(p.Id, inRangeApr, null, null, null, null));
+                continue;
+            }
+
+            var snaps = snapshotsByPosition[p.Id].ToList();
+            var daily = EarningsCalculator.Calculate(entity.Events, BuildEarningsPoints(entity, snaps), TimeZoneInfo.Utc);
+            var values = snaps.Select(s => new ValueSample(s.Timestamp, s.ValueUsd)).ToList();
+            var apr7 = PerformanceCalculator.Trailing(daily, values, m.CurrentValueUsd, m.AgeDays, today, 7);
+            var apr30 = PerformanceCalculator.Trailing(daily, values, m.CurrentValueUsd, m.AgeDays, today, 30);
+
+            // Recent rate where the position is old enough to have one, else its lifetime average.
+            HodlBreakEven? breakEven = null;
+            if (apr30 is not null || m.AgeDays is >= 1)
+            {
+                var (rate, basis) = apr30 is not null ? (apr30.EarnedUsd / apr30.Days, "30d") : (m.FeesEarnedUsd / (decimal)m.AgeDays!.Value, "lifetime");
+                breakEven = PerformanceCalculator.BreakEven(m.PnlVsHodlUsd, rate, basis);
+                totalRate += rate;
+                rateBases.Add(basis);
+            }
+
+            var comparison = PerformanceCalculator.ComparePool(
+                p.IsStaked, poolRates.GetValueOrDefault(p.Id), apr7, apr30, m.FeeAprPercent);
+            rows.Add(new PositionPerformanceDto(p.Id, inRangeApr, apr7, apr30, comparison, breakEven));
+        }
+
+        // The gap of every position (closed ones included) against what the open ones earn per day.
+        HodlBreakEven? portfolio = dtos.Count == 0
+            ? null
+            : PerformanceCalculator.BreakEven(
+                dtos.Sum(p => p.Metrics.PnlVsHodlUsd), totalRate, rateBases.Count == 1 ? rateBases.First() : rateBases.Count == 0 ? "none" : "mixed");
+        return new PortfolioPerformanceDto(rows, portfolio);
+    }
+
+    /// <summary>Snapshots as earnings points, plus the latest synced state so today is current.</summary>
+    private static List<EarningsPoint> BuildEarningsPoints(Position p, IEnumerable<PositionSnapshot> snapshots)
+    {
+        var points = snapshots
+            .Select(s => new EarningsPoint(s.Timestamp, s.Uncollected0, s.Uncollected1, s.PendingReward, s.Price0Usd, s.Price1Usd, s.RewardPriceUsd))
+            .ToList();
+
+        var liveAt = p.Status == PositionStatus.Open ? p.ValuedAt : p.ClosedAt;
+        if (liveAt is { } at && (points.Count == 0 || at > points[^1].Timestamp))
+        {
+            points.Add(new EarningsPoint(at, p.Uncollected0, p.Uncollected1, p.PendingReward, p.Price0Usd, p.Price1Usd, p.RewardPriceUsd));
+        }
+        return points;
     }
 
     /// <summary>
@@ -373,16 +457,8 @@ public sealed class PositionQueryService(
         var totals = new Dictionary<DateOnly, (decimal Fees, decimal Rewards, bool Missing)>();
         foreach (var p in list)
         {
-            var points = snapshotsByPosition[p.Id]
-                .Select(s => new EarningsPoint(s.Timestamp, s.Uncollected0, s.Uncollected1, s.PendingReward, s.Price0Usd, s.Price1Usd, s.RewardPriceUsd))
-                .ToList();
-
-            // Snapshots are hourly; add the latest synced state so today is current (closed positions end at their close).
-            var liveAt = p.Status == PositionStatus.Open ? p.ValuedAt : p.ClosedAt;
-            if (liveAt is { } at && (points.Count == 0 || at > points[^1].Timestamp))
-            {
-                points.Add(new EarningsPoint(at, p.Uncollected0, p.Uncollected1, p.PendingReward, p.Price0Usd, p.Price1Usd, p.RewardPriceUsd));
-            }
+            // Snapshots are hourly; the latest synced state is added so today is current (closed positions end at their close).
+            var points = BuildEarningsPoints(p, snapshotsByPosition[p.Id]);
 
             foreach (var d in EarningsCalculator.Calculate(p.Events, points, timeZone))
             {

@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using LpDashboard.Application.Abstractions;
 using LpDashboard.Domain;
+using LpDashboard.Domain.Entities;
 using LpDashboard.Domain.Metrics;
 using Microsoft.Extensions.Logging;
 
@@ -158,6 +159,62 @@ public sealed class PoolExplorerService(
             AprEstimator.BreakEvenMove(halfWidth, feeFraction, up: true) * 100,
             new PoolHistoryDto(history.DaysInRange, history.Days, history.FirstExitDay, history.LowMove * 100, history.HighMove * 100),
             await AlternativesAsync(pool, volatility, halfWidth, days, capital, request.KnownFees, ct));
+    }
+
+    /// <summary>
+    /// Pool-wide rates (swap-fee APR on the best window available, and the spot emission rate) for the pool each open
+    /// position is in, keyed by position id. Positions whose pool the analytics source does not list are left out, and a
+    /// source outage yields fewer entries rather than an error.
+    /// </summary>
+    public async Task<IReadOnlyDictionary<int, PoolRates>> GetPoolRatesAsync(IEnumerable<Position> open, CancellationToken ct)
+    {
+        var result = new Dictionary<int, PoolRates>();
+        var byPool = new Dictionary<string, PoolRates?>();
+
+        foreach (var chain in open.Where(p => p.Pool is not null).GroupBy(p => p.Chain))
+        {
+            IReadOnlyList<PoolStats> stats;
+            try
+            {
+                stats = (await GetStatsAsync(chain.Key, ct)).Pools;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogWarning(ex, "Pool analytics unavailable for {Chain}; skipping the pool comparison", chain.Key);
+                continue;
+            }
+
+            var listed = new Dictionary<string, PoolStats>();
+            foreach (var s in stats) listed.TryAdd(MatchKey(s.Protocol, s.Token0, s.Token1, s.FeeHundredthsBip, s.TickSpacing), s);
+
+            foreach (var p in chain)
+            {
+                var pool = p.Pool!;
+                var key = MatchKey(p.Protocol, pool.Token0.Address, pool.Token1.Address, pool.Fee, pool.TickSpacing);
+                if (!listed.TryGetValue(key, out var stat)) continue;
+
+                if (!byPool.TryGetValue(stat.Id, out var rates))
+                {
+                    try
+                    {
+                        // The position's on-chain fee beats the source's, which can be stale for dynamic-fee pools.
+                        var fixedFee = pool.Fee is { } f ? stat.WithFee(f / 10000m) : stat;
+                        var withHistory = await WithFeeApr30dAsync(fixedFee, ct);
+                        var r = Rates(withHistory);
+                        rates = new PoolRates(r is { } x ? (decimal)x.Basis : null, r?.Label, stat.RewardApr);
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        logger.LogWarning(ex, "Could not load rates for pool {PoolId}", stat.Id);
+                        rates = null;
+                    }
+                    byPool[stat.Id] = rates;
+                }
+
+                if (rates is not null) result[p.Id] = rates;
+            }
+        }
+        return result;
     }
 
     /// <summary>The same token pair in other pools, estimated at the same range; the pool being estimated is always included.</summary>

@@ -12,6 +12,7 @@ export type SortKey =
   | "pnl"
   | "il"
   | "vsHodl"
+  | "catchUp"
   | "apr"
   | "inRange";
 
@@ -25,7 +26,13 @@ const pairName = (p: PositionDto) =>
 
 const time = (iso: string | null) => (iso ? Date.parse(iso) : null);
 
-const sortValue: Record<SortKey, (p: PositionDto) => number | string | null> = {
+/** Data the sort needs that is not on the position itself. */
+export interface SortContext {
+  /** Days to catch up with holding per open position; null when it never does. Closed positions are absent. */
+  catchUpDays?: ReadonlyMap<number, number | null>;
+}
+
+const sortValue: Record<SortKey, (p: PositionDto, ctx: SortContext) => number | string | null> = {
   position: pairName,
   age: (p) => p.metrics.ageDays,
   created: (p) => time(p.openedAt),
@@ -36,6 +43,9 @@ const sortValue: Record<SortKey, (p: PositionDto) => number | string | null> = {
   pnl: (p) => p.metrics.pnlUsd,
   il: (p) => p.metrics.impermanentLossUsd,
   vsHodl: (p) => p.metrics.pnlVsHodlUsd,
+  // Never catching up sorts after every finite horizon; closed positions have no projection and go last.
+  catchUp: (p, ctx) =>
+    ctx.catchUpDays?.has(p.id) ? (ctx.catchUpDays.get(p.id) ?? Number.MAX_SAFE_INTEGER) : null,
   apr: (p) => p.metrics.feeAprPercent,
   inRange: (p) => p.timeInRange?.percent ?? null,
 };
@@ -44,12 +54,13 @@ const sortValue: Record<SortKey, (p: PositionDto) => number | string | null> = {
 export function sortPositions(
   positions: PositionDto[],
   { key, dir }: SortState,
+  ctx: SortContext = {},
 ): PositionDto[] {
   const get = sortValue[key];
   const sign = dir === "asc" ? 1 : -1;
   return [...positions].sort((a, b) => {
-    const x = get(a);
-    const y = get(b);
+    const x = get(a, ctx);
+    const y = get(b, ctx);
     if (x == null && y == null) return 0;
     if (x == null) return 1;
     if (y == null) return -1;
