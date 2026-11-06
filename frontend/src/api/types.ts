@@ -81,6 +81,8 @@ export interface PortfolioHistoryPoint {
   valueUsd: number;
   unclaimedUsd: number;
   positionCount: number;
+  /** At least one position's value here is reconstructed from events and prices, not measured. */
+  estimated: boolean;
 }
 
 export interface PositionDto {

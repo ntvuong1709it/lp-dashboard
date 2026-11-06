@@ -143,10 +143,29 @@ public sealed class PositionQueryService(
         var list = await positions.QueryAsync(filter, ct);
         var snapshotsByPosition = (await snapshots.ListLiteAsync(list.Select(p => p.Id).ToList(), ct)).ToLookup(s => s.PositionId);
 
+        // One at a time: reconstruction writes the price cache through a single DbContext.
         var series = new List<PositionSeries>(list.Count);
         foreach (var p in list)
         {
             var points = snapshotsByPosition[p.Id].Select(s => new ValuePoint(s.Timestamp, s.ValueUsd, s.UncollectedUsd)).ToList();
+
+            // Snapshots start at the first sync, so fill the time before it from events and historical prices.
+            // Without this a newly added wallet appears out of nowhere and the total jumps.
+            var historyEnd = points.Count > 0 ? points.Min(x => x.Timestamp) : p.Status == PositionStatus.Closed ? p.ClosedAt : p.ValuedAt;
+            if (historyEnd is { } reconstructUntil)
+            {
+                try
+                {
+                    var history = await ReconstructHistoryAsync(p, CollectSplitter.Order(p.Events).ToList(), reconstructUntil, MaxHistorySamples, ct);
+                    points.AddRange(history.Points
+                        .Where(h => h.Timestamp < reconstructUntil)
+                        .Select(h => new ValuePoint(h.Timestamp, h.ValueUsd, 0, Estimated: true)));
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    logger.LogWarning(ex, "Could not reconstruct portfolio history for position {PositionId}", p.Id);
+                }
+            }
 
             // Add the latest synced valuation (same formula as a snapshot) so the chart ends at the current value.
             if (p.Status == PositionStatus.Open && p.ValuedAt is { } valuedAt && (points.Count == 0 || valuedAt > points.Max(x => x.Timestamp)))
@@ -161,7 +180,7 @@ public sealed class PositionQueryService(
         }
 
         return PortfolioHistoryCalculator.Build(series, from, to)
-            .Select(h => new PortfolioHistoryPointDto(h.Timestamp, h.ValueUsd, h.UnclaimedUsd, h.PositionCount))
+            .Select(h => new PortfolioHistoryPointDto(h.Timestamp, h.ValueUsd, h.UnclaimedUsd, h.PositionCount, h.Estimated))
             .ToList();
     }
 

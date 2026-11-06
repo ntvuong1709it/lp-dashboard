@@ -181,6 +181,22 @@ public class PortfolioHistoryTests
     }
 
     [Fact]
+    public void EstimatedHistoryBeforeFirstSnapshot_KeepsTotalContinuous_AndIsFlagged()
+    {
+        var old = new PositionSeries([P(0, 100), P(2, 100)], null);
+        // A wallet added at hour 2: its history before that is reconstructed, then measured snapshots take over.
+        var added = new PositionSeries(
+            [new ValuePoint(T0, 50, 0, Estimated: true), new ValuePoint(T0.AddHours(1), 52, 0, Estimated: true), P(2, 53)], null);
+
+        var result = PortfolioHistoryCalculator.Build([old, added], null, null);
+
+        Assert.Collection(result,
+            p => { Assert.Equal(150, p.ValueUsd); Assert.True(p.Estimated); },
+            p => { Assert.Equal(152, p.ValueUsd); Assert.True(p.Estimated); },
+            p => { Assert.Equal(153, p.ValueUsd); Assert.False(p.Estimated); });
+    }
+
+    [Fact]
     public void NoSnapshots_IsEmpty()
     {
         Assert.Empty(PortfolioHistoryCalculator.Build([new PositionSeries([], null)], null, null));

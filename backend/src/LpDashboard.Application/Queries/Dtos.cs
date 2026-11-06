@@ -46,7 +46,8 @@ public sealed record PositionDto(
     /// <summary>Measured from snapshots, completed with an estimate from historical prices where there are none. Null when nothing could be covered.</summary>
     TimeInRange? TimeInRange);
 
-public sealed record PortfolioHistoryPointDto(DateTime Timestamp, decimal ValueUsd, decimal UnclaimedUsd, int PositionCount);
+/// <param name="Estimated">At least one position's value at this time is reconstructed from events and prices, not measured.</param>
+public sealed record PortfolioHistoryPointDto(DateTime Timestamp, decimal ValueUsd, decimal UnclaimedUsd, int PositionCount, bool Estimated);
 
 public sealed record PnlPointDto(DateTime Timestamp, decimal CumulativePnlUsd);
 

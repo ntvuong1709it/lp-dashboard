@@ -1,16 +1,18 @@
 namespace LpDashboard.Domain.Metrics;
 
-public sealed record ValuePoint(DateTime Timestamp, decimal ValueUsd, decimal UnclaimedUsd);
+/// <param name="Estimated">Reconstructed from events and historical prices rather than measured by a sync.</param>
+public sealed record ValuePoint(DateTime Timestamp, decimal ValueUsd, decimal UnclaimedUsd, bool Estimated = false);
 
 /// <param name="Points">Snapshots of one position, any order.</param>
 /// <param name="ClosedAt">The position contributes nothing from this moment on.</param>
 public sealed record PositionSeries(IReadOnlyList<ValuePoint> Points, DateTime? ClosedAt);
 
-public sealed record PortfolioHistoryPoint(DateTime Timestamp, decimal ValueUsd, decimal UnclaimedUsd, int PositionCount);
+public sealed record PortfolioHistoryPoint(DateTime Timestamp, decimal ValueUsd, decimal UnclaimedUsd, int PositionCount, bool Estimated = false);
 
 /// <summary>
 /// Sums position snapshots into one portfolio series on an hourly grid. Between snapshots a position keeps its last
-/// known value; before its first snapshot it does not count (history starts at the first sync, it is not reconstructed).
+/// known value; before its first point it does not count. Callers supply reconstructed (estimated) points for the time
+/// before a position's first snapshot, so a newly added wallet does not make the total jump.
 /// </summary>
 public static class PortfolioHistoryCalculator
 {
@@ -41,6 +43,7 @@ public static class PortfolioHistoryCalculator
 
             decimal value = 0, unclaimed = 0;
             var count = 0;
+            var estimated = false;
             foreach (var (points, closedAt) in sorted)
             {
                 if (closedAt is { } closed && closed <= t) continue;
@@ -50,9 +53,10 @@ public static class PortfolioHistoryCalculator
                 value += latest.ValueUsd;
                 unclaimed += latest.UnclaimedUsd;
                 count++;
+                estimated |= latest.Estimated;
             }
 
-            if (count > 0) result.Add(new PortfolioHistoryPoint(t, value, unclaimed, count));
+            if (count > 0) result.Add(new PortfolioHistoryPoint(t, value, unclaimed, count, estimated));
         }
         return result;
     }

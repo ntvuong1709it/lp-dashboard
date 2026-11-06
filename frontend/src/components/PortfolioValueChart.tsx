@@ -6,6 +6,7 @@ import {
   Legend,
   Line,
   LineChart,
+  ReferenceArea,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -24,7 +25,7 @@ const ranges = [
   { label: "All", value: 0 },
 ];
 
-/** Total value of every position (any status) over time, from hourly snapshots. */
+/** Total value of every position (any status) over time: hourly snapshots, plus reconstructed values before the first sync. */
 export function PortfolioValueChart({ owner }: { owner: string | null }) {
   const { data, error, isLoading } = usePortfolioHistory(owner);
 
@@ -38,9 +39,15 @@ export function PortfolioValueChart({ owner }: { owner: string | null }) {
         value: p.valueUsd,
         withUnclaimed: p.valueUsd + p.unclaimedUsd,
         count: p.positionCount,
+        estimated: p.estimated,
       }));
     },
     [data, days],
+  );
+  /** Span covered at least partly by reconstructed values; measured snapshots take over after it. */
+  const estimatedUntil = useMemo(
+    () => points.reduce((last, p) => (p.estimated ? p.t : last), 0),
+    [points],
   );
 
   return (
@@ -102,11 +109,21 @@ export function PortfolioValueChart({ owner }: { owner: string | null }) {
                     const count = items?.[0]?.payload?.count as
                       | number
                       | undefined;
-                    return `${new Date(t as number).toLocaleString()}${count ? ` · ${count} positions` : ""}`;
+                    const estimated = items?.[0]?.payload?.estimated as boolean | undefined;
+                    return `${new Date(t as number).toLocaleString()}${count ? ` · ${count} positions` : ""}${estimated ? " · estimated" : ""}`;
                   }}
                   formatter={(v) => formatUsd(v as number)}
                 />
                 <Legend />
+                {estimatedUntil > points[0].t && (
+                  <ReferenceArea
+                    x1={points[0].t}
+                    x2={estimatedUntil}
+                    fill={chart.axis}
+                    fillOpacity={0.12}
+                    ifOverflow="hidden"
+                  />
+                )}
                 <Line
                   type="stepAfter"
                   dataKey="value"
@@ -125,10 +142,11 @@ export function PortfolioValueChart({ owner }: { owner: string | null }) {
             </ResponsiveContainer>
           </div>
           <p className="mt-2 text-xs text-slate-500">
-            History starts at each position&apos;s first sync (it is not
-            reconstructed), so the line steps up when a position is first
-            tracked and drops when one is withdrawn. Fees already claimed are
-            not included.
+            {estimatedUntil > points[0].t
+              ? "The shaded part is estimated: before a position's first sync its value is rebuilt from its deposits and historical token prices (hourly), so it can be off by a percent or so and leaves out unclaimed fees. "
+              : ""}
+            The line steps when a position is opened or withdrawn. Fees
+            already claimed are not included.
           </p>
         </>
       )}
