@@ -27,7 +27,7 @@ import type {
 import { RangeBadge, RangeBar } from "../components/RangeBar";
 import { ResyncControls } from "../components/ResyncControls";
 import { UpdatedAgo } from "../components/UpdatedAgo";
-import { UnclaimedCard } from "../components/Unclaimed";
+import { UnclaimedCard, rewardTotals } from "../components/Unclaimed";
 import {
   CopyButton,
   Empty,
@@ -59,6 +59,7 @@ import {
   txUrl,
 } from "../lib/format";
 import { useHideBalances } from "../lib/privacy";
+import { claimInsight } from "../lib/claimInsight";
 
 export function PositionDetailPage({
   id: idProp,
@@ -173,6 +174,24 @@ export function PositionDetailPage({
             <MiniStat label="Deposited" value={formatUsd(m.depositedUsd)} />
             <MiniStat label="If held instead" value={formatUsd(m.hodlValueUsd)} />
           </div>
+          {(rewardTotals([p]).length > 0 || claimInsight(p, data.events).length > 0) && (
+            <div className="space-y-1 rounded-lg border border-sky-700 bg-sky-950/40 p-3 text-xs">
+              <div className="font-semibold uppercase tracking-[.05em] text-sky-300">
+                Unclaimed
+              </div>
+              {rewardTotals([p]).map((r) => (
+                <div key={r.symbol} className="text-slate-400 num">
+                  Rewards: {formatAmount(r.amount)} {r.symbol}
+                  {r.priceUsd == null ? " (price unknown)" : ` @ ${formatPrice(r.priceUsd)} USD`}
+                </div>
+              ))}
+              {claimInsight(p, data.events).map((line) => (
+                <div key={line} className="text-slate-300">
+                  {line}
+                </div>
+              ))}
+            </div>
+          )}
           <Panel title="P/L breakdown">
             <Waterfall
               totalLabel="Net P/L"
@@ -196,11 +215,8 @@ export function PositionDetailPage({
         <UnclaimedCard
           fees={m.uncollectedFeesUsd}
           rewards={m.pendingRewardsUsd}
-          note={
-            m.feesEarnedUsd > 0
-              ? `${(((m.uncollectedFeesUsd + m.pendingRewardsUsd) / m.feesEarnedUsd) * 100).toFixed(0)}% of fees earned`
-              : undefined
-          }
+          rewardTokens={rewardTotals([p])}
+          insights={claimInsight(p, data.events)}
           className="col-span-2 md:col-span-4"
         />
         <StatCard label="Value" value={formatUsd(m.currentValueUsd)} />

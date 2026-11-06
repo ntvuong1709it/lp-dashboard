@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { PositionDto } from "../api/types";
 import { UNCLAIMED_ALERT_USD, pairLabel } from "../lib/attention";
-import { formatUsd, protocolLabels } from "../lib/format";
+import { formatAmount, formatPrice, formatUsd, protocolLabels } from "../lib/format";
 import { usePositionDrawer } from "../lib/positionDrawer";
 import { Panel, Skeleton } from "./ui";
 
@@ -51,15 +51,52 @@ function Legend() {
   );
 }
 
+/** Pending reward tokens of one kind: how many you will receive and what one is worth today. */
+export interface RewardTokenTotal {
+  symbol: string;
+  amount: number;
+  /** Current USD price of one token; null when unknown. */
+  priceUsd: number | null;
+}
+
+/** Sums pending rewards per reward token across positions. */
+export function rewardTotals(positions: PositionDto[]): RewardTokenTotal[] {
+  const map = new Map<string, RewardTokenTotal>();
+  for (const p of positions) {
+    if (!(p.pendingReward > 0)) continue;
+    const symbol = p.rewardTokenSymbol ?? "reward";
+    const price = p.metrics.rewardPriceUsd ?? null;
+    const entry = map.get(symbol);
+    if (entry) {
+      entry.amount += p.pendingReward;
+      entry.priceUsd ??= price;
+    } else {
+      map.set(symbol, { symbol, amount: p.pendingReward, priceUsd: price });
+    }
+  }
+  return [...map.values()];
+}
+
+/** "1,234 AERO @ $0.52", or without the price when it is unknown. */
+function formatRewardToken(r: RewardTokenTotal): string {
+  const price = r.priceUsd == null ? "" : ` @ ${formatPrice(r.priceUsd)} USD`;
+  return `${formatAmount(r.amount)} ${r.symbol}${price}`;
+}
+
 export function UnclaimedCard({
   fees,
   rewards,
+  rewardTokens,
+  insights,
   note,
   loading,
   className = "",
 }: {
   fees: number;
   rewards: number;
+  rewardTokens?: RewardTokenTotal[];
+  /** Decision-helping lines (earning rate, claim cost, ...). */
+  insights?: string[];
   note?: string;
   loading?: boolean;
   className?: string;
@@ -93,6 +130,17 @@ export function UnclaimedCard({
               Rewards {formatUsd(rewards)}
             </span>
           </div>
+          {rewardTokens?.map((r) => (
+            <div key={r.symbol} className="mt-1 text-xs text-slate-400 num">
+              Rewards: {formatRewardToken(r)}
+              {r.priceUsd == null && " (price unknown)"}
+            </div>
+          ))}
+          {insights?.map((line) => (
+            <div key={line} className="mt-1 text-xs text-slate-300">
+              {line}
+            </div>
+          ))}
           {note && <div className="mt-2 text-xs text-slate-400">{note}</div>}
         </>
       )}
@@ -180,6 +228,12 @@ export function ReadyToClaimPanel({
                   </div>
                   <div className="mt-1.5 text-xs text-slate-400 num">
                     fees {formatUsd(fees)} · rewards {formatUsd(rewards)}
+                    {p.pendingReward > 0 &&
+                      ` (${formatRewardToken({
+                        symbol: p.rewardTokenSymbol ?? "reward",
+                        amount: p.pendingReward,
+                        priceUsd: p.metrics.rewardPriceUsd ?? null,
+                      })})`}
                     {p.metrics.currentValueUsd > 0 &&
                       ` · ${((total / p.metrics.currentValueUsd) * 100).toFixed(1)}% of position value`}
                   </div>

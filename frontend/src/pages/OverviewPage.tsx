@@ -4,7 +4,7 @@ import { usePositionDrawer } from "../lib/positionDrawer";
 import { usePositions, useSummary } from "../api/client";
 import { PortfolioValueChart } from "../components/PortfolioValueChart";
 import { UpdatedAgo } from "../components/UpdatedAgo";
-import { ReadyToClaimPanel, UnclaimedCard } from "../components/Unclaimed";
+import { ReadyToClaimPanel, UnclaimedCard, rewardTotals } from "../components/Unclaimed";
 import {
   BarRow,
   Empty,
@@ -127,6 +127,7 @@ export function OverviewPage() {
         <UnclaimedCard
           fees={s?.uncollectedFeesUsd ?? 0}
           rewards={s?.pendingRewardsUsd ?? 0}
+          rewardTokens={rewardTotals(open.data ?? [])}
           note={s && unclaimedNote(s, open.data ?? [])}
           loading={summary.isLoading || open.isLoading}
           className="sm:col-span-2 lg:col-span-1"
