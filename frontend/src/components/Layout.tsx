@@ -21,7 +21,8 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
 
 export function Layout() {
   // The pool explorer is a table next to a side panel, so it gets more of a wide screen than the other pages.
-  const wide = useLocation().pathname.startsWith("/pools");
+  const { pathname } = useLocation();
+  const wide = pathname.startsWith("/pools");
   const width = wide ? "max-w-[110rem]" : "max-w-7xl";
   return (
     <div className="min-h-screen">
@@ -47,10 +48,12 @@ export function Layout() {
             <NavLink to="/pnl" className={navClass}>
               Profit &amp; loss
             </NavLink>
-            <NavLink to="/activity" className={navClass}>
-              Activity
-            </NavLink>
-            <NavLink to="/fees" className={navClass}>
+            <NavLink
+              to="/fees"
+              className={({ isActive }) =>
+                navClass({ isActive: isActive || pathname === "/activity" })
+              }
+            >
               Earnings
             </NavLink>
             <NavLink to="/features" className={navClass}>

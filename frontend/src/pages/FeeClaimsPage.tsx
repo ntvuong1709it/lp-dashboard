@@ -11,6 +11,7 @@ import {
   YAxis,
 } from "recharts";
 import { useDailyEarnings, useWeeklyClaims } from "../api/client";
+import { EarningsTabs } from "../components/EarningsTabs";
 import { UpdatedAgo } from "../components/UpdatedAgo";
 import {
   CopyButton,
@@ -36,7 +37,8 @@ export function FeeClaimsPage() {
   useHideBalances(); // re-render when the toggle changes; formatters read the flag
   return (
     <div className="space-y-10">
-      <div className="-mb-6 flex items-center justify-end gap-3">
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <EarningsTabs />
         <UpdatedAgo />
       </div>
       <DailyEarnings />

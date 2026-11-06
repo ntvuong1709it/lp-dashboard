@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useActivity } from "../api/client";
 import type { PositionEventType } from "../api/types";
+import { EarningsTabs } from "../components/EarningsTabs";
 import { UpdatedAgo } from "../components/UpdatedAgo";
 import {
   CopyButton,
@@ -57,6 +58,7 @@ export function ActivityPage() {
 
   return (
     <div className="space-y-6">
+      <EarningsTabs />
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Activity</h1>

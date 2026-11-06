@@ -46,27 +46,31 @@ import {
 } from "../lib/positionTable";
 import { usePersistentState } from "../lib/usePersistentState";
 
-type StatusFilter = "all" | "in" | "out" | "closed";
+type StatusFilter = "all" | "open" | "in" | "out" | "closed";
 
 const statusOptions: { label: string; value: StatusFilter }[] = [
-  { label: "All", value: "all" },
+  { label: "Open", value: "open" },
   { label: "In range", value: "in" },
   { label: "Out of range", value: "out" },
   { label: "Closed", value: "closed" },
+  { label: "All", value: "all" },
 ];
 
 const matchesStatus = (p: PositionDto, f: StatusFilter) =>
   f === "all" ||
   (f === "closed"
     ? p.status === "Closed"
-    : p.status === "Open" && p.range?.inRange === (f === "in"));
+    : f === "open"
+      ? p.status === "Open"
+      : p.status === "Open" && p.range?.inRange === (f === "in"));
 
 export function PositionsPage() {
   useHideBalances(); // re-render when the toggle changes; formatters read the flag
   const { owner } = useOwner();
   const [status, setStatus] = usePersistentState<StatusFilter>(
-    "lpdash.portfolio.statusFilter",
-    "all",
+    // New key: the default changed to "open", and an old saved "all" would otherwise keep winning.
+    "lpdash.positions.status",
+    "open",
   );
   const [inverted, setInverted] = usePersistentState(
     "lpdash.portfolio.inverted",
