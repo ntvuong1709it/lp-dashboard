@@ -102,6 +102,13 @@ public sealed class PositionQueryService(
             HasMissingPrices: m.Any(x => x.HasMissingPrices));
     }
 
+    /// <summary>Token exposure of open positions and reward-token results; reads stored state only, no price history.</summary>
+    public async Task<PortfolioInsightsDto> GetPortfolioInsightsAsync(PositionFilter filter, CancellationToken ct)
+    {
+        var list = await positions.QueryAsync(filter, ct);
+        return new PortfolioInsightsDto(PortfolioExposureCalculator.Calculate(list), RewardPnlCalculator.Calculate(list));
+    }
+
     /// <summary>
     /// Measured from snapshots where they exist; the rest of the position's life (before the first sync, gaps while the
     /// app was off) is estimated from the tick implied by historical token prices. Falls back to measured-only if the

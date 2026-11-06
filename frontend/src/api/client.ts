@@ -13,6 +13,7 @@ import type {
   PoolEstimateDto,
   PoolListDto,
   PortfolioHistoryPoint,
+  PortfolioInsightsDto,
   SyncRequestBody,
   PortfolioSummaryDto,
   PositionDetailDto,
@@ -247,4 +248,11 @@ export const usePoolEstimate = (
           body: JSON.stringify({ halfWidthPercent, capitalUsd, days, feePercent, knownFees }),
         },
       ),
+  });
+
+export const usePortfolioInsights = (owner: string | null) =>
+  useQuery({
+    queryKey: ["portfolio-insights", owner],
+    queryFn: () =>
+      request<PortfolioInsightsDto>(`/api/portfolio/insights${query({ owner })}`),
   });

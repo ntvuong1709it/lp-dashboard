@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { usePositionDrawer } from "../lib/positionDrawer";
 import { usePositions, useSummary } from "../api/client";
 import { PortfolioValueChart } from "../components/PortfolioValueChart";
+import { ExposurePanel, RewardTokensPanel } from "../components/PortfolioInsights";
 import { UpdatedAgo } from "../components/UpdatedAgo";
 import { ReadyToClaimPanel, UnclaimedCard, rewardTotals } from "../components/Unclaimed";
 import {
@@ -30,11 +31,12 @@ import { useOwner } from "../lib/owner";
 import { useHideBalances } from "../lib/privacy";
 import { pairLabel } from "../lib/attention";
 
-const alertStyle: Record<AlertKind, { icon: string; className: string }> = {
-  out: { icon: "!", className: "text-rose-400" },
-  edge: { icon: "~", className: "text-amber-400" },
-  unclaimed: { icon: "$", className: "text-sky-400" },
-  prices: { icon: "?", className: "text-amber-400" },
+/** A text label per kind, each with its own colour, so a row is readable without decoding an icon. */
+const alertStyle: Record<AlertKind, { label: string; className: string }> = {
+  out: { label: "Out of range", className: "border-rose-500/50 bg-rose-500/10 text-rose-300" },
+  edge: { label: "Near edge", className: "border-orange-500/50 bg-orange-500/10 text-orange-300" },
+  unclaimed: { label: "Unclaimed", className: "border-sky-500/50 bg-sky-500/10 text-sky-300" },
+  prices: { label: "No price", className: "border-slate-500/50 bg-slate-500/10 text-slate-300" },
 };
 
 export function OverviewPage() {
@@ -145,7 +147,7 @@ export function OverviewPage() {
 
       <PortfolioValueChart owner={owner} />
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <AllocationPanel
           title="Allocation by position"
           loading={open.isLoading}
@@ -158,7 +160,10 @@ export function OverviewPage() {
           rows={byProtocol}
           note="Closed positions are excluded here and counted in all-time P/L."
         />
+        <ExposurePanel />
       </div>
+
+      <RewardTokensPanel />
     </div>
   );
 }
@@ -210,10 +215,9 @@ function AttentionPanel({
               className="flex gap-3 py-2.5 first:pt-0 last:pb-0"
             >
               <span
-                aria-hidden="true"
-                className={`mt-0.5 grid h-5 w-5 flex-none place-items-center rounded-full border-[1.5px] border-current text-xs font-bold ${alertStyle[a.kind].className}`}
+                className={`mt-0.5 h-fit w-24 flex-none rounded-full border px-2 py-0.5 text-center text-[11px] font-semibold ${alertStyle[a.kind].className}`}
               >
-                {alertStyle[a.kind].icon}
+                {alertStyle[a.kind].label}
               </span>
               <div className="text-sm">
                 <div>{a.title}</div>

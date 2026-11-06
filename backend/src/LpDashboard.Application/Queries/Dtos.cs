@@ -100,6 +100,9 @@ public sealed record PortfolioSummaryDto(
     decimal GasUsd,
     bool HasMissingPrices);
 
+/// <summary>Portfolio-wide views that need more than one position at a time: what is held per token, and how reward tokens fared after being claimed.</summary>
+public sealed record PortfolioInsightsDto(PortfolioExposure Exposure, IReadOnlyList<RewardTokenSummary> Rewards);
+
 public sealed record SnapshotPointDto(
     DateTime Timestamp,
     decimal ValueUsd,

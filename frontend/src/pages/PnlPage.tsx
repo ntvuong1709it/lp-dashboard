@@ -42,16 +42,19 @@ export function PnlPage() {
     const closed = all.filter((p) => p.status === "Closed");
     const pnl = sum(all, (p) => p.metrics.pnlUsd);
     const il = sum(all, (p) => p.metrics.impermanentLossUsd);
-    const fees = sum(all, (p) => p.metrics.feesEarnedUsd);
+    const earned = sum(all, (p) => p.metrics.feesEarnedUsd);
+    const rewards = sum(all, (p) => p.metrics.claimedRewardsUsd + p.metrics.pendingRewardsUsd);
+    const fees = earned - rewards;
     const gas = sum(all, (p) => p.metrics.gasUsd);
     return {
       all,
       pnl,
       il,
       fees,
+      rewards,
       gas,
       // Residual, so the breakdown always adds up to the P/L figure.
-      priceChange: pnl - il - fees + gas,
+      priceChange: pnl - il - earned + gas,
       unrealized: sum(open, (p) => p.metrics.pnlUsd),
       realized: sum(closed, (p) => p.metrics.pnlUsd),
       vsHodl: sum(all, (p) => p.metrics.pnlVsHodlUsd),
@@ -121,7 +124,8 @@ export function PnlPage() {
                   steps={[
                     { label: "Token price change", value: t.priceChange },
                     { label: "Impermanent loss", value: t.il },
-                    { label: "Fees earned", value: t.fees },
+                    { label: "Swap fees", value: t.fees },
+                    { label: "Reward tokens", value: t.rewards },
                     { label: "Gas spent", value: -t.gas },
                   ]}
                   total={t.pnl}
@@ -130,8 +134,8 @@ export function PnlPage() {
               <p className="mt-4 text-xs text-slate-500">
                 Token price change is what the deposited tokens gained or lost
                 if simply held. Impermanent loss is the gap between the pool
-                position and holding. Fees include claimed, unclaimed and
-                rewards.
+                position and holding. Swap fees and reward tokens (such as
+                AERO) both include claimed and unclaimed amounts.
               </p>
             </Panel>
             <PnlByPosition positions={t.all} loading={isLoading} />

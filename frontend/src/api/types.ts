@@ -363,3 +363,52 @@ export interface PoolAlternativeDto {
   apr: number;
   isSelected: boolean;
 }
+
+export type AssetClass = "Stablecoin" | "Ether" | "Bitcoin" | "Other";
+
+export interface TokenExposureDto {
+  symbol: string;
+  assetClass: AssetClass;
+  amount: number;
+  valueUsd: number;
+  unclaimedUsd: number;
+  totalUsd: number;
+}
+
+export interface AssetClassExposureDto {
+  assetClass: AssetClass;
+  valueUsd: number;
+  unclaimedUsd: number;
+  totalUsd: number;
+}
+
+export interface PortfolioExposureDto {
+  totalUsd: number;
+  tokens: TokenExposureDto[];
+  classes: AssetClassExposureDto[];
+  hasMissingPrices: boolean;
+}
+
+export interface RewardTokenSummaryDto {
+  symbol: string;
+  address: string | null;
+  claimCount: number;
+  firstClaimAt: string | null;
+  lastClaimAt: string | null;
+  claimedAmount: number;
+  claimedUsd: number;
+  averageClaimPriceUsd: number | null;
+  currentPriceUsd: number | null;
+  claimedValueNowUsd: number | null;
+  changeSinceClaimUsd: number | null;
+  changeSinceClaimPercent: number | null;
+  pendingAmount: number;
+  pendingUsd: number | null;
+  hasEstimatedPrices: boolean;
+  hasMissingPrices: boolean;
+}
+
+export interface PortfolioInsightsDto {
+  exposure: PortfolioExposureDto;
+  rewards: RewardTokenSummaryDto[];
+}
