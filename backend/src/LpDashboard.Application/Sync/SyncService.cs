@@ -259,10 +259,20 @@ public sealed class SyncService(
     {
         var pair = $"{token0.Symbol}/{token1.Symbol} #{p.TokenId}";
         var where = $"{p.Chain} {p.Protocol}";
+
+        // Price of token0 in token1, the same convention the dashboard's range bar uses.
+        var lower = PositionMath.TickToPrice(p.TickLower, token0.Decimals, token1.Decimals);
+        var upper = PositionMath.TickToPrice(p.TickUpper, token0.Decimals, token1.Decimals);
+        var current = PositionMath.SqrtPriceX96ToPrice(p.SqrtPriceX96 ?? default,token0.Decimals, token1.Decimals);
+        var prices = $"\nRange: {FormatPrice(lower)} \u2013 {FormatPrice(upper)} {token1.Symbol} per {token0.Symbol}\nCurrent price: {FormatPrice(current)} {token1.Symbol} per {token0.Symbol}";
+
         return transition == RangeTransition.WentOut
-            ? $"\u26a0\ufe0f {pair} went out of range ({(tick >= p.TickUpper ? "price above" : "price below")} the range) and no longer earns fees. {where}"
-            : $"\u2705 {pair} is back in range and earning fees again. {where}";
+            ? $"\u26a0\ufe0f {pair} went out of range ({(tick >= p.TickUpper ? "price above" : "price below")} the range) and no longer earns fees.{prices}\n{where}"
+            : $"\u2705 {pair} is back in range and earning fees again.{prices}\n{where}";
     }
+
+    private static string FormatPrice(double price) =>
+        price.ToString(price >= 1000 ? "#,##0.##" : "G5", System.Globalization.CultureInfo.InvariantCulture);
 
     /// <summary>Sent only after the new state is saved, so a failed sync cannot repeat the same alert. A delivery failure is logged, never fatal.</summary>
     private async Task SendAlertsAsync(CancellationToken ct)
