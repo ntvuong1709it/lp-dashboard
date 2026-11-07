@@ -66,6 +66,13 @@ export function CollateralSection({
     return { first, last };
   }, [data]);
 
+  // Events by day, so the tooltip can list what happened on the day being hovered.
+  const eventsByDate = useMemo(() => {
+    const map = new Map<string, TrendEventDto[]>();
+    for (const e of data?.events ?? []) map.set(e.date, [...(map.get(e.date) ?? []), e]);
+    return map;
+  }, [data]);
+
   const options = loanOptions(loans);
 
   return (
@@ -109,7 +116,7 @@ export function CollateralSection({
                 <CartesianGrid stroke={theme.grid} vertical={false} />
                 <XAxis dataKey="date" stroke={theme.axis} fontSize={11} tickFormatter={shortDay} minTickGap={28} />
                 <YAxis stroke={theme.axis} fontSize={11} tickFormatter={kUsd} width={56} domain={["auto", "auto"]} />
-                <Tooltip contentStyle={tip} labelFormatter={(d) => shortDay(String(d))} formatter={(v, name) => [formatUsd(v as number), name]} />
+                <Tooltip content={<TrendTooltip eventsByDate={eventsByDate} />} />
                 <Line dataKey="collateralUsd" name="Collateral" stroke={theme.a} strokeWidth={2} dot={false} />
                 <Line dataKey="debtUsd" name="Debt" stroke={ROSE} strokeWidth={2} dot={false} />
                 {data.events.map((e, i) => {
@@ -131,17 +138,6 @@ export function CollateralSection({
               </ComposedChart>
             </ResponsiveContainer>
           </div>
-          {data.events.length > 0 && (
-            <ul className="mt-2 space-y-0.5 text-xs text-slate-400">
-              {data.events.map((e, i) => (
-                <li key={i}>
-                  <span className="num text-slate-300">{shortDay(e.date)}</span> {EVENT_TEXT[e.kind]} on {e.label}:{" "}
-                  <span className="num text-slate-300">{formatUsd(e.usd, true)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-
           <div className="mb-1 mt-4 flex flex-wrap items-baseline justify-between gap-2 text-xs">
             <span className="uppercase tracking-[.05em] text-slate-400">Collateral ÷ debt</span>
             <span className="text-slate-500">
@@ -167,6 +163,42 @@ export function CollateralSection({
         </>
       )}
     </Panel>
+  );
+}
+
+/** Tooltip for the collateral and debt chart: the two values for the day, plus anything that happened on it. */
+function TrendTooltip({
+  active,
+  label,
+  payload,
+  eventsByDate,
+}: {
+  active?: boolean;
+  label?: string | number;
+  payload?: { name?: string; value?: number | string; color?: string }[];
+  eventsByDate: Map<string, TrendEventDto[]>;
+}) {
+  if (!active || !payload?.length) return null;
+  const events = eventsByDate.get(String(label)) ?? [];
+  return (
+    <div className="rounded-md px-3 py-2 text-xs shadow-lg" style={tip}>
+      <div className="mb-1 text-slate-300">{shortDay(String(label))}</div>
+      {payload.map((p) => (
+        <div key={p.name} className="flex items-center justify-between gap-4" style={{ color: p.color }}>
+          <span>{p.name}</span>
+          <span className="num">{formatUsd(Number(p.value))}</span>
+        </div>
+      ))}
+      {events.length > 0 && (
+        <div className="mt-1.5 space-y-0.5 border-t border-slate-700 pt-1.5 text-slate-400">
+          {events.map((e, i) => (
+            <div key={i}>
+              {EVENT_TEXT[e.kind]} on {e.label}: <span className="num text-slate-200">{formatUsd(e.usd, true)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

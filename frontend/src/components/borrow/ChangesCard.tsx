@@ -21,6 +21,23 @@ const good = (v: number) => <span className={v >= 0 ? "text-emerald-400" : "text
 /** Debt rising is bad, falling is good; sub-dollar moves are noise. */
 const bad = (v: number) => <span className={v > 0.5 ? "text-rose-400" : v < -0.5 ? "text-emerald-400" : ""}>{formatUsd(v, true)}</span>;
 
+/** End value with its % change against the start. For debt, rising is bad, so the colours flip. */
+function nowWithPct(start: number, end: number, debt?: boolean) {
+  if (start <= 0) return <>{formatUsd(end)}</>;
+  const pct = ((end - start) / start) * 100;
+  const flat = Math.abs(pct) < 0.05;
+  const goodMove = debt ? pct < 0 : pct > 0;
+  const color = flat ? "text-slate-400" : goodMove ? "text-emerald-400" : "text-rose-400";
+  return (
+    <>
+      {formatUsd(end)}{" "}
+      <span className={`text-xs font-normal ${color}`}>
+        {flat ? "0.0%" : `${pct > 0 ? "▲ +" : "▼ −"}${Math.abs(pct).toFixed(1)}%`}
+      </span>
+    </>
+  );
+}
+
 /**
  * What moved collateral and debt over the window, in dollars: market, your own transactions, or interest.
  * With several wallets followed it shows one column per wallet beside the combined one.
@@ -55,7 +72,7 @@ function Combined({ days, loan }: { days: number; loan: string }) {
               <Row label="Price moves">{good(c.priceMovesUsd)}</Row>
               <Row label="Deposits and withdrawals">{good(c.depositsUsd)}</Row>
               {c.supplyYieldUsd !== 0 && <Row label="Aave supply yield">{good(c.supplyYieldUsd)}</Row>}
-              <Row label="Now" strong top>{formatUsd(c.collateralEndUsd)}</Row>
+              <Row label="Now" strong top>{nowWithPct(c.collateralStartUsd, c.collateralEndUsd)}</Row>
             </div>
             <div>
               <div className="mb-1 text-xs uppercase tracking-[.05em] text-slate-400">Debt</div>
@@ -63,7 +80,7 @@ function Combined({ days, loan }: { days: number; loan: string }) {
               <Row label="Interest added">{bad(c.interestUsd)}</Row>
               <Row label="Borrowed or repaid">{bad(c.borrowedUsd)}</Row>
               {Math.abs(c.debtPriceMovesUsd) >= 0.5 && <Row label="Debt asset price">{bad(c.debtPriceMovesUsd)}</Row>}
-              <Row label="Now" strong top>{formatUsd(c.debtEndUsd)}</Row>
+              <Row label="Now" strong top>{nowWithPct(c.debtStartUsd, c.debtEndUsd, true)}</Row>
             </div>
           </div>
           <Summary c={c} />
@@ -152,14 +169,14 @@ function ByWallet({ days, loan, wallets }: { days: number; loan: string; wallets
                 <Line label="Price moves" columns={columns} value={(c) => good(c.priceMovesUsd)} />
                 <Line label="Deposits and withdrawals" columns={columns} value={(c) => good(c.depositsUsd)} />
                 {any((c) => c.supplyYieldUsd) && <Line label="Aave supply yield" columns={columns} value={(c) => good(c.supplyYieldUsd)} />}
-                <Line label="Now" columns={columns} value={(c) => formatUsd(c.collateralEndUsd)} total />
+                <Line label="Now" columns={columns} value={(c) => nowWithPct(c.collateralStartUsd, c.collateralEndUsd)} total />
 
                 <Section title="Debt" columns={columns} />
                 <Line label={`Start${from ? `, ${shortDay(from)}`: ""}`} columns={columns} value={(c) => formatUsd(c.debtStartUsd)} />
                 <Line label="Interest added" columns={columns} value={(c) => bad(c.interestUsd)} />
                 <Line label="Borrowed or repaid" columns={columns} value={(c) => bad(c.borrowedUsd)} />
                 {any((c) => c.debtPriceMovesUsd, 0.5) && <Line label="Debt asset price" columns={columns} value={(c) => bad(c.debtPriceMovesUsd)} />}
-                <Line label="Now" columns={columns} value={(c) => formatUsd(c.debtEndUsd)} total />
+                <Line label="Now" columns={columns} value={(c) => nowWithPct(c.debtStartUsd, c.debtEndUsd, true)} total />
 
                 <Section title="Collateral ÷ debt" columns={columns} />
                 <Line label="Start → now" columns={columns} value={ratioCell} total />

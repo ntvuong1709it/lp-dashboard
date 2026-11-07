@@ -37,7 +37,10 @@ public sealed class BorrowQueryService(
 
         var interestPerDay = active.Sum(l => l.Cost.PerDay);
         var lpPerDay = (last7.LpFeesUsd + last7.LpRewardsUsd) / 7m;
-        var incomePerDay = last7.LpIncomeUsd / 7m;
+        // LP income is the last 7 days' pace; supply yield is today's balance at today's rate (like the interest), so a gap in
+        // the stored Aave history cannot hide it.
+        var supplyPerDay = ctx.SupplyYieldPerDayUsd;
+        var incomePerDay = lpPerDay + supplyPerDay;
         var runRate = new RunRateDto(
             interestPerDay,
             incomePerDay,
@@ -48,11 +51,15 @@ public sealed class BorrowQueryService(
 
         var income = LoanCost.FromPerDay(incomePerDay);
         var total = LoanCostCalculator.Sum(active.Select(l => l.Cost));
+        var lpIncome = LoanCost.FromPerDay(lpPerDay);
+        var supplyIncome = LoanCost.FromPerDay(supplyPerDay);
         var costs = new CostsDto(
             active.GroupBy(l => l.Owner)
                 .Select(g => new WalletCostsDto(g.Key, g.Select(l => l.Key).ToList(), ToDto(LoanCostCalculator.Sum(g.Select(l => l.Cost)))))
                 .ToList(),
             ToDto(total),
+            ToDto(lpIncome),
+            ToDto(supplyIncome),
             ToDto(income),
             ToDto(new LoanCost(income.PerDay - total.PerDay, income.PerWeek - total.PerWeek, income.PerMonth - total.PerMonth, income.PerYear - total.PerYear)));
 
@@ -193,6 +200,8 @@ public sealed class BorrowQueryService(
         public required List<LoanState> Loans { get; init; }
         public required List<LegState> Legs { get; init; }
         public required Dictionary<DateOnly, decimal> SupplyYieldUsd { get; init; }
+        /// <summary>Aave supply yield per day at today's balances and supply rates.</summary>
+        public required decimal SupplyYieldPerDayUsd { get; init; }
         public required Dictionary<DateOnly, DailyEarningsDto> Lp { get; init; }
         public required Dictionary<DateOnly, decimal> Gas { get; init; }
         public required decimal OpenValueUsd { get; init; }
@@ -226,6 +235,7 @@ public sealed class BorrowQueryService(
         var legs = new List<LegState>();
         var supplyYield = new Dictionary<DateOnly, decimal>();
         var notes = new List<string>();
+        decimal supplyPerDay = 0;
 
         foreach (var l in manual)
         {
@@ -238,7 +248,7 @@ public sealed class BorrowQueryService(
         {
             var mine = reserves.Where(r => r.Owner == account.Owner).ToList();
             var rows = lendingDays.Where(d => d.Owner == account.Owner).ToLookup(d => d.Reserve, StringComparer.OrdinalIgnoreCase);
-            BuildAave(account, mine, rows, book, baseline, today, loans, legs, supplyYield);
+            supplyPerDay += BuildAave(account, mine, rows, book, baseline, today, loans, legs, supplyYield);
             if (account.HistoryNote is { Length: > 0 } note) notes.Add(note);
         }
 
@@ -264,6 +274,7 @@ public sealed class BorrowQueryService(
             Loans = loans,
             Legs = legs,
             SupplyYieldUsd = supplyYield,
+            SupplyYieldPerDayUsd = supplyPerDay,
             Lp = lp,
             Gas = gas,
             OpenValueUsd = openValue,
@@ -343,7 +354,7 @@ public sealed class BorrowQueryService(
     /// One Aave account becomes a loan per borrowed reserve (cost, interest, health factor) and a trend leg per reserve
     /// (supplied collateral and debt as daily balances). A day without a stored row keeps the last known balance.
     /// </summary>
-    private static void BuildAave(
+    private static decimal BuildAave(
         LendingAccount account,
         List<LendingReserve> reserves,
         ILookup<string, LendingDay> rows,
@@ -368,8 +379,13 @@ public sealed class BorrowQueryService(
                 BorrowCoverageCalculator.HealthFactorDropToLiquidationPercent(hf), null, null)
             : new LoanRiskDto("None", null, RiskLevel.Ok, null, null, null);
 
+        decimal supplyPerDay = 0;
         foreach (var r in reserves)
         {
+            // Yield at today's balance and supply rate, the same basis as what the loans cost, so it does not depend on stored history.
+            if (r.SuppliedTokens > 0)
+                supplyPerDay += r.SuppliedTokens * (book.At(r.PriceKey, today) ?? 0) * r.SupplyAprPercent / 100m / 365m;
+
             var byDate = rows[r.Reserve].ToDictionary(d => d.Date);
             var supplied = new List<BalanceDay>();
             var borrowed = new List<BalanceDay>();
@@ -426,6 +442,8 @@ public sealed class BorrowQueryService(
             foreach (var (day, usd) in interestByDay) loan.InterestUsdByDay[day] = usd;
             loans.Add(loan);
         }
+
+        return supplyPerDay;
     }
 
     private async Task<PriceBook> LoadPricesAsync(IReadOnlyList<string> keys, DateOnly from, DateOnly today, CancellationToken ct)

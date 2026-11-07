@@ -29,12 +29,12 @@ export function SteadyCard({ summary, loans }: { summary: BorrowSummaryDto; loan
           {debt > 0 && ` (${((cost / debt) * 100).toFixed(period === "m" ? 2 : 3)}% of ${formatUsd(debt)})`}. Paying it keeps debt flat.{" "}
           {left >= 0 ? (
             <>
-              LP income runs at <b className="num">{formatUsd(income)}</b> {info.text}, so it covers that with{" "}
+              Income (LP plus Aave supply) runs at <b className="num">{formatUsd(income)}</b> {info.text}, so it covers that with{" "}
               <b className="num text-emerald-400">{formatUsd(left)}</b> to spare.
             </>
           ) : (
             <>
-              LP income runs at <b className="num">{formatUsd(income)}</b> {info.text}, which covers only {cost > 0 ? Math.round((income / cost) * 100) : 0}% of it.
+              Income (LP plus Aave supply) runs at <b className="num">{formatUsd(income)}</b> {info.text}, which covers only {cost > 0 ? Math.round((income / cost) * 100) : 0}% of it.
             </>
           )}
         </p>
@@ -105,8 +105,8 @@ function Target({ loan, leftPerMonth }: { loan: LoanDto; leftPerMonth: number })
           <>
             Repay <b className="num">{formatUsd(fix.repayUsd)}</b> or add <b className="num">{formatUsd(fix.addCollateralUsd)}</b> of collateral.{" "}
             {leftPerMonth > 0
-              ? `That is about ${(fix.repayUsd / leftPerMonth).toFixed(1)} months of left-over LP income.`
-              : "LP income is not leaving a surplus right now."}
+              ? `That is about ${(fix.repayUsd / leftPerMonth).toFixed(1)} months of left-over income.`
+              : "Income is not leaving a surplus right now."}
           </>
         )}
       </div>

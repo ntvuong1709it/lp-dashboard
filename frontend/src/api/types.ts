@@ -643,6 +643,11 @@ export interface WalletCostsDto {
 export interface CostsDto {
   wallets: WalletCostsDto[];
   total: LoanCostDto;
+  /** LP fees and rewards at the last 7 days' pace. */
+  lpIncomeAtPace: LoanCostDto;
+  /** Aave supply yield at today's balances and supply rates. */
+  supplyYieldAtRate: LoanCostDto;
+  /** LP income plus supply yield. */
   incomeAtPace: LoanCostDto;
   leftOver: LoanCostDto;
 }

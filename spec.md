@@ -132,7 +132,7 @@ Price keys: a picker of common assets mapped to DefiLlama/CoinGecko keys (BTC, E
 
 ## 6. Management features
 
-1. **What you pay**: for every loan, the interest cost per day, week, month and year, grouped by wallet with a subtotal per wallet and a grand total. Below it, LP income at the same pace and what is left over. Answers "how many dollars of interest do I owe each period" without any history. Aave rates float, so the numbers move with the rate.
+1. **What you pay**: for every loan, the interest cost per day, week, month and year, grouped by wallet with a subtotal per wallet and a grand total. Below it, LP income at the last 7 days' pace, Aave supply yield at today's balances and rates (so it does not depend on stored history), and what is left over. Answers "how many dollars of interest do I owe each period" without any history. Aave rates float, so the numbers move with the rate.
 2. **Coverage trend**: daily bars of LP income vs interest plus the cumulative net-carry line, for the chosen window. Shows whether the trend is improving.
 3. **Break-even**: the three numbers from section 4 (required income per day, required LP APR, current LP APR), with one sentence: "You need $X/day to cover interest; LP is making $Y/day."
 4. **What-if** (client-side sliders over a server-computed baseline, nothing persisted):
@@ -163,15 +163,16 @@ Per the project convention, the Borrow page and the Earnings card get an HTML mo
 
 ### Borrow page (`/borrow`, nav item next to Earnings)
 
+The page leads with the answer; detail sits in tabs underneath. A **basis** toggle (Today's pace / Past N days) drives the verdict, the money table and the rate chart, so the two answers (a forward one and a backward one) never sit side by side unexplained.
+
 1. Banner area for warnings.
-2. Summary row: coverage ratio, net carry, interest, LP income split (fees, rewards, supply yield), gas.
-   Directly below it, the **What you pay** table: wallet group rows (with subtotals), loan rows with debt, APR and cost per day / week / month / year, then total, LP income at the same pace, and left over (green or red).
-3. Run-rate panel: interest/day vs income/day, required LP APR.
-4. Chart: daily LP income vs interest, cumulative net carry.
-5. Loans table: source (Aave / Binance), asset, debt, APR, interest in window, collateral ÷ debt with its change over the window, risk gauge. Aave rows are read-only apart from hide/adjust; manual rows have edit/delete. "Add manual loan" opens a form with the terms-history editor.
-6. **Collateral and debt over time** card (selector All / Aave / Binance), then **What changed** and **Keep it steady** side by side.
-7. Risk panel: Aave health factor trend and liquidation distance; manual LTV gauges.
-8. What-if panel and Repay-vs-keep panel.
+2. **Verdict**: status chip, "Income beats (or trails) interest by $X a day", a bar of what pays the interest (LP fees and rewards, then Aave supply yield) against a marker at 100% of interest, and a one-line note giving the other basis' ratio.
+3. **What you pay and earn**: day / week / month / year side by side. Rows: You pay (interest), Aave yield (set by Aave, fixed by the loan), **LP must earn** (pay minus Aave yield, the part the owner works for), LP earns, Left over. The Aave rows are hidden when there is no Aave supply yield.
+4. **Borrow rate vs yield rate**: per $100 borrowed over a year, a bar for what you pay against a stacked bar for what you earn (LP, Aave) with a dashed line at what you pay, and the amount kept.
+5. **How much room**: the borrow rate that makes income equal interest, the LP APR that alone would cover interest, and a borrow-rate slider showing left over and coverage (today's pace).
+6. **Details**, as tabs or one scroll (persisted): **Trend** (daily income vs interest, cumulative net carry); **Loans** (per-loan cost grid when there is more than one loan, then the loans table with add / edit / delete); **Collateral and safety** (collateral and debt over time, what changed, risk panel); **Plan** (keep it steady, repay vs keep, what-if).
+
+Loans table: source (Aave / Binance), asset, debt, APR, interest in window, collateral ÷ debt with its change, risk badge. Aave rows are read-only apart from hide/adjust; manual rows have edit/delete. "Add manual loan" opens a form with the terms-history editor.
 
 Respect existing privacy mode, price-invert toggle and wallet selection. Loading, empty, error and "backfill in progress (day X of Y)" states are specified in the mock.
 

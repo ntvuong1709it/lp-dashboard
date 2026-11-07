@@ -127,6 +127,13 @@ public sealed class BorrowIntegrationTests : IDisposable
         // History day two earned 10; today's open day earned 10,000 * (1.0015 / 1.001 - 1).
         Assert.Equal(14.995005m, Math.Round(summary.Coverage.InterestUsd, 6));
         Assert.Equal(20_000m, summary.Trend.CollateralUsd); // 10 WETH at $2,000
+
+        // Supply yield comes from today's balance and rate (1% a year on $20,000), not from the stored days, and is part of income.
+        Assert.Equal(LoanCostCalculator.Cost(20_000m, 1m).PerYear, summary.Costs.SupplyYieldAtRate.PerYearUsd, 6);
+        Assert.Equal(
+            summary.Costs.LpIncomeAtPace.PerDayUsd + summary.Costs.SupplyYieldAtRate.PerDayUsd, summary.Costs.IncomeAtPace.PerDayUsd);
+        Assert.Equal(summary.Costs.IncomeAtPace.PerDayUsd, summary.RunRate.IncomePerDayUsd);
+        Assert.Equal(summary.Costs.IncomeAtPace.PerDayUsd - summary.Costs.Total.PerDayUsd, summary.Costs.LeftOver.PerDayUsd);
     }
 
     [Fact]

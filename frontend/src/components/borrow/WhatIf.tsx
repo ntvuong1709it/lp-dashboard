@@ -29,7 +29,7 @@ export function WhatIf({ summary, loans }: { summary: BorrowSummaryDto; loans: L
       <div className="grid gap-5 lg:grid-cols-2">
         <div className="space-y-4">
           <Slider id="wi-rate" label="Borrow rates" value={`${v.rate}% of today`} min={50} max={200} step={5} current={v.rate} onChange={(n) => setV({ ...v, rate: n })} />
-          <Slider id="wi-income" label="LP income" value={`${v.income}% of the 7d average`} min={20} max={200} step={5} current={v.income} onChange={(n) => setV({ ...v, income: n })} />
+          <Slider id="wi-income" label="Income" value={`${v.income}% of today's pace`} min={20} max={200} step={5} current={v.income} onChange={(n) => setV({ ...v, income: n })} />
           <Slider id="wi-move" label="Collateral price" value={`${v.move > 0 ? "+" : ""}${v.move}%`} min={-60} max={30} step={1} current={v.move} onChange={(n) => setV({ ...v, move: n })} />
         </div>
         <div className="grid grid-cols-2 gap-3 self-start">

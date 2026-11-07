@@ -24,7 +24,7 @@ export function CostTable({ summary, loans }: { summary: BorrowSummaryDto; loans
   const { costs } = summary;
 
   return (
-    <Panel title="What you pay">
+    <Panel title="What each loan costs">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[44rem] text-sm">
           <thead>
@@ -60,24 +60,11 @@ export function CostTable({ summary, loans }: { summary: BorrowSummaryDto; loans
               <td className="px-2.5 py-2" colSpan={3}>You pay, all loans</td>
               {cells(costs.total)}
             </tr>
-            <tr className="border-t border-slate-800">
-              <td className="px-2.5 py-2" colSpan={3}>LP income at the last 7 days' pace</td>
-              {cells(costs.incomeAtPace)}
-            </tr>
-            <tr className="border-t border-slate-700 font-semibold">
-              <td className="px-2.5 py-2" colSpan={3}>Left over</td>
-              {(["perDayUsd", "perWeekUsd", "perMonthUsd", "perYearUsd"] as const).map((k) => (
-                <td key={k} className={`px-2.5 py-2 text-right num ${costs.leftOver[k] >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                  {formatUsd(costs.leftOver[k], true)}
-                </td>
-              ))}
-            </tr>
           </tfoot>
         </table>
       </div>
       <p className="mt-2 text-xs text-slate-500">
         Interest at today's balances and rates; a week is 7 days and a month a twelfth of the year. Aave rates float, so these move.
-        Income is LP fees, rewards and Aave supply yield, before gas.
       </p>
     </Panel>
   );

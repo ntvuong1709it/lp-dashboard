@@ -76,7 +76,14 @@ public sealed record RunRateDto(
 
 public sealed record WalletCostsDto(string Owner, IReadOnlyList<string> LoanKeys, LoanCostDto Subtotal);
 
-public sealed record CostsDto(IReadOnlyList<WalletCostsDto> Wallets, LoanCostDto Total, LoanCostDto IncomeAtPace, LoanCostDto LeftOver);
+/// <summary><see cref="IncomeAtPace"/> is <see cref="LpIncomeAtPace"/> plus <see cref="SupplyYieldAtRate"/>; <see cref="LeftOver"/> is that minus <see cref="Total"/>.</summary>
+public sealed record CostsDto(
+    IReadOnlyList<WalletCostsDto> Wallets,
+    LoanCostDto Total,
+    LoanCostDto LpIncomeAtPace,
+    LoanCostDto SupplyYieldAtRate,
+    LoanCostDto IncomeAtPace,
+    LoanCostDto LeftOver);
 
 public sealed record RepayDto(RepayMode Mode, decimal AmountUsd, string? LoanLabel, decimal AprPercent, decimal SavingPerYearUsd);
 
