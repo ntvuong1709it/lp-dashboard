@@ -1,5 +1,7 @@
-import { useMemo } from "react";
+import { Fragment, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { WalletChip, WalletGroupLabel } from "../components/WalletChip";
+import { groupByWallet, useWallets, type WalletInfo } from "../lib/wallets";
 import { usePositionDrawer } from "../lib/positionDrawer";
 import { usePerformance, usePositions, useSummary } from "../api/client";
 import type {
@@ -76,6 +78,8 @@ export function PositionsPage() {
     "lpdash.portfolio.inverted",
     false,
   );
+  const [grouping, setGrouping] = usePersistentState<"wallet" | "flat">("lpdash.positions.group", "wallet");
+  const walletOf = useWallets();
   const [search, setSearch] = usePersistentState("lpdash.portfolio.search", "");
   const [protocol, setProtocol] = usePersistentState<Protocol | "">(
     "lpdash.portfolio.protocol",
@@ -117,6 +121,7 @@ export function PositionsPage() {
       ),
     [positions.data, status, search, protocol, sort, breakEven],
   );
+  const walletCount = useMemo(() => new Set(visible.map((p) => p.owner.toLowerCase())).size, [visible]);
   const filtered = !!search.trim() || !!protocol || status !== "all";
   const toggleSort = (key: SortKey) =>
     setSort(
@@ -128,12 +133,25 @@ export function PositionsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Segmented
-          label="Status"
-          options={statusOptions}
-          value={status}
-          onChange={setStatus}
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          <Segmented
+            label="Status"
+            options={statusOptions}
+            value={status}
+            onChange={setStatus}
+          />
+          {walletCount > 1 && (
+            <Segmented
+              label="Group positions"
+              options={[
+                { label: "By wallet", value: "wallet" },
+                { label: "Flat", value: "flat" },
+              ]}
+              value={grouping}
+              onChange={setGrouping}
+            />
+          )}
+        </div>
         <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
           <UpdatedAgo />
           <input
@@ -193,9 +211,45 @@ export function PositionsPage() {
           sort={sort}
           onSort={toggleSort}
           breakEven={breakEven}
+          grouped={grouping === "wallet" && walletCount > 1}
+          walletOf={walletOf}
         />
       )}
     </div>
+  );
+}
+
+/** The value, fees, unclaimed, P/L, IL and vs-HODL cells summed over `items`: used for wallet subtotals and the grand total. */
+function TotalsCells({ items }: { items: PositionDto[] }) {
+  const sum = (pick: (m: PositionDto["metrics"]) => number) =>
+    items.reduce((total, p) => total + pick(p.metrics), 0);
+  return (
+    <>
+      <td className="px-3 py-2 text-right num">
+        {formatUsd(sum((m) => m.currentValueUsd))}
+      </td>
+      <td className="px-3 py-2 text-right num">
+        {formatUsd(sum((m) => m.feesEarnedUsd))}
+      </td>
+      <td className="border-x border-sky-900 bg-sky-950/30 px-3 py-2 text-right num">
+        <div className="font-semibold text-sky-400">
+          {formatUsd(sum((m) => m.uncollectedFeesUsd + m.pendingRewardsUsd))}
+        </div>
+        <div className="text-[11px] font-normal text-slate-400">
+          {formatUsd(sum((m) => m.uncollectedFeesUsd))} fees ·{" "}
+          {formatUsd(sum((m) => m.pendingRewardsUsd))} rewards
+        </div>
+      </td>
+      <td className={`px-3 py-2 text-right num ${pnlClass(sum((m) => m.pnlUsd))}`}>
+        {formatUsd(sum((m) => m.pnlUsd), true)}
+      </td>
+      <td className={`px-3 py-2 text-right num ${pnlClass(sum((m) => m.impermanentLossUsd))}`}>
+        {formatUsd(sum((m) => m.impermanentLossUsd), true)}
+      </td>
+      <td className={`px-3 py-2 text-right num ${pnlClass(sum((m) => m.pnlVsHodlUsd))}`}>
+        {formatUsd(sum((m) => m.pnlVsHodlUsd), true)}
+      </td>
+    </>
   );
 }
 
@@ -240,16 +294,26 @@ function PositionsTable({
   sort,
   onSort,
   breakEven,
+  grouped,
+  walletOf,
 }: {
   positions: PositionDto[];
   inverted: boolean;
   sort: SortState;
   onSort: (key: SortKey) => void;
   breakEven: ReadonlyMap<number, HodlBreakEvenDto>;
+  grouped: boolean;
+  walletOf: (address: string) => WalletInfo;
 }) {
   const drawer = usePositionDrawer();
-  const sum = (pick: (m: PositionDto["metrics"]) => number) =>
-    positions.reduce((total, p) => total + pick(p.metrics), 0);
+  // Flat lists of several wallets tag each row instead, so rows never lose their wallet.
+  const showWallet = !grouped && new Set(positions.map((p) => p.owner.toLowerCase())).size > 1;
+  // Grouped: each wallet's rows stay in the chosen sort order, under a header with that wallet's subtotals.
+  const groups = grouped
+    ? groupByWallet(positions, (p) => p.owner, walletOf, (p) => p.metrics.currentValueUsd)
+    : null;
+  const ordered = groups ? groups.flatMap((g) => g.items) : positions;
+  const groupStart = new Map(groups?.map((g) => [g.items[0].id, g]) ?? []);
   const maxUnclaimed = Math.max(
     0,
     ...positions.map(
@@ -278,16 +342,26 @@ function PositionsTable({
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-800">
-          {positions.map((p, index) => {
+          {ordered.map((p, index) => {
             const m = p.metrics;
             const range =
               p.range && (inverted ? invertRange(p.range) : p.range);
             const [base, quote] = inverted
               ? [p.token1, p.token0]
               : [p.token0, p.token1];
+            const group = groupStart.get(p.id);
             return (
+              <Fragment key={p.id}>
+                {group && (
+                  <tr className="bg-slate-900 font-medium">
+                    <td colSpan={4} className="px-3 py-2">
+                      <WalletGroupLabel wallet={group.wallet} count={group.items.length} noun="position" />
+                    </td>
+                    <TotalsCells items={group.items} />
+                    <td colSpan={3} className="px-3 py-2" />
+                  </tr>
+                )}
               <tr
-                key={p.id}
                 className="cursor-pointer hover:bg-slate-900/70"
                 onClick={() => drawer.open(p.id)}
               >
@@ -300,6 +374,11 @@ function PositionsTable({
                     <span className="text-xs text-slate-500">
                       {formatFee(p.fee)}
                     </span>
+                    {showWallet && (
+                      <span className="ml-2 align-middle">
+                        <WalletChip wallet={walletOf(p.owner)} />
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 text-xs text-slate-500">
                     <span>{protocolLabels[p.protocol]}</span>
@@ -460,6 +539,7 @@ function PositionsTable({
                   )}
                 </td>
               </tr>
+              </Fragment>
             );
           })}
         </tbody>
@@ -469,38 +549,7 @@ function PositionsTable({
               Total · {positions.length}{" "}
               {positions.length === 1 ? "position" : "positions"}
             </td>
-            <td className="px-3 py-2 text-right num">
-              {formatUsd(sum((m) => m.currentValueUsd))}
-            </td>
-            <td className="px-3 py-2 text-right num">
-              {formatUsd(sum((m) => m.feesEarnedUsd))}
-            </td>
-            <td className="border-x border-sky-900 bg-sky-950/30 px-3 py-2 text-right num">
-              <div className="font-semibold text-sky-400">
-                {formatUsd(
-                  sum((m) => m.uncollectedFeesUsd + m.pendingRewardsUsd),
-                )}
-              </div>
-              <div className="text-[11px] font-normal text-slate-400">
-                {formatUsd(sum((m) => m.uncollectedFeesUsd))} fees ·{" "}
-                {formatUsd(sum((m) => m.pendingRewardsUsd))} rewards
-              </div>
-            </td>
-            <td
-              className={`px-3 py-2 text-right num ${pnlClass(sum((m) => m.pnlUsd))}`}
-            >
-              {formatUsd(sum((m) => m.pnlUsd), true)}
-            </td>
-            <td
-              className={`px-3 py-2 text-right num ${pnlClass(sum((m) => m.impermanentLossUsd))}`}
-            >
-              {formatUsd(sum((m) => m.impermanentLossUsd), true)}
-            </td>
-            <td
-              className={`px-3 py-2 text-right num ${pnlClass(sum((m) => m.pnlVsHodlUsd))}`}
-            >
-              {formatUsd(sum((m) => m.pnlVsHodlUsd), true)}
-            </td>
+            <TotalsCells items={positions} />
             <td colSpan={3} className="px-3 py-2" />
           </tr>
         </tfoot>

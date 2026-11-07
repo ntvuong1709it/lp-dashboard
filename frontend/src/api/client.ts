@@ -9,6 +9,7 @@ import type {
   ActivityEventDto,
   Chain,
   DailyEarningsDto,
+  PositionEarningsDto,
   HealthDto,
   PnlHistoryDto,
   PoolEstimateDto,
@@ -169,6 +170,15 @@ export const useDailyEarnings = (owner: string | null) =>
     queryFn: () =>
       request<DailyEarningsDto[]>(
         `/api/fees/daily${query({ owner, timeZone })}`,
+      ),
+  });
+
+export const useEarningsByPosition = (owner: string | null) =>
+  useQuery({
+    queryKey: ["earnings-by-position", owner, timeZone],
+    queryFn: () =>
+      request<PositionEarningsDto[]>(
+        `/api/fees/by-position${query({ owner, timeZone })}`,
       ),
   });
 

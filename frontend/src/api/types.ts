@@ -202,7 +202,17 @@ export interface FeeClaimItemDto {
   feesUsd: number;
   rewardsUsd: number;
   totalUsd: number;
+  gasUsd: number;
   hasMissingPrices: boolean;
+}
+
+/** One token's share of a day's earnings: swap fees in a pool token, or the reward (gauge emission) token. */
+export interface TokenEarningDto {
+  symbol: string;
+  address: string | null;
+  kind: "fee" | "reward";
+  amount: number;
+  usd: number;
 }
 
 export interface DailyEarningsDto {
@@ -211,6 +221,23 @@ export interface DailyEarningsDto {
   rewardsUsd: number;
   totalUsd: number;
   hasMissingPrices: boolean;
+  tokens: TokenEarningDto[];
+}
+
+/** The 7 and 30 day windows end yesterday; month to date includes today. */
+export interface PositionEarningsDto {
+  positionId: number;
+  tokenId: string;
+  protocol: Protocol;
+  pair: string;
+  status: PositionStatus;
+  yesterdayUsd: number;
+  last7Usd: number;
+  last30Usd: number;
+  mtdUsd: number;
+  allTimeUsd: number;
+  lastEarnedDate: string | null;
+  owner: string;
 }
 
 export interface WeeklyClaimsDto {

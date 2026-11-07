@@ -450,11 +450,49 @@ public sealed class PositionQueryService(
         return SumDailyEarnings([position], points.ToLookup(s => s.PositionId), timeZone);
     }
 
+    public async Task<IReadOnlyList<PositionEarningsDto>> GetEarningsByPositionAsync(PositionFilter filter, TimeZoneInfo timeZone, CancellationToken ct)
+    {
+        var list = await positions.QueryAsync(filter, ct);
+        var snapshotsByPosition = (await snapshots.ListForPositionsAsync(list.Select(p => p.Id).ToList(), ct))
+            .ToLookup(s => s.PositionId);
+
+        var today = EarningsCalculator.LocalDate(time.GetUtcNow().UtcDateTime, timeZone);
+        var monthStart = new DateOnly(today.Year, today.Month, 1);
+
+        // Windows end yesterday so a half-finished day does not drag the averages down; month to date includes today.
+        static decimal Sum(IEnumerable<DailyEarnings> days, DateOnly from, DateOnly to) =>
+            days.Where(d => d.Date >= from && d.Date <= to).Sum(d => d.FeesUsd + d.RewardsUsd);
+
+        return list
+            .Select(p =>
+            {
+                var days = EarningsCalculator.Calculate(p.Events, BuildEarningsPoints(p, snapshotsByPosition[p.Id]), timeZone);
+                var yesterday = today.AddDays(-1);
+                DateOnly? lastEarned = days.Where(d => d.FeesUsd + d.RewardsUsd > 0).Select(d => (DateOnly?)d.Date).LastOrDefault();
+                return new PositionEarningsDto(
+                    p.Id,
+                    p.TokenId,
+                    p.Protocol,
+                    $"{p.Pool?.Token0?.Symbol ?? "?"}/{p.Pool?.Token1?.Symbol ?? "?"}",
+                    p.Status,
+                    Sum(days, yesterday, yesterday),
+                    Sum(days, today.AddDays(-7), yesterday),
+                    Sum(days, today.AddDays(-30), yesterday),
+                    Sum(days, monthStart, today),
+                    days.Sum(d => d.FeesUsd + d.RewardsUsd),
+                    lastEarned,
+                    p.Owner);
+            })
+            .OrderByDescending(e => e.Last30Usd)
+            .ToList();
+    }
+
     private IReadOnlyList<DailyEarningsDto> SumDailyEarnings(
         IEnumerable<Position> list, ILookup<int, PositionSnapshot> snapshotsByPosition, TimeZoneInfo timeZone)
     {
         var now = time.GetUtcNow().UtcDateTime;
         var totals = new Dictionary<DateOnly, (decimal Fees, decimal Rewards, bool Missing)>();
+        var tokens = new Dictionary<DateOnly, Dictionary<string, TokenEarningDto>>();
         foreach (var p in list)
         {
             // Snapshots are hourly; the latest synced state is added so today is current (closed positions end at their close).
@@ -464,6 +502,11 @@ public sealed class PositionQueryService(
             {
                 var existing = totals.GetValueOrDefault(d.Date);
                 totals[d.Date] = (existing.Fees + d.FeesUsd, existing.Rewards + d.RewardsUsd, existing.Missing || d.HasMissingPrices);
+
+                if (!tokens.TryGetValue(d.Date, out var byToken)) tokens[d.Date] = byToken = [];
+                AddToken(byToken, "fee", p.Pool?.Token0?.Address, p.Pool?.Token0?.Symbol, d.Fee0, d.Fee0Usd);
+                AddToken(byToken, "fee", p.Pool?.Token1?.Address, p.Pool?.Token1?.Symbol, d.Fee1, d.Fee1Usd);
+                AddToken(byToken, "reward", p.RewardTokenAddress, p.RewardTokenSymbol, d.RewardAmount, d.RewardsUsd);
             }
         }
 
@@ -477,9 +520,23 @@ public sealed class PositionQueryService(
         for (var day = last; day >= first; day = day.AddDays(-1))
         {
             var t = totals.GetValueOrDefault(day);
-            result.Add(new DailyEarningsDto(day, t.Fees, t.Rewards, t.Fees + t.Rewards, t.Missing));
+            var dayTokens = tokens.TryGetValue(day, out var byToken)
+                ? byToken.Values.OrderByDescending(x => x.Usd).ToList()
+                : [];
+            result.Add(new DailyEarningsDto(day, t.Fees, t.Rewards, t.Fees + t.Rewards, t.Missing, dayTokens));
         }
         return result;
+    }
+
+    /// <summary>Groups by token address (symbol when there is none), keeping fees and rewards of the same token apart.</summary>
+    private static void AddToken(Dictionary<string, TokenEarningDto> byToken, string kind, string? address, string? symbol, decimal amount, decimal usd)
+    {
+        if (amount <= 0 && usd <= 0) return;
+        var token = (!string.IsNullOrWhiteSpace(address) ? address : symbol ?? "?").Trim().ToLowerInvariant();
+        var key = $"{kind}:{token}";
+        byToken[key] = byToken.TryGetValue(key, out var e)
+            ? e with { Amount = e.Amount + amount, Usd = e.Usd + usd }
+            : new TokenEarningDto(symbol ?? "?", address, kind, amount, usd);
     }
 
     private static DateOnly WeekStart(DateTime local)
@@ -515,6 +572,7 @@ public sealed class PositionQueryService(
             feesUsd,
             rewardsUsd,
             feesUsd + rewardsUsd,
+            e.GasUsd ?? 0,
             missing);
     }
 

@@ -1,59 +1,82 @@
-import { chart as theme } from "../lib/chartTheme";
-import { Fragment, useState } from "react";
+import { useMemo } from "react";
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import { useDailyEarnings, useWeeklyClaims } from "../api/client";
+  useDailyEarnings,
+  useEarningsByPosition,
+  usePositions,
+  useWeeklyClaims,
+} from "../api/client";
+import { ClaimHealth } from "../components/earnings/ClaimHealth";
+import { ClaimLog } from "../components/earnings/ClaimLog";
+import { EarningsAlerts } from "../components/earnings/EarningsAlerts";
+import { EarningsChart } from "../components/earnings/EarningsChart";
+import { HeadlineCards } from "../components/earnings/HeadlineCards";
+import { PositionBreakdown } from "../components/earnings/PositionBreakdown";
+import { TokenBreakdown } from "../components/earnings/TokenBreakdown";
 import { EarningsTabs } from "../components/EarningsTabs";
 import { UpdatedAgo } from "../components/UpdatedAgo";
+import { Empty, ErrorText, PageSkeleton } from "../components/ui";
 import {
-  CopyButton,
-  Empty,
-  ErrorText,
-  ExternalLink,
-  PageSkeleton,
-  Panel,
-  StatCard,
-} from "../components/ui";
-import {
-  formatAmount,
-  formatDate,
-  formatUsd,
-  protocolLabels,
-  txUrl,
-} from "../lib/format";
-import { usePositionDrawer } from "../lib/positionDrawer";
+  buildEarningsAlerts,
+  claimFlags,
+  claimHealth,
+  claimTxs,
+  headlines,
+} from "../lib/earnings";
+import { formatUsd } from "../lib/format";
 import { useOwner } from "../lib/owner";
 import { useHideBalances } from "../lib/privacy";
 
 export function FeeClaimsPage() {
   useHideBalances(); // re-render when the toggle changes; formatters read the flag
   return (
-    <div className="space-y-10">
-      <div className="mb-6 flex items-center justify-between gap-3">
-        <EarningsTabs />
+    <div className="space-y-6">
+      <EarningsTabs />
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Earnings</h1>
+          <p className="text-sm text-slate-400">
+            What your positions earn each day, claimed or not.
+          </p>
+        </div>
         <UpdatedAgo />
       </div>
-      <DailyEarnings />
-      <WeeklyClaims />
+      <EarningsOverview />
     </div>
   );
 }
 
-function DailyEarnings() {
+function EarningsOverview() {
   const { owner } = useOwner();
-  const { data, error, isLoading } = useDailyEarnings(owner);
+  const hidden = useHideBalances(); // alert text embeds formatted amounts, so rebuild it when the mask toggles
+  const daily = useDailyEarnings(owner);
+  const byPosition = useEarningsByPosition(owner);
+  const open = usePositions(owner, "Open");
+  const claims = useWeeklyClaims(owner);
 
-  if (error) return <ErrorText error={error} />;
-  if (isLoading) return <PageSkeleton cards={4} />;
-  if (!data?.length) {
+  const days = daily.data;
+  const txs = useMemo(() => claimTxs(claims.data ?? []), [claims.data, hidden]);
+  const view = useMemo(() => {
+    if (!days?.length) return null;
+    const head = headlines(days);
+    const flags = claimFlags(txs, formatUsd, head.today);
+    return {
+      head,
+      flags,
+      alerts: buildEarningsAlerts({
+        days,
+        byPosition: byPosition.data ?? [],
+        positions: open.data ?? [],
+        claims: txs,
+        flags,
+        usd: formatUsd,
+      }),
+      health: claimHealth(days, txs, open.data ?? []),
+    };
+  }, [days, byPosition.data, open.data, txs, hidden]);
+
+  if (daily.error) return <ErrorText error={daily.error} />;
+  if (daily.isLoading) return <PageSkeleton cards={4} />;
+  if (!days?.length || !view) {
     return (
       <Empty>
         No earnings tracked yet. Daily earnings build up from hourly snapshots
@@ -62,259 +85,24 @@ function DailyEarnings() {
     );
   }
 
-  const chart = [...data].reverse();
-  const last7 = data.slice(0, 7);
-  const avg7 = last7.reduce((sum, d) => sum + d.totalUsd, 0) / last7.length;
-  const total = data.reduce((sum, d) => sum + d.totalUsd, 0);
-
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard
-          label="Today"
-          value={formatUsd(data[0].totalUsd)}
-          hint="so far, claimed or not"
-        />
-        <StatCard label="Avg / day (last 7)" value={formatUsd(avg7)} />
-        <StatCard
-          label="Total tracked"
-          value={formatUsd(total)}
-          hint={`since ${data[data.length - 1].date}`}
-        />
-        <StatCard label="Est. / month" value={formatUsd(avg7 * 30)} />
-      </div>
-
-      <Panel title="Earned per day (incl. unclaimed, USD)">
-        <div className="h-64">
-          <ResponsiveContainer>
-            <BarChart data={chart}>
-              <CartesianGrid stroke={theme.grid} vertical={false} />
-              <XAxis dataKey="date" stroke={theme.axis} fontSize={11} />
-              <YAxis
-                stroke={theme.axis}
-                fontSize={11}
-                tickFormatter={(v) => formatUsd(v)}
-                width={80}
-              />
-              <Tooltip
-                contentStyle={{
-                  background: theme.tooltip.background,
-                  border: theme.tooltip.border,
-                }}
-                formatter={(v) => formatUsd(v as number)}
-              />
-              <Legend />
-              <Bar
-                dataKey="feesUsd"
-                name="Swap fees"
-                stackId="a"
-                fill={theme.b}
-              />
-              <Bar
-                dataKey="rewardsUsd"
-                name="Rewards"
-                stackId="a"
-                fill={theme.a}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </Panel>
-
-      <Panel title="Daily earnings">
-        <table className="w-full text-sm">
-          <thead className="text-left text-xs uppercase text-slate-500">
-            <tr>
-              <th className="py-1">Day</th>
-              <th className="py-1 text-right">Swap fees</th>
-              <th className="py-1 text-right">Rewards</th>
-              <th className="py-1 text-right">Total</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-800">
-            {data.map((d) => (
-              <tr key={d.date}>
-                <td className="py-1.5">{d.date}</td>
-                <td className="py-1.5 text-right num">
-                  {formatUsd(d.feesUsd)}
-                </td>
-                <td className="py-1.5 text-right num">
-                  {formatUsd(d.rewardsUsd)}
-                </td>
-                <td className="py-1.5 text-right num font-medium">
-                  {formatUsd(d.totalUsd)}
-                  {d.hasMissingPrices && (
-                    <span className="ml-1 text-amber-400" title="Price missing">
-                      *
-                    </span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Panel>
-    </div>
-  );
-}
-
-function WeeklyClaims() {
-  const { owner } = useOwner();
-  const drawer = usePositionDrawer();
-  const { data, error, isLoading } = useWeeklyClaims(owner);
-  const [expanded, setExpanded] = useState<string | null>(null);
-
-  if (error) return <ErrorText error={error} />;
-  if (isLoading) return <PageSkeleton cards={4} />;
-  if (!data?.length) return <Empty>No fee claims yet.</Empty>;
-
-  const chart = [...data].reverse().map((w) => ({
-    week: w.weekStart,
-    fees: w.feesUsd,
-    rewards: w.rewardsUsd,
-  }));
-  const total = data.reduce((sum, w) => sum + w.totalUsd, 0);
-  const recent = data.slice(0, 4);
-  const avg4w = recent.reduce((sum, w) => sum + w.totalUsd, 0) / recent.length;
-
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard
-          label="Total claimed"
-          value={formatUsd(total)}
-          hint={`${data.length} weeks with claims`}
-        />
-        <StatCard
-          label="This week"
-          value={formatUsd(data[0].totalUsd)}
-          hint={`week of ${data[0].weekStart}`}
-        />
-        <StatCard label="Avg (last 4 claim weeks)" value={formatUsd(avg4w)} />
-        <StatCard
-          label="Claims"
-          value={data.reduce((n, w) => n + w.claimCount, 0)}
-        />
-      </div>
-
-      <Panel title="Claimed per week (USD at claim time)">
-        <div className="h-64">
-          <ResponsiveContainer>
-            <BarChart data={chart}>
-              <CartesianGrid stroke={theme.grid} vertical={false} />
-              <XAxis dataKey="week" stroke={theme.axis} fontSize={11} />
-              <YAxis
-                stroke={theme.axis}
-                fontSize={11}
-                tickFormatter={(v) => formatUsd(v)}
-                width={80}
-              />
-              <Tooltip
-                contentStyle={{
-                  background: theme.tooltip.background,
-                  border: theme.tooltip.border,
-                }}
-                formatter={(v) => formatUsd(v as number)}
-              />
-              <Legend />
-              <Bar dataKey="fees" name="Swap fees" stackId="a" fill={theme.b} />
-              <Bar
-                dataKey="rewards"
-                name="Rewards"
-                stackId="a"
-                fill={theme.a}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </Panel>
-
-      <Panel title="Weekly claims">
-        <table className="w-full text-sm">
-          <thead className="text-left text-xs uppercase text-slate-500">
-            <tr>
-              <th className="py-1">Week of</th>
-              <th className="py-1 text-right">Claims</th>
-              <th className="py-1 text-right">Swap fees</th>
-              <th className="py-1 text-right">Rewards</th>
-              <th className="py-1 text-right">Total</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-800">
-            {data.map((w) => (
-              <Fragment key={w.weekStart}>
-                <tr
-                  className="cursor-pointer hover:bg-slate-800/50"
-                  onClick={() =>
-                    setExpanded(expanded === w.weekStart ? null : w.weekStart)
-                  }
-                >
-                  <td className="py-1.5">
-                    {expanded === w.weekStart ? "▾" : "▸"} {w.weekStart}
-                  </td>
-                  <td className="py-1.5 text-right num">{w.claimCount}</td>
-                  <td className="py-1.5 text-right num">
-                    {formatUsd(w.feesUsd)}
-                  </td>
-                  <td className="py-1.5 text-right num">
-                    {formatUsd(w.rewardsUsd)}
-                  </td>
-                  <td className="py-1.5 text-right num font-medium">
-                    {formatUsd(w.totalUsd)}
-                  </td>
-                </tr>
-                {expanded === w.weekStart &&
-                  w.items.map((i) => (
-                    <tr
-                      key={`${i.txHash}-${i.positionId}-${i.type}`}
-                      className="bg-slate-950/50 text-xs"
-                    >
-                      <td className="py-1 pl-6 text-slate-400">
-                        {formatDate(i.timestamp)}{" "}
-                        {/* Claims carry no chain yet; Base is the only synced chain. */}
-                        <ExternalLink href={txUrl("Base", i.txHash)}>
-                          tx
-                        </ExternalLink>
-                        <CopyButton
-                          text={i.txHash}
-                          title="Copy transaction hash"
-                        />
-                      </td>
-                      <td className="py-1" colSpan={2}>
-                        <button
-                          type="button"
-                          className="text-sky-400 hover:underline"
-                          onClick={() => drawer.open(i.positionId)}
-                        >
-                          {i.pair} #{i.tokenId}
-                        </button>{" "}
-                        <span className="text-slate-500">
-                          {protocolLabels[i.protocol]}
-                        </span>
-                      </td>
-                      <td className="py-1 text-right num text-slate-300">
-                        {i.type === "RewardClaim"
-                          ? `${formatAmount(i.rewardAmount)} ${i.rewardTokenSymbol ?? ""}`
-                          : `${formatAmount(i.fee0)} ${i.token0Symbol} + ${formatAmount(i.fee1)} ${i.token1Symbol}`}
-                      </td>
-                      <td className="py-1 text-right num">
-                        {formatUsd(i.totalUsd)}
-                        {i.hasMissingPrices && (
-                          <span
-                            className="ml-1 text-amber-400"
-                            title="Price missing"
-                          >
-                            *
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-              </Fragment>
-            ))}
-          </tbody>
-        </table>
-      </Panel>
+      <EarningsAlerts alerts={view.alerts} />
+      <HeadlineCards cards={view.head.cards} />
+      <EarningsChart
+        days={days}
+        projection={view.head.projection}
+        monthName={view.head.monthName}
+      />
+      <TokenBreakdown days={days} />
+      <PositionBreakdown
+        rows={byPosition.data ?? []}
+        open={open.data ?? []}
+        today={view.head.today}
+        owner={owner}
+      />
+      <ClaimHealth stats={view.health} />
+      <ClaimLog weeks={claims.data ?? []} flags={view.flags} />
     </div>
   );
 }

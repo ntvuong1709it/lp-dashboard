@@ -134,6 +134,21 @@ public sealed class PositionsController(PositionQueryService queries) : Controll
         return Ok(await queries.GetDailyEarningsAsync(new PositionFilter(owners), zone!, ct));
     }
 
+    [HttpGet("fees/by-position")]
+    [ProducesResponseType<IReadOnlyList<PositionEarningsDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> EarningsByPosition([FromQuery] string? owner, [FromQuery] string? timeZone, CancellationToken ct)
+    {
+        if (!OwnerParam.TryParse(owner, out var owners)) return InvalidOwner();
+
+        var zone = TimeZoneInfo.Utc;
+        if (!string.IsNullOrWhiteSpace(timeZone) && !TimeZoneInfo.TryFindSystemTimeZoneById(timeZone, out zone))
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest, title: "Unknown time zone");
+        }
+        return Ok(await queries.GetEarningsByPositionAsync(new PositionFilter(owners), zone!, ct));
+    }
+
     private ObjectResult InvalidOwner() =>
         Problem(statusCode: StatusCodes.Status400BadRequest, title: "Invalid owner", detail: "Pass owner=<wallet address>[,<wallet address>...] (at most 20).");
 }

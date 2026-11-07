@@ -145,7 +145,11 @@ public sealed record FeeClaimItemDto(
     decimal FeesUsd,
     decimal RewardsUsd,
     decimal TotalUsd,
+    decimal GasUsd,
     bool HasMissingPrices);
+
+/// <summary>One token's share of a day's earnings: swap fees paid in a pool token, or the reward (gauge emission) token.</summary>
+public sealed record TokenEarningDto(string Symbol, string? Address, string Kind, decimal Amount, decimal Usd);
 
 /// <summary>Earned on a local day, whether or not it has been claimed yet.</summary>
 public sealed record DailyEarningsDto(
@@ -153,7 +157,25 @@ public sealed record DailyEarningsDto(
     decimal FeesUsd,
     decimal RewardsUsd,
     decimal TotalUsd,
-    bool HasMissingPrices);
+    bool HasMissingPrices,
+    IReadOnlyList<TokenEarningDto> Tokens);
+
+/// <summary>
+/// What one position earned over fixed local windows. The 7 and 30 day windows end yesterday; month to date includes today.
+/// </summary>
+public sealed record PositionEarningsDto(
+    int PositionId,
+    string TokenId,
+    Protocol Protocol,
+    string Pair,
+    PositionStatus Status,
+    decimal YesterdayUsd,
+    decimal Last7Usd,
+    decimal Last30Usd,
+    decimal MtdUsd,
+    decimal AllTimeUsd,
+    DateOnly? LastEarnedDate,
+    string Owner);
 
 public sealed record WeeklyClaimsDto(
     DateOnly WeekStart,

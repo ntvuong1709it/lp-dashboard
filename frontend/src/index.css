@@ -21,6 +21,14 @@
   --chart-a: #38bdf8;
   --chart-b: #34d399;
   --chart-c: #f59e0b;
+  --chart-d: #a78bfa;
+  /* One hue per followed wallet, in the order the wallets were added. */
+  --wallet-1: #818cf8;
+  --wallet-2: #2dd4bf;
+  --wallet-3: #f472b6;
+  --wallet-4: #a3e635;
+  --wallet-5: #fb923c;
+  --wallet-6: #22d3ee;
   --marker: #fff;
   color-scheme: dark;
 }
@@ -53,6 +61,13 @@
   --chart-a: #2a78d6;
   --chart-b: #1baf7a;
   --chart-c: #d98a00;
+  --chart-d: #7c4fd6;
+  --wallet-1: #4f46e5;
+  --wallet-2: #0f766e;
+  --wallet-3: #be185d;
+  --wallet-4: #4d7c0f;
+  --wallet-5: #c2410c;
+  --wallet-6: #0e7490;
   --marker: #0f1720;
 }
 
