@@ -56,6 +56,9 @@ export function Layout() {
             >
               Earnings
             </NavLink>
+            <NavLink to="/borrow" className={navClass}>
+              Borrow
+            </NavLink>
             <NavLink to="/features" className={navClass}>
               Features
             </NavLink>

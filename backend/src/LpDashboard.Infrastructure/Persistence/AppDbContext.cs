@@ -17,6 +17,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<PositionSnapshot> PositionSnapshots => Set<PositionSnapshot>();
     public DbSet<TokenPrice> TokenPrices => Set<TokenPrice>();
     public DbSet<SyncCursor> SyncCursors => Set<SyncCursor>();
+    public DbSet<ManualLoan> ManualLoans => Set<ManualLoan>();
+    public DbSet<ManualLoanTerm> ManualLoanTerms => Set<ManualLoanTerm>();
+    public DbSet<ManualLoanCollateral> ManualLoanCollateral => Set<ManualLoanCollateral>();
+    public DbSet<LendingAccount> LendingAccounts => Set<LendingAccount>();
+    public DbSet<LendingReserve> LendingReserves => Set<LendingReserve>();
+    public DbSet<LendingDay> LendingDays => Set<LendingDay>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
     {
@@ -94,6 +100,43 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
         {
             e.Property(x => x.Owner).HasMaxLength(64);
             e.HasIndex(x => new { x.Chain, x.Protocol, x.Owner }).IsUnique();
+        });
+
+        modelBuilder.Entity<ManualLoan>(e =>
+        {
+            e.Property(x => x.Owner).HasMaxLength(64);
+            e.Property(x => x.Label).HasMaxLength(100);
+            e.Property(x => x.Platform).HasMaxLength(40);
+            e.Property(x => x.AssetSymbol).HasMaxLength(32);
+            e.Property(x => x.AssetPriceKey).HasMaxLength(100);
+            e.Property(x => x.CollateralSymbol).HasMaxLength(32);
+            e.Property(x => x.CollateralPriceKey).HasMaxLength(100);
+            e.HasIndex(x => x.Owner);
+            e.HasMany(x => x.Terms).WithOne().HasForeignKey(x => x.LoanId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(x => x.Collateral).WithOne().HasForeignKey(x => x.LoanId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<LendingAccount>(e =>
+        {
+            e.Property(x => x.Owner).HasMaxLength(64);
+            e.Property(x => x.HistoryNote).HasMaxLength(500);
+            e.HasIndex(x => new { x.Chain, x.Owner }).IsUnique();
+        });
+
+        modelBuilder.Entity<LendingReserve>(e =>
+        {
+            e.Property(x => x.Owner).HasMaxLength(64);
+            e.Property(x => x.Reserve).HasMaxLength(64);
+            e.Property(x => x.Symbol).HasMaxLength(64);
+            e.Property(x => x.PriceKey).HasMaxLength(100);
+            e.HasIndex(x => new { x.Chain, x.Owner, x.Reserve }).IsUnique();
+        });
+
+        modelBuilder.Entity<LendingDay>(e =>
+        {
+            e.Property(x => x.Owner).HasMaxLength(64);
+            e.Property(x => x.Reserve).HasMaxLength(64);
+            e.HasIndex(x => new { x.Chain, x.Owner, x.Reserve, x.Date }).IsUnique();
         });
 
         ApplyGlobalConverters(modelBuilder);

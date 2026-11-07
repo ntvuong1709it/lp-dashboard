@@ -17,6 +17,292 @@ namespace LpDashboard.Infrastructure.Migrations.Sqlite.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.14");
 
+            modelBuilder.Entity("LpDashboard.Domain.Entities.LendingAccount", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Chain")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("HealthFactor")
+                        .HasPrecision(38, 18)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly?>("HistoryFrom")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("HistoryNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly?>("HistoryThrough")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("LiquidationThreshold")
+                        .HasPrecision(38, 18)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Owner")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("TotalCollateralUsd")
+                        .HasPrecision(38, 18)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("TotalDebtUsd")
+                        .HasPrecision(38, 18)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Chain", "Owner")
+                        .IsUnique();
+
+                    b.ToTable("LendingAccounts");
+                });
+
+            modelBuilder.Entity("LpDashboard.Domain.Entities.LendingDay", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("BorrowIndex")
+                        .HasPrecision(38, 18)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("BorrowedTokens")
+                        .HasPrecision(38, 18)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Chain")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("InterestTokens")
+                        .HasPrecision(38, 18)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsCollateral")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Owner")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reserve")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("SuppliedTokens")
+                        .HasPrecision(38, 18)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("SupplyIndex")
+                        .HasPrecision(38, 18)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("YieldTokens")
+                        .HasPrecision(38, 18)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Chain", "Owner", "Reserve", "Date")
+                        .IsUnique();
+
+                    b.ToTable("LendingDays");
+                });
+
+            modelBuilder.Entity("LpDashboard.Domain.Entities.LendingReserve", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("BorrowAprPercent")
+                        .HasPrecision(38, 18)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("BorrowedTokens")
+                        .HasPrecision(38, 18)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Chain")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Decimals")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsCollateral")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Owner")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PriceKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reserve")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("SuppliedTokens")
+                        .HasPrecision(38, 18)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("SupplyAprPercent")
+                        .HasPrecision(38, 18)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Symbol")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Chain", "Owner", "Reserve")
+                        .IsUnique();
+
+                    b.ToTable("LendingReserves");
+                });
+
+            modelBuilder.Entity("LpDashboard.Domain.Entities.ManualLoan", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AssetPriceKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AssetSymbol")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly?>("ClosedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CollateralPriceKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CollateralSymbol")
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("LiquidationLtvPercent")
+                        .HasPrecision(38, 18)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("MarginCallLtvPercent")
+                        .HasPrecision(38, 18)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Owner")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Platform")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Owner");
+
+                    b.ToTable("ManualLoans");
+                });
+
+            modelBuilder.Entity("LpDashboard.Domain.Entities.ManualLoanCollateral", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(38, 18)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly>("EffectiveFrom")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LoanId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LoanId");
+
+                    b.ToTable("ManualLoanCollateral");
+                });
+
+            modelBuilder.Entity("LpDashboard.Domain.Entities.ManualLoanTerm", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("AprPercent")
+                        .HasPrecision(38, 18)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly>("EffectiveFrom")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LoanId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Principal")
+                        .HasPrecision(38, 18)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LoanId");
+
+                    b.ToTable("ManualLoanTerms");
+                });
+
             modelBuilder.Entity("LpDashboard.Domain.Entities.Pool", b =>
                 {
                     b.Property<int>("Id")
@@ -473,6 +759,24 @@ namespace LpDashboard.Infrastructure.Migrations.Sqlite.Migrations
                     b.ToTable("WatchedAddresses");
                 });
 
+            modelBuilder.Entity("LpDashboard.Domain.Entities.ManualLoanCollateral", b =>
+                {
+                    b.HasOne("LpDashboard.Domain.Entities.ManualLoan", null)
+                        .WithMany("Collateral")
+                        .HasForeignKey("LoanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LpDashboard.Domain.Entities.ManualLoanTerm", b =>
+                {
+                    b.HasOne("LpDashboard.Domain.Entities.ManualLoan", null)
+                        .WithMany("Terms")
+                        .HasForeignKey("LoanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("LpDashboard.Domain.Entities.Pool", b =>
                 {
                     b.HasOne("LpDashboard.Domain.Entities.Token", "Token0")
@@ -522,6 +826,13 @@ namespace LpDashboard.Infrastructure.Migrations.Sqlite.Migrations
                         .IsRequired();
 
                     b.Navigation("Position");
+                });
+
+            modelBuilder.Entity("LpDashboard.Domain.Entities.ManualLoan", b =>
+                {
+                    b.Navigation("Collateral");
+
+                    b.Navigation("Terms");
                 });
 
             modelBuilder.Entity("LpDashboard.Domain.Entities.Position", b =>

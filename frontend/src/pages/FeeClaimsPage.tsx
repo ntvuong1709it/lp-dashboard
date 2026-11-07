@@ -5,6 +5,7 @@ import {
   usePositions,
   useWeeklyClaims,
 } from "../api/client";
+import { CoverageCard } from "../components/borrow/CoverageCard";
 import { ClaimHealth } from "../components/earnings/ClaimHealth";
 import { ClaimLog } from "../components/earnings/ClaimLog";
 import { EarningsAlerts } from "../components/earnings/EarningsAlerts";
@@ -40,6 +41,7 @@ export function FeeClaimsPage() {
         </div>
         <UpdatedAgo />
       </div>
+      <CoverageCard />
       <EarningsOverview />
     </div>
   );

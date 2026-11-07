@@ -1,14 +1,22 @@
 import {
   keepPreviousData,
   useMutation,
+  useQueries,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import { useOwner } from "../lib/owner";
 import type {
   ActivityEventDto,
+  AssetOptionDto,
+  BorrowSummaryDto,
+  ChangesDto,
   Chain,
+  CollateralHistoryDto,
+  DailyCoverageDto,
   DailyEarningsDto,
+  LoanDto,
+  ManualLoanDto,
   PositionEarningsDto,
   HealthDto,
   PnlHistoryDto,
@@ -292,6 +300,118 @@ export const usePortfolioInsights = (owner: string | null) =>
     queryFn: () =>
       request<PortfolioInsightsDto>(`/api/portfolio/insights${query({ owner })}`),
   });
+
+// ---- Borrow ----
+
+export const useBorrowSummary = (owner: string | null, days: number) =>
+  useQuery({
+    queryKey: ["borrow", "summary", owner, days, timeZone],
+    enabled: owner != null,
+    queryFn: () =>
+      request<BorrowSummaryDto>(
+        `/api/borrow/summary${query({ owner, days: String(days), timeZone })}`,
+      ),
+  });
+
+export const useBorrowLoans = (owner: string | null, days: number) =>
+  useQuery({
+    queryKey: ["borrow", "loans", owner, days, timeZone],
+    enabled: owner != null,
+    queryFn: () =>
+      request<LoanDto[]>(
+        `/api/borrow/loans${query({ owner, days: String(days), timeZone })}`,
+      ),
+  });
+
+export const useBorrowDaily = (owner: string | null, days: number) =>
+  useQuery({
+    queryKey: ["borrow", "daily", owner, days, timeZone],
+    enabled: owner != null,
+    queryFn: () =>
+      request<DailyCoverageDto[]>(
+        `/api/borrow/daily${query({ owner, days: String(days), timeZone })}`,
+      ),
+  });
+
+export const useCollateralHistory = (owner: string | null, days: number, loan: string) =>
+  useQuery({
+    queryKey: ["borrow", "collateral-history", owner, days, loan, timeZone],
+    enabled: owner != null,
+    placeholderData: keepPreviousData,
+    queryFn: () =>
+      request<CollateralHistoryDto>(
+        `/api/borrow/collateral-history${query({ owner, days: String(days), timeZone, loan })}`,
+      ),
+  });
+
+export const useBorrowChanges = (owner: string | null, days: number, loan: string) =>
+  useQuery({
+    queryKey: ["borrow", "changes", owner, days, loan, timeZone],
+    enabled: owner != null,
+    placeholderData: keepPreviousData,
+    queryFn: () =>
+      request<ChangesDto>(
+        `/api/borrow/changes${query({ owner, days: String(days), timeZone, loan })}`,
+      ),
+  });
+
+/** The same figures as useBorrowChanges, one request per wallet (shares the cache when a single wallet is picked). */
+export const useBorrowChangesByWallet = (owners: string[], days: number, loan: string) =>
+  useQueries({
+    queries: owners.map((owner) => ({
+      queryKey: ["borrow", "changes", owner, days, loan, timeZone],
+      placeholderData: keepPreviousData,
+      queryFn: () =>
+        request<ChangesDto>(
+          `/api/borrow/changes${query({ owner, days: String(days), timeZone, loan })}`,
+        ),
+    })),
+  });
+
+export const useManualLoans =(owner: string | null) =>
+  useQuery({
+    queryKey: ["borrow", "manual", owner],
+    enabled: owner != null,
+    queryFn: () =>
+      request<ManualLoanDto[]>(`/api/borrow/loans/manual${query({ owner })}`),
+  });
+
+export const useBorrowAssets = () =>
+  useQuery({
+    queryKey: ["borrow", "assets"],
+    staleTime: Infinity,
+    queryFn: () => request<AssetOptionDto[]>("/api/borrow/assets"),
+  });
+
+/** Creates a manual loan (no id) or edits one (with id); both refresh every borrow figure. */
+export function useSaveManualLoan() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (loan: ManualLoanDto) =>
+      loan.id > 0
+        ? request<ManualLoanDto>(
+            `/api/borrow/loans/manual/${loan.id}${query({ owner: loan.owner })}`,
+            { method: "PUT", body: JSON.stringify(loan) },
+          )
+        : request<ManualLoanDto>("/api/borrow/loans/manual", {
+            method: "POST",
+            body: JSON.stringify(loan),
+          }),
+    onSuccess: () => void client.invalidateQueries({ queryKey: ["borrow"] }),
+  });
+}
+
+export function useDeleteManualLoan() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (loan: { id: number; owner: string }) =>
+      request<void>(
+        `/api/borrow/loans/manual/${loan.id}${query({ owner: loan.owner })}`,
+        { method: "DELETE" },
+      ),
+    onSuccess: () => void client.invalidateQueries({ queryKey: ["borrow"] }),
+  });
+}
 
 export const usePerformance = (owner: string | null) =>
   useQuery({

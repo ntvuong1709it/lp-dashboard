@@ -27,6 +27,8 @@ internal sealed record EvmLog(string Address, IReadOnlyList<string> Topics, stri
 
 internal sealed record EvmReceipt(string TxHash, string From, BigInteger FeeWei, IReadOnlyList<EvmLog> Logs);
 
+internal sealed record TokenTransferIn(string Contract, long BlockNumber);
+
 internal sealed record NftTransfer(BigInteger TokenId, string From, string To, long BlockNumber, int LogIndex, string TxHash);
 
 /// <summary>JSON-RPC client with batching, pacing, 429 retry and adaptive eth_getLogs ranges. Never logs the URL (it contains the API key).</summary>
@@ -116,6 +118,9 @@ internal sealed partial class EvmRpcClient(IHttpClientFactory httpClientFactory,
         (await CallAsync("eth_call", [CallObject(to, data, from), "latest"], ct)).GetString()!;
 
     public static RpcCall EthCall(string to, string data, string? from = null) => new("eth_call", [CallObject(to, data, from), "latest"]);
+
+    /// <summary>eth_call against the state at a past block; needs a node that keeps historical state.</summary>
+    public static RpcCall EthCallAt(string to, string data, long block) => new("eth_call", [CallObject(to, data, null), Abi.ToHex(block)]);
 
     public async Task<List<EvmLog>> GetLogsAsync(object address, object?[] topics, long fromBlock, long toBlock, CancellationToken ct)
     {
@@ -225,6 +230,35 @@ internal sealed partial class EvmRpcClient(IHttpClientFactory httpClientFactory,
                 logIndex,
                 t.GetProperty("hash").GetString()!);
         }).ToList();
+    }
+
+    /// <summary>
+    /// ERC-20 transfers (mints included) of the given tokens to an address, oldest first, via alchemy_getAssetTransfers.
+    /// Works on plans that limit eth_getLogs to a few blocks.
+    /// </summary>
+    public async Task<List<TokenTransferIn>> GetTokenTransfersToAsync(string toAddress, IReadOnlyCollection<string> contracts, CancellationToken ct)
+    {
+        var found = new List<TokenTransferIn>();
+        foreach (var chunk in contracts.Chunk(100))
+        {
+            var request = new Dictionary<string, object?>
+            {
+                ["fromBlock"] = "0x0",
+                ["toBlock"] = "latest",
+                ["category"] = new[] { "erc20" },
+                ["toAddress"] = toAddress,
+                ["contractAddresses"] = chunk,
+                ["order"] = "asc"
+            };
+            foreach (var t in await GetAssetTransfersAsync(request, ct))
+            {
+                found.Add(new TokenTransferIn(
+                    t.GetProperty("rawContract").GetProperty("address").GetString()!.ToLowerInvariant(),
+                    Abi.ToLong(t.GetProperty("blockNum").GetString()!)));
+            }
+        }
+
+        return found;
     }
 
     /// <summary>

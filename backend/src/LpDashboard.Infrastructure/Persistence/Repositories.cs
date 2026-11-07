@@ -132,6 +132,53 @@ internal sealed class SyncCursorRepository(AppDbContext db) : ISyncCursorReposit
     public void Add(SyncCursor cursor) => db.SyncCursors.Add(cursor);
 }
 
+internal sealed class ManualLoanRepository(AppDbContext db) : IManualLoanRepository
+{
+    public Task<List<ManualLoan>> ListAsync(IReadOnlyCollection<string> owners, CancellationToken ct) =>
+        db.ManualLoans.AsNoTracking()
+            .Include(l => l.Terms)
+            .Include(l => l.Collateral)
+            .Where(l => owners.Contains(l.Owner))
+            .OrderBy(l => l.CreatedAt)
+            .ThenBy(l => l.Id)
+            .AsSplitQuery()
+            .ToListAsync(ct);
+
+    public Task<ManualLoan?> GetAsync(int id, CancellationToken ct) =>
+        db.ManualLoans.Include(l => l.Terms).Include(l => l.Collateral).AsSplitQuery().FirstOrDefaultAsync(l => l.Id == id, ct);
+
+    public void Add(ManualLoan loan) => db.ManualLoans.Add(loan);
+
+    public void Remove(ManualLoan loan) => db.ManualLoans.Remove(loan);
+}
+
+internal sealed class LendingRepository(AppDbContext db) : ILendingRepository
+{
+    // Tracked: the sync edits these rows in place.
+    public Task<LendingAccount?> GetAccountAsync(Chain chain, string owner, CancellationToken ct) =>
+        db.LendingAccounts.FirstOrDefaultAsync(a => a.Chain == chain && a.Owner == owner, ct);
+
+    public Task<List<LendingAccount>> ListAccountsAsync(IReadOnlyCollection<string> owners, CancellationToken ct) =>
+        db.LendingAccounts.AsNoTracking().Where(a => owners.Contains(a.Owner)).ToListAsync(ct);
+
+    public Task<List<LendingReserve>> ListReservesAsync(Chain chain, string owner, CancellationToken ct) =>
+        db.LendingReserves.Where(r => r.Chain == chain && r.Owner == owner).ToListAsync(ct);
+
+    public Task<List<LendingReserve>> ListReservesAsync(IReadOnlyCollection<string> owners, CancellationToken ct) =>
+        db.LendingReserves.AsNoTracking().Where(r => owners.Contains(r.Owner)).ToListAsync(ct);
+
+    public Task<List<LendingDay>> ListDaysAsync(Chain chain, string owner, CancellationToken ct) =>
+        db.LendingDays.Where(d => d.Chain == chain && d.Owner == owner).ToListAsync(ct);
+
+    public Task<List<LendingDay>> ListDaysAsync(IReadOnlyCollection<string> owners, DateOnly from, CancellationToken ct) =>
+        db.LendingDays.AsNoTracking().Where(d => owners.Contains(d.Owner) && d.Date >= from).OrderBy(d => d.Date).ToListAsync(ct);
+
+    public void Add(LendingAccount account) => db.LendingAccounts.Add(account);
+    public void Add(LendingReserve reserve) => db.LendingReserves.Add(reserve);
+    public void Add(LendingDay day) => db.LendingDays.Add(day);
+    public void Remove(LendingReserve reserve) => db.LendingReserves.Remove(reserve);
+}
+
 internal sealed class UnitOfWork(AppDbContext db) : IUnitOfWork
 {
     public Task SaveChangesAsync(CancellationToken ct) => db.SaveChangesAsync(ct);

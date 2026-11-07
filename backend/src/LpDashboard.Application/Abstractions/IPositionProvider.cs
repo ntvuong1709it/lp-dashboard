@@ -62,8 +62,11 @@ public sealed record RawPositionEvent(
     // Whole-tx fee in native token units (already divided by 1e18).
     decimal TxGasNative);
 
-/// <summary>Sub-step update for long-running provider work; <paramref name="Total"/> is 0 when unknown.</summary>
-public sealed record ProviderProgress(string Step, int Done, int Total);
+/// <summary>
+/// Sub-step update for long-running provider work; <paramref name="Total"/> is 0 when unknown. <paramref name="Overall"/> (0 to 1) is
+/// the share of the whole run done, for work whose steps each count from zero.
+/// </summary>
+public sealed record ProviderProgress(string Step, int Done, int Total, double? Overall = null);
 
 /// <summary>One implementation per chain + protocol family.</summary>
 public interface IPositionProvider

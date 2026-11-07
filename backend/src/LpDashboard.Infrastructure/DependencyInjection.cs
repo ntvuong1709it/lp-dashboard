@@ -65,6 +65,8 @@ public static class DependencyInjection
         services.AddScoped<ISnapshotRepository, SnapshotRepository>();
         services.AddScoped<ITokenPriceRepository, TokenPriceRepository>();
         services.AddScoped<ISyncCursorRepository, SyncCursorRepository>();
+        services.AddScoped<IManualLoanRepository, ManualLoanRepository>();
+        services.AddScoped<ILendingRepository, LendingRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         return services;
     }
@@ -126,6 +128,15 @@ public static class DependencyInjection
                     chain,
                     protocol,
                     sp.GetRequiredService<ILoggerFactory>().CreateLogger<UniswapV3StyleProvider>()));
+            }
+
+            if (chain.Lending.AaveV3 is { Enabled: true } aave && !string.IsNullOrWhiteSpace(aave.PoolAddressesProvider))
+            {
+                services.AddSingleton<ILendingProvider>(sp => new AaveV3Provider(
+                    rpc ??= new EvmRpcClient(sp.GetRequiredService<IHttpClientFactory>(), chain),
+                    chain,
+                    aave,
+                    sp.GetRequiredService<ILoggerFactory>().CreateLogger<AaveV3Provider>()));
             }
         }
     }

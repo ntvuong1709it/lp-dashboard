@@ -1,0 +1,751 @@
+<title>Borrow Coverage Mock</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: mock-control strip on top, then the real app frame (header, nav, page). Tokens mirror the app's slate scale, dark first. */
+:root {
+  --bg: #020617;
+  --surface: #0f172a;
+  --surface2: #162033;
+  --border: #1e293b;
+  --border2: #334155;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --faint: #64748b;
+  --sky: #38bdf8;
+  --violet: #a78bfa;
+  --green: #34d399;
+  --rose: #fb7185;
+  --amber: #f59e0b;
+  --rose-bg: rgba(251,113,133,.13);
+  --amber-bg: rgba(245,158,11,.13);
+  --green-bg: rgba(52,211,153,.13);
+  --sky-bg: rgba(56,189,248,.12);
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --font-display: "Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f4f6f8; --surface: #ffffff; --surface2: #eef1f5; --border: #e2e7ec; --border2: #cfd6de;
+    --text: #1b2430; --muted: #5b6675; --faint: #6b7686;
+    --sky: #2a78d6; --violet: #7c4fd6; --green: #0f7d57; --rose: #c23b36; --amber: #b36b00;
+    --rose-bg: rgba(194,59,54,.10); --amber-bg: rgba(179,107,0,.12); --green-bg: rgba(15,125,87,.11); --sky-bg: rgba(42,120,214,.10);
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f4f6f8; --surface: #ffffff; --surface2: #eef1f5; --border: #e2e7ec; --border2: #cfd6de;
+  --text: #1b2430; --muted: #5b6675; --faint: #6b7686;
+  --sky: #2a78d6; --violet: #7c4fd6; --green: #0f7d57; --rose: #c23b36; --amber: #b36b00;
+  --rose-bg: rgba(194,59,54,.10); --amber-bg: rgba(179,107,0,.12); --green-bg: rgba(15,125,87,.11); --sky-bg: rgba(42,120,214,.10);
+  color-scheme: light;
+}
+:root[data-theme="dark"] { color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--text); font-family: var(--font-sans); font-size: 14px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 48px; -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; font-weight: 600; letter-spacing: -.01em; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
+.wrap { max-width: 1120px; margin: 0 auto; }
+
+/* Mock controls (not part of the app) */
+.mockbar { border: 1px dashed var(--border2); border-radius: 8px; margin-top: 12px; padding: 10px 12px; display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; font-size: 12px; color: var(--muted); background: var(--surface2); }
+.mockbar b { color: var(--text); font-weight: 600; }
+.mockbar select { background: var(--surface); color: var(--text); border: 1px solid var(--border2); border-radius: 6px; padding: 4px 8px; font: inherit; }
+.mockbar .tag { text-transform: uppercase; letter-spacing: .06em; font-size: 11px; color: var(--amber); font-weight: 600; }
+
+/* App frame */
+.appbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; padding: 14px 0; border-bottom: 1px solid var(--border); margin-top: 12px; }
+.brand { font-family: var(--font-display); font-weight: 600; font-size: 16px; }
+.nav { display: flex; gap: 2px; overflow-x: auto; min-width: 0; flex: 1 1 320px; }
+.nav button { background: none; border: 0; padding: 6px 10px; border-radius: 6px; color: var(--muted); white-space: nowrap; }
+.nav button:hover { color: var(--text); background: var(--surface); }
+.nav button[aria-current="page"] { color: var(--text); background: var(--surface); box-shadow: inset 0 -2px 0 var(--sky); }
+.wallet { font-size: 12px; border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+.wallet i { width: 8px; height: 8px; border-radius: 50%; background: #818cf8; display: inline-block; }
+
+.page { padding-top: 22px; display: flex; flex-direction: column; gap: 18px; }
+.pagehead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 10px; }
+.pagehead h1 { font-size: 24px; }
+.sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+.card { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 16px; min-width: 0; }
+.card h2 { font-size: 15px; }
+.cardhead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 12px; margin-bottom: 12px; }
+.label { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.hint { font-size: 12px; color: var(--faint); }
+.grid { display: grid; gap: 12px; }
+.g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.g21 { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+
+.seg { display: inline-flex; border: 1px solid var(--border2); border-radius: 6px; overflow: hidden; }
+.seg button { background: none; border: 0; padding: 3px 10px; font-size: 12px; color: var(--muted); }
+.seg button + button { border-left: 1px solid var(--border2); }
+.seg button[aria-pressed="true"] { background: var(--sky-bg); color: var(--sky); font-weight: 600; }
+
+.chip { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 600; }
+.chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.chip.covered { background: var(--green-bg); color: var(--green); }
+.chip.thin { background: var(--amber-bg); color: var(--amber); }
+.chip.shortfall { background: var(--rose-bg); color: var(--rose); }
+.chip.nodebt { background: var(--surface2); color: var(--muted); }
+.chip.ok { background: var(--green-bg); color: var(--green); }
+.chip.warn { background: var(--amber-bg); color: var(--amber); }
+.chip.crit { background: var(--rose-bg); color: var(--rose); }
+
+.banner { display: flex; gap: 10px; align-items: flex-start; border-radius: 8px; padding: 10px 14px; border: 1px solid; font-size: 13px; }
+.banner.warn { background: var(--amber-bg); border-color: var(--amber); }
+.banner.crit { background: var(--rose-bg); border-color: var(--rose); }
+.banner.info { background: var(--sky-bg); border-color: var(--sky); }
+.banner b { font-weight: 600; }
+.banner .bi { font-weight: 700; width: 18px; flex: none; text-align: center; }
+.banner.warn .bi { color: var(--amber); } .banner.crit .bi { color: var(--rose); } .banner.info .bi { color: var(--sky); }
+.banner .act { margin-left: auto; white-space: nowrap; color: var(--text); text-decoration: underline; background: none; border: 0; padding: 0; }
+.progress { height: 6px; background: var(--surface2); border-radius: 99px; overflow: hidden; margin-top: 6px; width: min(320px, 100%); }
+.progress i { display: block; height: 100%; width: 49%; background: var(--sky); }
+
+.bignum { font-family: var(--font-mono); font-size: 34px; font-weight: 500; letter-spacing: -.02em; line-height: 1.1; }
+.mid { font-family: var(--font-mono); font-size: 22px; font-weight: 500; letter-spacing: -.01em; }
+.pos { color: var(--green); } .neg { color: var(--rose); }
+.stat .row { margin-top: 4px; font-size: 12px; color: var(--muted); }
+.split { display: flex; height: 6px; border-radius: 99px; overflow: hidden; background: var(--surface2); margin-top: 10px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); }
+.legend span::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; background: var(--c); vertical-align: -1px; }
+.legend .line::before { height: 3px; border-radius: 2px; vertical-align: 3px; }
+
+.link { background: none; border: 0; padding: 0; color: var(--sky); text-decoration: underline; text-underline-offset: 2px; }
+.btn { border: 1px solid var(--border2); background: var(--surface2); border-radius: 6px; padding: 6px 12px; font-size: 13px; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--sky); border-color: var(--sky); color: #04101c; font-weight: 600; }
+.btn.small { padding: 2px 8px; font-size: 12px; }
+.btn.ghost { background: none; }
+
+/* Coverage strip on Earnings */
+.cover { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px; align-items: center; }
+.cover .tiny { font-size: 12px; color: var(--muted); }
+.bars { display: flex; flex-direction: column; gap: 10px; }
+.bars .line { display: grid; grid-template-columns: 78px minmax(0, 1fr) 76px; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
+.bars .track { height: 12px; border-radius: 3px; background: var(--surface2); display: flex; overflow: hidden; }
+.bars .val { text-align: right; color: var(--text); }
+.health { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+
+/* Tables */
+.tablewrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; min-width: 760px; }
+th { text-align: left; font-weight: 500; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; padding: 6px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+td { padding: 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+td.r, th.r { text-align: right; }
+.src { font-size: 11px; border: 1px solid var(--border2); border-radius: 4px; padding: 0 6px; color: var(--muted); white-space: nowrap; }
+.src.manual { border-color: var(--amber); color: var(--amber); }
+.sub2 { font-size: 12px; color: var(--muted); }
+.acts { display: flex; gap: 6px; justify-content: flex-end; }
+
+.trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+.trio .mid { font-size: 20px; }
+.lcols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.lrow { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; font-size: 13px; }
+.lrow.b { font-weight: 600; }
+.lrow.top { border-top: 1px solid var(--border); margin-top: 4px; padding-top: 8px; }
+.trow { display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: 6px 12px; align-items: end; padding: 10px 0; border-top: 1px solid var(--border); }
+.trow .tout { grid-column: 1 / -1; font-size: 13px; }
+.trow input { width: 100%; background: var(--surface2); border: 1px solid var(--border2); color: var(--text); border-radius: 6px; padding: 5px 8px; font: inherit; }
+.trow label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 3px; }
+.para { margin: 0 0 10px; }
+@media (max-width: 700px) { .trio { grid-template-columns: minmax(0, 1fr); } .lcols { grid-template-columns: minmax(0, 1fr); } }
+tr.grp td { background: var(--surface2); }
+tr.tot td { border-top: 1px solid var(--border2); }
+td.b, .b { font-weight: 600; }
+.cost td:first-child { white-space: nowrap; }
+/* Gauges */
+.gauge { position: relative; height: 10px; margin: 18px 0 22px; }
+.gz { position: absolute; inset: 0; display: block; border-radius: 99px; overflow: hidden; background: var(--surface2); }
+.gz span { position: absolute; top: 0; bottom: 0; opacity: .75; }
+.gm { position: absolute; top: -5px; width: 3px; height: 20px; background: var(--text); border-radius: 2px; transform: translateX(-50%); }
+.gt { position: absolute; top: 14px; font-size: 10px; color: var(--muted); transform: translateX(-50%); white-space: nowrap; }
+.gt::before { content: ""; position: absolute; left: 50%; top: -6px; width: 1px; height: 6px; background: var(--faint); }
+.rkrow { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 10px; }
+.risk + .risk { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 12px; }
+
+/* What-if */
+.sliders { display: grid; gap: 14px; }
+.sl label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
+.sl input[type=range] { width: 100%; accent-color: var(--sky); }
+.outs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+.out { border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; background: var(--surface2); }
+.out .mid { font-size: 20px; }
+
+/* Form */
+.form { display: grid; gap: 12px; }
+.fgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.field input, .field select { width: 100%; background: var(--surface2); border: 1px solid var(--border2); color: var(--text); border-radius: 6px; padding: 6px 8px; font: inherit; }
+.terms { display: grid; gap: 8px; }
+.term { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, .8fr) auto; gap: 8px; align-items: end; }
+.fnote { font-size: 12px; color: var(--muted); }
+.divider { border: 0; border-top: 1px solid var(--border); margin: 4px 0; }
+.empty { text-align: center; padding: 36px 16px; color: var(--muted); }
+.empty h2 { color: var(--text); margin-bottom: 6px; }
+.placeholder { border: 1px dashed var(--border2); border-radius: 8px; padding: 26px; text-align: center; color: var(--faint); font-size: 13px; }
+svg text { fill: var(--muted); font-family: var(--font-sans); font-size: 11px; }
+svg .tick { stroke: var(--border); stroke-width: 1; }
+.toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 13px; z-index: 20; }
+
+@media (max-width: 900px) {
+  .g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .g21, .g2 { grid-template-columns: minmax(0, 1fr); }
+  .cover { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 520px) {
+  .g4 { grid-template-columns: minmax(0, 1fr); }
+  .term { grid-template-columns: 1fr 1fr; }
+  .bignum { font-size: 30px; }
+}
+</style>
+
+<div class="wrap">
+  <div class="mockbar" role="group" aria-label="Mock controls">
+    <span class="tag">Mock, example data</span>
+    <span><b>Screen</b> <span class="seg" id="viewSeg"></span></span>
+    <label><b>State</b>
+      <select id="scenario" aria-label="Preview state">
+        <option value="covered">Covered (healthy)</option>
+        <option value="thin">Thin coverage</option>
+        <option value="shortfall">Shortfall</option>
+        <option value="backfill">Aave backfill running</option>
+        <option value="noloans">No loans yet</option>
+      </select>
+    </label>
+    <span>Nothing here is wired to the app. Numbers come from a generated 90-day sample.</span>
+  </div>
+
+  <header class="appbar">
+    <span class="brand">LP Dashboard</span>
+    <nav class="nav" id="nav" aria-label="Main"></nav>
+    <span class="wallet"><i></i><span class="num">2 wallets</span></span>
+  </header>
+
+  <main class="page" id="app"></main>
+</div>
+<div id="toastHost"></div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var usd = function (n, d) {
+    d = d == null ? 2 : d;
+    return (n < 0 ? "-" : "") + "$" + Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+  };
+  var dshort = function (dt) { return dt.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }); };
+
+  /* ---------- sample data (90 days, deterministic) ---------- */
+  function rng(seed) {
+    return function () {
+      seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+      var t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  var R = rng(42), DAYS = 90, END = Date.UTC(2026, 10, 7), DATA = [];
+  for (var i = 0; i < DAYS; i++) {
+    var fees = 3.7 + (R() - .5) * 3.6; if (R() < .08) fees = 0.3 + R() * .5; if (fees < .5) fees = .5 + R() * .3;
+    DATA.push({
+      date: new Date(END - (DAYS - 1 - i) * 864e5),
+      fees: fees,
+      rewards: 1.7 + (R() - .5) * 1.0,
+      supply: .85 + (R() - .5) * .1,
+      ia: 14200 * (0.056 + (R() - .5) * .008) / 365,
+      ib: 6000 * (i < 48 ? 0.084 : 0.092) / 365,
+      gas: R() < .07 ? 1.1 + R() * 1.4 : 0
+    });
+  }
+  var MULT = { covered: 1, backfill: 1, thin: .62, shortfall: .35, noloans: 1 };
+  var LP_VALUE = 28400;
+  var AAVE = { debt: 14200, apr: 5.8, hf: 1.74, collat: 32800 };
+  var BIN = { debt: 6000, apr: 9.2, ltv: 71, liq: 80, margin: 75 };
+  var RUN = AAVE.debt * AAVE.apr / 100 / 365 + BIN.debt * BIN.apr / 100 / 365;
+
+  /* Collateral and debt history. Built backwards from today's balances so each day follows from the next. */
+  var P = [], PB = [], pi;
+  for (pi = 0; pi < DAYS; pi++) {
+    var pbase = pi <= 60 ? .93 + .19 * (pi / 60) : 1.12 - .12 * ((pi - 60) / 29);
+    P.push(pbase * (1 + (R() - .5) * .03)); PB.push(pbase * (1 + (R() - .5) * .04));
+  }
+  (function () { var a = P[DAYS - 1], b = PB[DAYS - 1]; P = P.map(function (v) { return v / a; }); PB = PB.map(function (v) { return v / b; }); })();
+  function holdings(price, collatEnd, debtEnd, deps, bors, yieldOn, intKey) {
+    var H = { tok: [], debt: [], dep: new Array(DAYS).fill(0), bor: new Array(DAYS).fill(0) };
+    deps.forEach(function (d) { H.dep[d[0]] = d[1] / price[d[0]]; });
+    bors.forEach(function (b) { H.bor[b[0]] = b[1]; });
+    H.tok[DAYS - 1] = collatEnd / price[DAYS - 1]; H.debt[DAYS - 1] = debtEnd;
+    for (var i = DAYS - 2; i >= 0; i--) {
+      H.tok[i] = H.tok[i + 1] - (yieldOn ? DATA[i + 1].supply / price[i + 1] : 0) - H.dep[i + 1];
+      H.debt[i] = H.debt[i + 1] - DATA[i + 1][intKey] - H.bor[i + 1];
+    }
+    return H;
+  }
+  var HA = holdings(P, AAVE.collat, AAVE.debt, [[55, 2000]], [[35, 1500]], true, "ia");
+  var HB = holdings(PB, BIN.debt / (BIN.ltv / 100), BIN.debt, [[70, 700]], [], false, "ib");
+
+  var state = {
+    view: "borrow", scenario: "covered", win: 30, form: null, cd: "all", per: "m", tg: { hf: 2, ltv: 60 }, coll: [],
+    terms: [], wi: { rate: 100, inc: 100, move: 0 }
+  };
+
+  function stats(win) {
+    var m = MULT[state.scenario], d = DATA.slice(-win);
+    var s = { win: win, fees: 0, rew: 0, sup: 0, ia: 0, ib: 0, gas: 0 };
+    d.forEach(function (x) { s.fees += x.fees * m; s.rew += x.rewards * m; s.sup += x.supply; s.ia += x.ia; s.ib += x.ib; s.gas += x.gas; });
+    s.income = s.fees + s.rew + s.sup; s.interest = s.ia + s.ib;
+    s.net = s.income - s.interest - s.gas; s.ratio = s.interest ? s.income / s.interest : null;
+    return s;
+  }
+  function status(r) { return r == null ? "nodebt" : r >= 1.25 ? "covered" : r >= 1 ? "thin" : "shortfall"; }
+  var STATUS_TXT = { covered: "Covered", thin: "Thin", shortfall: "Shortfall", nodebt: "No interest" };
+  var chip = function (st) { return '<span class="chip ' + st + '">' + STATUS_TXT[st] + "</span>"; };
+  var hasLoans = function () { return state.scenario !== "noloans"; };
+
+  /* ---------- small components ---------- */
+  function gauge(o) {
+    var p = function (v) { return Math.max(0, Math.min(100, (v - o.min) / (o.max - o.min) * 100)); };
+    var z = o.zones.map(function (z) { return '<span style="left:' + p(z.from) + "%;width:" + (p(z.to) - p(z.from)) + "%;background:var(--" + z.c + ')"></span>'; }).join("");
+    var t = (o.ticks || []).map(function (k) { return '<span class="gt" style="left:' + p(k.v) + '%">' + k.t + "</span>"; }).join("");
+    return '<div class="gauge" role="img" aria-label="' + o.aria + '"><span class="gz">' + z + '</span><i class="gm" style="left:' + p(o.value) + '%"></i>' + t + "</div>";
+  }
+  var hfGauge = function (v) { return gauge({ min: 1, max: 2.5, value: v, aria: "Health factor " + v.toFixed(2), zones: [{ from: 1, to: 1.2, c: "rose" }, { from: 1.2, to: 1.5, c: "amber" }, { from: 1.5, to: 2.5, c: "green" }], ticks: [{ v: 1.2, t: "1.2 critical" }, { v: 1.5, t: "1.5 warn" }] }); };
+  var ltvGauge = function (v) { return gauge({ min: 40, max: 90, value: v, aria: "LTV " + v.toFixed(0) + " percent", zones: [{ from: 40, to: 68, c: "green" }, { from: 68, to: 76, c: "amber" }, { from: 76, to: 90, c: "rose" }], ticks: [{ v: 68, t: "68 warn" }, { v: 75, t: "75 margin call" }, { v: 80, t: "80 liquidation" }] }); };
+  function hfLevel(h) { return h < 1.2 ? "crit" : h < 1.5 ? "warn" : "ok"; }
+  function ltvLevel(l) { return l >= BIN.liq * .95 ? "crit" : l >= BIN.liq * .85 ? "warn" : "ok"; }
+  var LV_TXT = { ok: "Healthy", warn: "Warning", crit: "Critical" };
+
+  /* ---------- chart ---------- */
+  function niceMax(v) { var p = Math.pow(10, Math.floor(Math.log10(v))), n = v / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p; }
+  function chart(win) {
+    var m = MULT[state.scenario], d = DATA.slice(-win), W = 760, H = 230, L = 40, Rt = 6, T = 10, B = 26, pw = W - L - Rt, ph = H - T - B;
+    var tot = d.map(function (x) { return (x.fees + x.rewards) * m + x.supply; });
+    var inter = d.map(function (x) { return x.ia + x.ib; });
+    var ymax = niceMax(Math.max.apply(null, tot.concat(inter)) * 1.08);
+    var Y = function (v) { return T + ph - v / ymax * ph; };
+    var bw = pw / win, gap = win > 45 ? .12 : .3, s = "";
+    for (var k = 0; k <= 4; k++) {
+      var tv = ymax * k / 4;
+      s += '<line class="tick" x1="' + L + '" x2="' + (W - Rt) + '" y1="' + Y(tv) + '" y2="' + Y(tv) + '"/><text x="' + (L - 6) + '" y="' + (Y(tv) + 4) + '" text-anchor="end">$' + (Number.isInteger(tv) ? tv : tv.toFixed(1)) + "</text>";
+    }
+    d.forEach(function (x, i) {
+      var bx = L + i * bw + bw * gap / 2, w = bw * (1 - gap), y = 0;
+      [[x.supply, "green"], [x.fees * m, "sky"], [x.rewards * m, "violet"]].forEach(function (seg) {
+        var h = seg[0] / ymax * ph; s += '<rect x="' + bx.toFixed(2) + '" y="' + (T + ph - y - h).toFixed(2) + '" width="' + w.toFixed(2) + '" height="' + h.toFixed(2) + '" fill="var(--' + seg[1] + ')"/>'; y += h;
+      });
+      s += '<rect x="' + (L + i * bw).toFixed(2) + '" y="' + T + '" width="' + bw.toFixed(2) + '" height="' + ph + '" fill="transparent"><title>' + dshort(x.date) + ": income " + usd(tot[i]) + ", interest " + usd(inter[i]) + (x.gas ? ", gas " + usd(x.gas) : "") + "</title></rect>";
+    });
+    var pts = inter.map(function (v, i) { return (L + i * bw + bw / 2).toFixed(1) + "," + Y(v).toFixed(1); }).join(" ");
+    s += '<polyline points="' + pts + '" fill="none" stroke="var(--rose)" stroke-width="2" stroke-linejoin="round"/>';
+    var ex = L + (win - 1) * bw + bw / 2;
+    s += '<circle cx="' + ex.toFixed(1) + '" cy="' + Y(inter[win - 1]).toFixed(1) + '" r="3.5" fill="var(--rose)"/>';
+    var xl = [[0, "start"], [Math.floor(win / 2), "middle"], [win - 1, "end"]];
+    xl.forEach(function (p) { s += '<text x="' + (L + p[0] * bw + bw / 2) + '" y="' + (H - 8) + '" text-anchor="' + p[1] + '">' + dshort(d[p[0]].date) + "</text>"; });
+    return '<svg viewBox="0 0 ' + W + " " + H + '" width="100%" role="img" aria-label="Daily LP income against interest, last ' + win + ' days">' + s + "</svg>";
+  }
+  function cumChart(win) {
+    var m = MULT[state.scenario], d = DATA.slice(-win), W = 760, H = 120, L = 40, Rt = 56, T = 10, B = 20, pw = W - L - Rt, ph = H - T - B, c = 0;
+    var cum = d.map(function (x) { c += (x.fees + x.rewards) * m + x.supply - x.ia - x.ib - x.gas; return c; });
+    var lo = Math.min(0, Math.min.apply(null, cum)), hi = Math.max(0, Math.max.apply(null, cum)), pad = (hi - lo) * .12 || 1; lo -= pad; hi += pad;
+    var Y = function (v) { return T + ph - (v - lo) / (hi - lo) * ph; }, X = function (i) { return L + i / (win - 1) * pw; };
+    var line = cum.map(function (v, i) { return X(i).toFixed(1) + "," + Y(v).toFixed(1); }).join(" ");
+    var last = cum[win - 1], col = last >= 0 ? "green" : "rose";
+    var area = "M" + X(0) + "," + Y(0) + " L" + line.replace(/ /g, " L") + " L" + X(win - 1) + "," + Y(0) + " Z";
+    var s = '<line x1="' + L + '" x2="' + (W - Rt) + '" y1="' + Y(0) + '" y2="' + Y(0) + '" stroke="var(--faint)" stroke-dasharray="3 3"/><text x="' + (L - 6) + '" y="' + (Y(0) + 4) + '" text-anchor="end">$0</text>';
+    s += '<path d="' + area + '" fill="var(--' + col + ')" opacity=".16"/><polyline points="' + line + '" fill="none" stroke="var(--' + col + ')" stroke-width="2" stroke-linejoin="round"/>';
+    s += '<circle cx="' + X(win - 1) + '" cy="' + Y(last) + '" r="3.5" fill="var(--' + col + ')"/><text x="' + (X(win - 1) + 8) + '" y="' + (Y(last) + 4) + '" style="fill:var(--' + col + ');font-weight:600">' + usd(last, 0) + "</text>";
+    return '<svg viewBox="0 0 ' + W + " " + H + '" width="100%" role="img" aria-label="Cumulative net carry over the last ' + win + ' days, ending at ' + usd(last, 0) + '">' + s + "</svg>";
+  }
+
+  /* ---------- Earnings screen ---------- */
+  var winSeg = function () {
+    return '<span class="seg" role="group" aria-label="Window">' + [7, 30, 90].map(function (w) { return '<button data-act="win" data-v="' + w + '" aria-pressed="' + (state.win === w) + '">' + w + "d</button>"; }).join("") + "</span>";
+  };
+  function incomeBars(s) {
+    var mx = Math.max(s.income, s.interest) || 1, w = function (v) { return (v / mx * 100).toFixed(1) + "%"; };
+    return '<div class="bars"><div class="line"><span>LP income</span><span class="track"><i style="width:' + w(s.fees) + ';background:var(--sky)"></i><i style="width:' + w(s.rew) + ';background:var(--violet)"></i><i style="width:' + w(s.sup) + ';background:var(--green)"></i></span><span class="val num">' + usd(s.income, 0) + '</span></div>' +
+      '<div class="line"><span>Interest</span><span class="track"><i style="width:' + w(s.interest) + ';background:var(--rose)"></i></span><span class="val num">' + usd(s.interest, 0) + "</span></div></div>";
+  }
+  function worstHealth() {
+    var l = ltvLevel(BIN.ltv), h = hfLevel(AAVE.hf);
+    if (l !== "ok" && (h === "ok" || l === "crit")) return { lv: l, txt: "Binance LTV " + BIN.ltv + "%, " + Math.round((1 - BIN.ltv / BIN.liq) * 100) + "% price drop to liquidation" };
+    return { lv: h, txt: "Aave health factor " + AAVE.hf.toFixed(2) + ", " + Math.round((1 - 1 / AAVE.hf) * 100) + "% collateral drop to liquidation" };
+  }
+  function coverageCard() {
+    if (!hasLoans()) {
+      return '<section class="card"><div class="cardhead"><h2>Interest coverage</h2></div><div class="cover" style="grid-template-columns:1fr auto"><p style="margin:0;color:var(--muted)">Borrowing against your LP tokens? Add your Aave wallet or a manual loan to see whether LP income covers the interest.</p><button class="btn primary" data-act="goto" data-v="borrow">Set up loans</button></div></section>';
+    }
+    var s = stats(state.win), st = status(s.ratio), h = worstHealth();
+    return '<section class="card" aria-label="Interest coverage"><div class="cardhead"><h2>Interest coverage</h2>' + winSeg() + '</div><div class="cover">' +
+      '<div><div class="label">Last ' + state.win + ' days</div><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:4px"><span class="bignum">' + s.ratio.toFixed(2) + '×</span>' + chip(st) + '</div>' +
+      '<div class="tiny" style="margin-top:6px"><span class="num ' + (s.net >= 0 ? "pos" : "neg") + '">' + (s.net >= 0 ? "+" : "") + usd(s.net, 0) + '</span> net carry after gas</div><div class="tiny" style="margin-top:2px">Interest costs <span class="num">' + usd(RUN) + '</span> a day, <span class="num">' + usd(RUN * 365 / 12, 0) + '</span> a month</div></div>' +
+      incomeBars(s) +
+      '<div class="health"><span class="chip ' + h.lv + '">' + LV_TXT[h.lv] + '</span><span class="tiny">' + h.txt + '</span><span class="tiny">' + cdLine() + '</span><button class="link" data-act="goto" data-v="borrow">Open Borrow</button></div></div></section>';
+  }
+  function earningsView() {
+    var m = MULT[state.scenario], n = DATA.length, sum = function (a, b) { var f = 0, r = 0; DATA.slice(a, b).forEach(function (x) { f += x.fees * m; r += x.rewards * m; }); return { f: f, r: r }; };
+    var cards = [["Yesterday", "Nov 6", sum(n - 2, n - 1)], ["Average per day", "30 days", (function () { var q = sum(n - 30, n); return { f: q.f / 30, r: q.r / 30 }; })()], ["This week", "Mon to today", sum(n - 5, n)], ["This month", "Nov 1 to 7", sum(n - 7, n)]];
+    var cardsHtml = cards.map(function (c) {
+      var t = c[2].f + c[2].r, share = t ? c[2].f / t * 100 : 0;
+      return '<div class="card stat"><div class="label">' + c[0] + " · " + c[1] + '</div><div class="mid" style="margin-top:4px">' + usd(t) + '</div><div class="row">Fees + rewards, unchanged card</div><div class="split"><i style="width:' + share + '%;background:var(--sky)"></i><i style="width:' + (100 - share) + '%;background:var(--violet)"></i></div></div>';
+    }).join("");
+    return '<div class="pagehead"><div><h1>Earnings</h1><div class="sub">Fees and rewards accrued across your followed wallets</div></div></div>' +
+      (hasLoans() ? bannersFor(false) : "") + coverageCard() +
+      '<div class="grid g4">' + cardsHtml + "</div>" +
+      '<div class="placeholder">Existing earnings chart, token breakdown and claim health stay as they are below the new card.</div>';
+  }
+
+  /* ---------- Borrow screen ---------- */
+  function bannersFor(full) {
+    var s = stats(state.win), st = status(s.ratio), out = [], l = ltvLevel(BIN.ltv);
+    if (st === "shortfall") out.push('<div class="banner crit" role="alert"><span class="bi">!</span><span><b>LP income does not cover interest.</b> Over ' + state.win + ' days you earned ' + usd(s.income, 0) + ' against ' + usd(s.interest, 0) + ' of interest.</span></div>');
+    if (st === "thin") out.push('<div class="banner warn"><span class="bi">!</span><span><b>Coverage is thin at ' + s.ratio.toFixed(2) + '×.</b> A small drop in LP income or rise in borrow rates puts you below 1.0×.</span></div>');
+    if (l !== "ok") out.push('<div class="banner ' + l + '"><span class="bi">!</span><span><b>Binance loan LTV is ' + BIN.ltv + '%.</b> Liquidation at ' + BIN.liq + '%, margin call at ' + BIN.margin + '%. A ' + Math.round((1 - BIN.ltv / BIN.liq) * 100) + '% price drop in your collateral liquidates it.</span>' + (full ? "" : '<button class="act" data-act="goto" data-v="borrow">Details</button>') + "</div>");
+    if (full && state.scenario === "backfill") out.push('<div class="banner info"><span class="bi">i</span><span><b>Reading your Aave history.</b> Day 118 of 238 (from 14 Mar 2026). Interest before that day is missing, so ratios may look better than they are.<span class="progress"><i></i></span></span></div>');
+    return out.join("");
+  }
+  function summaryTiles(s, st) {
+    var tot = s.income || 1, w = function (v) { return (v / tot * 100).toFixed(1) + "%"; };
+    return '<div class="grid g4">' +
+      '<div class="card stat"><div class="label">Coverage · ' + state.win + 'd</div><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:4px"><span class="bignum">' + s.ratio.toFixed(2) + '×</span>' + chip(st) + '</div><div class="row">LP income ÷ borrow interest</div></div>' +
+      '<div class="card stat"><div class="label">Net carry</div><div class="mid ' + (s.net >= 0 ? "pos" : "neg") + '" style="margin-top:4px">' + (s.net >= 0 ? "+" : "") + usd(s.net) + '</div><div class="row">Income − interest − gas</div></div>' +
+      '<div class="card stat"><div class="label">Interest paid (accrued)</div><div class="mid" style="margin-top:4px">' + usd(s.interest) + '</div><div class="row">Aave ' + usd(s.ia, 0) + ' · Binance ' + usd(s.ib, 0) + '</div></div>' +
+      '<div class="card stat"><div class="label">LP income</div><div class="mid" style="margin-top:4px">' + usd(s.income) + '</div><div class="row">Fees ' + usd(s.fees, 0) + ' · Rewards ' + usd(s.rew, 0) + ' · Supply ' + usd(s.sup, 0) + '</div><div class="split"><i style="width:' + w(s.fees) + ';background:var(--sky)"></i><i style="width:' + w(s.rew) + ';background:var(--violet)"></i><i style="width:' + w(s.sup) + ';background:var(--green)"></i></div></div></div>' +
+      '<div class="hint">Gas on LP claims and rebalances in this window: ' + usd(s.gas) + '. Unclaimed fees and pending rewards count; they are priced when they accrued.</div>';
+  }
+  function runRatePanel(s) {
+    var inc7 = stats(7).income / 7, need = RUN, apr = (stats(7).fees + stats(7).rew) / 7 * 365 / LP_VALUE * 100, req = RUN * 365 / LP_VALUE * 100;
+    var ok = inc7 >= need;
+    return '<section class="card"><div class="cardhead"><h2>Break-even</h2><span class="hint">Today\'s rates and balances, not history</span></div>' +
+      '<p style="margin:0 0 12px">You need <b class="num">' + usd(need) + '</b> a day to cover interest. Over the last 7 days LP income averaged <b class="num ' + (ok ? "pos" : "neg") + '">' + usd(inc7) + "</b> a day.</p>" +
+      '<div class="grid g2"><div class="out"><div class="label">Interest per day</div><div class="mid">' + usd(RUN) + '</div><div class="hint">' + usd(AAVE.debt + BIN.debt, 0) + ' debt, blended ' + (RUN * 365 / (AAVE.debt + BIN.debt) * 100).toFixed(1) + '% APR</div></div>' +
+      '<div class="out"><div class="label">LP APR needed</div><div class="mid">' + req.toFixed(1) + '%</div><div class="hint">now ' + apr.toFixed(1) + '% on ' + usd(LP_VALUE, 0) + ' open value</div></div></div></section>';
+  }
+  function costPanel() {
+    var wal = { w1: "0x7a3f…c91e · Main", w2: "0x91c2…04be · Exchange loans" };
+    var loans = [
+      { w: "w1", name: "USDC variable debt", src: "Aave v3 · Base", debt: AAVE.debt, apr: AAVE.apr },
+      { w: "w2", name: "Flexible loan, USDT", src: "Manual · Binance", manual: true, debt: BIN.debt, apr: BIN.apr }
+    ];
+    var K = ["d", "w", "m", "y"], zero = function () { return { d: 0, w: 0, m: 0, y: 0 }; };
+    var c = function (l) { var y = l.debt * l.apr / 100; return { d: y / 365, w: y / 365 * 7, m: y / 12, y: y }; };
+    var add = function (a, b) { var r = zero(); K.forEach(function (k) { r[k] = a[k] + b[k]; }); return r; };
+    var cells = function (x, cls) { return K.map(function (k) { return '<td class="r num ' + (cls || "") + '">' + usd(x[k], k === "y" ? 0 : 2) + "</td>"; }).join(""); };
+    var rows = "", total = zero();
+    ["w1", "w2"].forEach(function (id) {
+      var ls = loans.filter(function (l) { return l.w === id; }), sub = zero();
+      ls.forEach(function (l) { sub = add(sub, c(l)); });
+      total = add(total, sub);
+      rows += '<tr class="grp"><td colspan="3"><b class="num">' + wal[id] + '</b> <span class="sub2">' + ls.length + " loan" + (ls.length > 1 ? "s" : "") + "</span></td>" + cells(sub, "b") + "</tr>";
+      ls.forEach(function (l) {
+        rows += '<tr><td><span class="src' + (l.manual ? " manual" : "") + '">' + l.src + "</span> " + l.name + '</td><td class="r num">' + usd(l.debt, 0) + '</td><td class="r num">' + l.apr.toFixed(1) + "%</td>" + cells(c(l)) + "</tr>";
+      });
+    });
+    var inc = stats(7).income / 7, I = { d: inc, w: inc * 7, m: inc * 365 / 12, y: inc * 365 }, left = zero();
+    K.forEach(function (k) { left[k] = I[k] - total[k]; });
+    rows += '<tr class="tot"><td colspan="3"><b>You pay, all loans</b></td>' + cells(total, "b") + "</tr>";
+    rows += '<tr><td colspan="3">LP income at the last 7 days\' pace</td>' + cells(I) + "</tr>";
+    rows += '<tr class="tot"><td colspan="3"><b>Left over</b></td>' + K.map(function (k) { return '<td class="r num b ' + (left[k] >= 0 ? "pos" : "neg") + '">' + (left[k] >= 0 ? "+" : "") + usd(left[k], k === "y" ? 0 : 2) + "</td>"; }).join("") + "</tr>";
+    return '<section class="card"><div class="cardhead"><h2>What you pay</h2><span class="hint">Interest at today\'s balances and rates. Aave rates float, so this moves.</span></div><div class="tablewrap"><table class="cost"><thead><tr><th>Loan</th><th class="r">Debt</th><th class="r">APR</th><th class="r">Per day</th><th class="r">Per week</th><th class="r">Per month</th><th class="r">Per year</th></tr></thead><tbody>' + rows + '</tbody></table></div><div class="hint" style="margin-top:8px">Week is 7 days of interest, month is a twelfth of the year. Income includes LP fees, rewards and Aave supply yield, before gas.</div></section>';
+  }
+  /* ---------- collateral and debt ---------- */
+  var EV = [
+    { i: 35, k: "debt", sel: "aave", t: "Borrowed $1,500 more on Aave" },
+    { i: 55, k: "coll", sel: "aave", t: "Added $2,000 collateral on Aave" },
+    { i: 70, k: "coll", sel: "bin", t: "Added $700 collateral on Binance" }
+  ];
+  var CDL = { all: "All loans", aave: "Aave", bin: "Binance" };
+  var LT_A = AAVE.hf * AAVE.debt / AAVE.collat;
+  var sgn = function (v, d) { return (v >= 0 ? "+" : "−") + usd(Math.abs(v), d == null ? 0 : d); };
+  var dsp = function (v, txt, goodUp) { var up = v >= 0; return '<span class="' + (up === goodUp ? "pos" : "neg") + '">' + (up ? "▲" : "▼") + " " + txt + "</span>"; };
+  var kfmt = function (v) { return "$" + (v / 1000).toFixed(1) + "k"; };
+  function series(sel) {
+    var out = [];
+    for (var i = 0; i < DAYS; i++) {
+      var c = 0, d = 0;
+      if (sel !== "bin") { c += HA.tok[i] * P[i]; d += HA.debt[i]; }
+      if (sel !== "aave") { c += HB.tok[i] * PB[i]; d += HB.debt[i]; }
+      out.push({ date: DATA[i].date, c: c, d: d, r: c / d });
+    }
+    return out;
+  }
+  function changes(sel, win) {
+    var s = Math.max(0, DAYS - 1 - win), e = DAYS - 1, r = { cStart: 0, cEnd: 0, price: 0, dep: 0, yld: 0, dStart: 0, dEnd: 0, int: 0, bor: 0 };
+    function acc(H, Pp, hasYield, key) {
+      r.cStart += H.tok[s] * Pp[s]; r.cEnd += H.tok[e] * Pp[e];
+      for (var i = s + 1; i <= e; i++) {
+        r.price += H.tok[i - 1] * (Pp[i] - Pp[i - 1]);
+        r.dep += H.dep[i] * Pp[i]; if (hasYield) r.yld += DATA[i].supply;
+        r.bor += H.bor[i]; r.int += DATA[i][key];
+      }
+      r.dStart += H.debt[s]; r.dEnd += H.debt[e];
+    }
+    if (sel !== "bin") acc(HA, P, true, "ia");
+    if (sel !== "aave") acc(HB, PB, false, "ib");
+    return r;
+  }
+  function cdCell(sel) {
+    var S = series(sel), a = S[Math.max(0, DAYS - 1 - state.win)], b = S[DAYS - 1];
+    return b.r.toFixed(2) + "× " + dsp(b.r - a.r, Math.abs(b.r - a.r).toFixed(2), true);
+  }
+  function cdLine() {
+    var S = series("all"), a = S[Math.max(0, DAYS - 1 - state.win)], b = S[DAYS - 1];
+    return 'Collateral ÷ debt <span class="num">' + b.r.toFixed(2) + "×</span> " + dsp(b.r - a.r, Math.abs(b.r - a.r).toFixed(2) + " in " + state.win + "d", true);
+  }
+  function xlabels(sl, X, H) {
+    var n = sl.length, o = "";
+    [[0, "start"], [Math.floor(n / 2), "middle"], [n - 1, "end"]].forEach(function (p) { o += '<text x="' + X(p[0]) + '" y="' + (H - 8) + '" text-anchor="' + p[1] + '">' + dshort(sl[p[0]].date) + "</text>"; });
+    return o;
+  }
+  function cdChart(S, s, e, sel) {
+    var n = e - s + 1, W = 760, H = 230, L = 46, Rt = 66, T = 12, B = 26, pw = W - L - Rt, ph = H - T - B, sl = S.slice(s, e + 1), all = [];
+    sl.forEach(function (x) { all.push(x.c, x.d); });
+    var lo = Math.min.apply(null, all), hi = Math.max.apply(null, all), pad = (hi - lo) * .1; lo -= pad; hi += pad;
+    var X = function (i) { return L + i / (n - 1) * pw; }, Y = function (v) { return T + ph - (v - lo) / (hi - lo) * ph; }, o = "";
+    for (var k = 0; k <= 4; k++) { var tv = lo + (hi - lo) * k / 4; o += '<line class="tick" x1="' + L + '" x2="' + (W - Rt) + '" y1="' + Y(tv) + '" y2="' + Y(tv) + '"/><text x="' + (L - 6) + '" y="' + (Y(tv) + 4) + '" text-anchor="end">' + kfmt(tv) + "</text>"; }
+    var line = function (key, col) { return '<polyline points="' + sl.map(function (x, i) { return X(i).toFixed(1) + "," + Y(x[key]).toFixed(1); }).join(" ") + '" fill="none" stroke="var(--' + col + ')" stroke-width="2" stroke-linejoin="round"/>'; };
+    o += line("c", "sky") + line("d", "rose");
+    EV.forEach(function (ev) {
+      if (ev.i > s && ev.i <= e && (sel === "all" || sel === ev.sel)) {
+        var i = ev.i - s, col = ev.k === "coll" ? "sky" : "rose", yv = ev.k === "coll" ? sl[i].c : sl[i].d;
+        o += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(yv).toFixed(1) + '" r="5" fill="var(--surface)" stroke="var(--' + col + ')" stroke-width="2"><title>' + dshort(sl[i].date) + ": " + ev.t + "</title></circle>";
+      }
+    });
+    var lc = sl[n - 1].c, ld = sl[n - 1].d;
+    o += '<circle cx="' + X(n - 1) + '" cy="' + Y(lc) + '" r="3.5" fill="var(--sky)"/><text x="' + (X(n - 1) + 8) + '" y="' + (Y(lc) + 4) + '" style="fill:var(--sky);font-weight:600">' + kfmt(lc) + "</text>";
+    o += '<circle cx="' + X(n - 1) + '" cy="' + Y(ld) + '" r="3.5" fill="var(--rose)"/><text x="' + (X(n - 1) + 8) + '" y="' + (Y(ld) + 4) + '" style="fill:var(--rose);font-weight:600">' + kfmt(ld) + "</text>";
+    o += xlabels(sl, X, H);
+    return '<svg viewBox="0 0 ' + W + " " + H + '" width="100%" role="img" aria-label="Collateral and debt in USD, ' + CDL[sel] + ", last " + state.win + ' days">' + o + "</svg>";
+  }
+  function ratioChart(S, s, e, sel) {
+    var n = e - s + 1, W = 760, H = 140, L = 46, Rt = 100, T = 10, B = 24, pw = W - L - Rt, ph = H - T - B, sl = S.slice(s, e + 1);
+    var refs = sel === "aave" ? [{ v: 1.5 / LT_A, t: "warn", c: "amber" }, { v: 1 / LT_A, t: "liquidation", c: "rose" }] : sel === "bin" ? [{ v: 1 / .68, t: "warn", c: "amber" }, { v: 1 / (BIN.liq / 100), t: "liquidation", c: "rose" }] : [];
+    var vals = sl.map(function (x) { return x.r; }).concat(refs.map(function (r) { return r.v; }));
+    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals), pad = (hi - lo) * .12; lo -= pad; hi += pad;
+    var X = function (i) { return L + i / (n - 1) * pw; }, Y = function (v) { return T + ph - (v - lo) / (hi - lo) * ph; }, o = "";
+    for (var k = 0; k <= 2; k++) { var tv = lo + (hi - lo) * k / 2; o += '<line class="tick" x1="' + L + '" x2="' + (W - Rt) + '" y1="' + Y(tv) + '" y2="' + Y(tv) + '"/><text x="' + (L - 6) + '" y="' + (Y(tv) + 4) + '" text-anchor="end">' + tv.toFixed(1) + "×</text>"; }
+    refs.forEach(function (r) { o += '<line x1="' + L + '" x2="' + (W - Rt) + '" y1="' + Y(r.v) + '" y2="' + Y(r.v) + '" stroke="var(--' + r.c + ')" stroke-dasharray="4 3"/><text x="' + (W - Rt + 6) + '" y="' + (Y(r.v) + 4) + '" style="fill:var(--' + r.c + ')">' + r.t + " " + r.v.toFixed(2) + "×</text>"; });
+    o += '<polyline points="' + sl.map(function (x, i) { return X(i).toFixed(1) + "," + Y(x.r).toFixed(1); }).join(" ") + '" fill="none" stroke="var(--text)" stroke-width="2" stroke-linejoin="round"/>';
+    o += '<circle cx="' + X(n - 1) + '" cy="' + Y(sl[n - 1].r) + '" r="3.5" fill="var(--text)"/><text x="' + (X(n - 1) + 8) + '" y="' + (Y(sl[n - 1].r) - 8) + '" style="fill:var(--text);font-weight:600">' + sl[n - 1].r.toFixed(2) + "×</text>";
+    o += xlabels(sl, X, H);
+    return '<svg viewBox="0 0 ' + W + " " + H + '" width="100%" role="img" aria-label="Collateral divided by debt, ' + CDL[sel] + '">' + o + "</svg>";
+  }
+  function cdSection() {
+    var sel = state.cd, S = series(sel), s = Math.max(0, DAYS - 1 - state.win), e = DAYS - 1, a = S[s], b = S[e];
+    var seg = '<span class="seg" role="group" aria-label="Loans shown">' + ["all", "aave", "bin"].map(function (k) { return '<button data-act="cd" data-v="' + k + '" aria-pressed="' + (sel === k) + '">' + CDL[k] + "</button>"; }).join("") + "</span>";
+    var pct = function (x, y) { return ((x - y) / y * 100).toFixed(1) + "%"; };
+    var trio = '<div class="trio"><div class="out"><div class="label">Collateral</div><div class="mid">' + usd(b.c, 0) + '</div><div class="hint">' + dsp(b.c - a.c, usd(Math.abs(b.c - a.c), 0) + " (" + pct(b.c, a.c).replace("-", "") + ")", true) + " in " + state.win + 'd</div></div>' +
+      '<div class="out"><div class="label">Debt</div><div class="mid">' + usd(b.d, 0) + '</div><div class="hint">' + dsp(b.d - a.d, usd(Math.abs(b.d - a.d), 0) + " (" + pct(b.d, a.d).replace("-", "") + ")", false) + " in " + state.win + 'd</div></div>' +
+      '<div class="out"><div class="label">Collateral ÷ debt</div><div class="mid">' + b.r.toFixed(2) + '×</div><div class="hint">' + dsp(b.r - a.r, Math.abs(b.r - a.r).toFixed(2), true) + " · LTV " + (b.d / b.c * 100).toFixed(0) + "% (was " + (a.d / a.c * 100).toFixed(0) + "%)</div></div></div>";
+    return '<section class="card"><div class="cardhead"><h2>Collateral and debt over time</h2>' + seg + "</div>" + trio +
+      '<div class="legend" style="margin-bottom:6px"><span style="--c:var(--sky)">Collateral</span><span style="--c:var(--rose)">Debt</span><span style="--c:var(--surface);outline:2px solid var(--muted);outline-offset:-2px;border-radius:50%">Deposit, withdrawal, borrow or repay (hover)</span></div>' +
+      cdChart(S, s, e, sel) + '<div class="cardhead" style="margin:12px 0 2px"><span class="label">Collateral ÷ debt</span><span class="hint">' + (sel === "all" ? "Pick one loan to see its warn and liquidation lines" : "Higher is safer. Dashed lines are your warn and liquidation levels") + "</span></div>" +
+      ratioChart(S, s, e, sel) + "</section>";
+  }
+  function monthly() { var mi = RUN * 365 / 12, inc = stats(7).income / 7 * 365 / 12; return { cost: mi, inc: inc, left: inc - mi }; }
+  var PER = { d: { f: 1 / 365, t: "a day", b: "Day", dg: 2 }, w: { f: 7 / 365, t: "a week", b: "Week", dg: 2 }, m: { f: 1 / 12, t: "a month", b: "Month", dg: 0 } };
+  function perAmounts() {
+    var p = PER[state.per], inc = stats(7).income / 7 * 365 * p.f, cost = RUN * 365 * p.f;
+    return { t: p.t, dg: p.dg, cost: cost, inc: inc, left: inc - cost };
+  }
+  function perSeg() {
+    return '<span class="seg" role="group" aria-label="Period">' + ["d", "w", "m"].map(function (k) { return '<button data-act="per" data-v="' + k + '" aria-pressed="' + (state.per === k) + '">' + PER[k].b + "</button>"; }).join("") + "</span>";
+  }
+  function changesCard() {
+    var win = state.win, sel = state.cd, r = changes(sel, win), S = series(sel), a = S[Math.max(0, DAYS - 1 - win)], b = S[DAYS - 1];
+    var s0 = DATA[Math.max(0, DAYS - 1 - win)].date, row = function (l, v, cls) { return '<div class="lrow' + (cls ? " " + cls : "") + '"><span>' + l + '</span><span class="num">' + v + "</span></div>"; };
+    var good = function (v) { return '<span class="' + (v >= 0 ? "pos" : "neg") + '">' + sgn(v) + "</span>"; };
+    var bad = function (v) { return '<span class="' + (v > 0.5 ? "neg" : v < -0.5 ? "pos" : "") + '">' + sgn(v) + "</span>"; };
+    var coll = row("Start, " + dshort(s0), usd(r.cStart, 0), "b") + row("Price moves", good(r.price)) + row("Deposits and withdrawals", good(r.dep)) + (sel !== "bin" ? row("Aave supply yield", good(r.yld)) : "") + row("Now", usd(r.cEnd, 0), "b top");
+    var debt = row("Start, " + dshort(s0), usd(r.dStart, 0), "b") + row("Interest added", bad(r.int)) + row("Borrowed or repaid", bad(r.bor)) + row("Now", usd(r.dEnd, 0), "b top");
+    var items = [["price moves in your collateral", r.price], ["collateral you added", r.dep], ["supply yield", r.yld], ["interest on your debt", -r.int], ["new borrowing", -r.bor]];
+    items.sort(function (x, y) { return Math.abs(y[1]) - Math.abs(x[1]); });
+    var top = items[0], word = b.r < a.r ? "fell" : "rose";
+    return '<section class="card"><div class="cardhead"><h2>What changed in ' + win + ' days</h2><span class="hint">' + CDL[sel] + '</span></div><div class="lcols"><div><div class="label" style="margin-bottom:4px">Collateral</div>' + coll + '</div><div><div class="label" style="margin-bottom:4px">Debt</div>' + debt + "</div></div>" +
+      '<p class="para" style="margin:12px 0 4px">Collateral ÷ debt ' + word + " from <b class=\"num\">" + a.r.toFixed(2) + "×</b> to <b class=\"num\">" + b.r.toFixed(2) + "×</b>. Biggest driver: <b>" + top[0] + '</b> (<span class="num ' + (top[1] >= 0 ? "pos" : "neg") + '">' + sgn(top[1]) + '</span>).</p><div class="hint">Worked out day by day, so each deposit counts at the price of its day and the parts add up to the total. Debt price effect is zero for stablecoins and left out.</div></section>';
+  }
+  function steadyCard() {
+    var m = perAmounts(), S = series("all")[DAYS - 1];
+    var t1 = 'Interest adds about <b class="num">' + usd(m.cost, m.dg) + "</b> " + m.t + " to your debt (" + (m.cost / S.d * 100).toFixed(m.dg ? 3 : 2) + "% of " + usd(S.d, 0) + "). Paying it keeps debt flat. " +
+      (m.left >= 0 ? 'LP income runs at <b class="num">' + usd(m.inc, m.dg) + "</b> " + m.t + ', so it covers that with <b class="num pos">' + usd(m.left, m.dg) + "</b> to spare." : 'LP income runs at <b class="num">' + usd(m.inc, m.dg) + "</b> " + m.t + ", which covers only " + Math.round(m.inc / m.cost * 100) + "% of it.");
+    var t2 = 'If prices stay flat, your collateral ÷ debt only slips because interest piles up. To hold it where it is, repay about <b class="num">' + usd(m.cost, m.dg) + "</b> " + m.t + ', or add about <b class="num">' + usd(m.cost * S.r, m.dg) + "</b> of collateral.";
+    return '<section class="card"><div class="cardhead"><h2>Keep it steady</h2>' + perSeg() + '</div><p class="para">' + t1 + '</p><p class="para">' + t2 + "</p>" +
+      '<div class="label" style="margin-top:12px">Target calculator</div>' +
+      '<div class="trow"><div><b>Aave health factor</b><div class="sub2">now ' + AAVE.hf.toFixed(2) + '</div></div><div><label for="t-hf">Target</label><input id="t-hf" type="number" step="0.1" min="1.1" max="5" value="' + state.tg.hf + '"></div><div class="tout" id="t-hf-out"></div></div>' +
+      '<div class="trow"><div><b>Binance LTV %</b><div class="sub2">now ' + BIN.ltv + '%</div></div><div><label for="t-ltv">Target</label><input id="t-ltv" type="number" step="1" min="20" max="79" value="' + state.tg.ltv + '"></div><div class="tout" id="t-ltv-out"></div></div></section>';
+  }
+  function updateTargets() {
+    var m = monthly(), mo = function (rep) { return m.left > 0 ? " That is about " + (rep / m.left).toFixed(1) + " months of left-over LP income." : " LP income is not leaving a surplus right now."; };
+    var o1 = $("#t-hf-out"), o2 = $("#t-ltv-out");
+    if (o1) {
+      var T = state.tg.hf, add = T * AAVE.debt / LT_A - AAVE.collat, rep = AAVE.debt - AAVE.collat * LT_A / T;
+      o1.innerHTML = T <= AAVE.hf ? "Already at or above this target." : 'Repay <b class="num">' + usd(rep, 0) + '</b> or add <b class="num">' + usd(add, 0) + "</b> of collateral." + mo(rep);
+    }
+    if (o2) {
+      var t = state.tg.ltv / 100, col = BIN.debt / (BIN.ltv / 100), rp = BIN.debt - t * col, ad = BIN.debt / t - col;
+      o2.innerHTML = BIN.ltv <= state.tg.ltv ? "Already at or below this target." : 'Repay <b class="num">' + usd(rp, 0) + '</b> or add <b class="num">' + usd(ad, 0) + "</b> of collateral." + mo(rp);
+    }
+  }
+  function loansTable(s) {
+    var rows = [
+      '<tr><td><span class="src">Aave v3 · Base</span></td><td><b>USDC variable debt</b><div class="sub2">Collateral cbBTC + WETH, ' + usd(AAVE.collat, 0) + '</div></td><td class="r num">' + usd(AAVE.debt, 0) + '</td><td class="r num">' + AAVE.apr.toFixed(1) + '%</td><td class="r num">' + usd(s.ia) + '</td><td class="r num">' + cdCell("aave") + '</td><td><span class="chip ' + hfLevel(AAVE.hf) + '">HF ' + AAVE.hf.toFixed(2) + '</span></td><td><div class="acts"><button class="btn small ghost" data-act="toast" data-v="Reserve hidden from coverage (mock)">Hide</button><button class="btn small ghost" data-act="toast" data-v="Day-level adjustment dialog (mock)">Adjust</button></div></td></tr>',
+      '<tr><td><span class="src manual">Manual · Binance</span></td><td><b>Flexible loan, USDT</b><div class="sub2">Collateral 0.15 BTC · rate changed 20 Sep</div></td><td class="r num">' + usd(BIN.debt, 0) + '</td><td class="r num">' + BIN.apr.toFixed(1) + '%</td><td class="r num">' + usd(s.ib) + '</td><td class="r num">' + cdCell("bin") + '</td><td><span class="chip ' + ltvLevel(BIN.ltv) + '">LTV ' + BIN.ltv + '%</span></td><td><div class="acts"><button class="btn small ghost" data-act="form" data-v="edit">Edit</button><button class="btn small ghost" data-act="toast" data-v="Delete confirmation (mock)">Delete</button></div></td></tr>'
+    ];
+    return '<section class="card"><div class="cardhead"><h2>Loans</h2><button class="btn" data-act="form" data-v="add">Add manual loan</button></div><div class="tablewrap"><table><thead><tr><th>Source</th><th>Loan</th><th class="r">Debt</th><th class="r">Borrow APR</th><th class="r">Interest ' + state.win + 'd</th><th class="r">Collateral ÷ debt</th><th>Risk</th><th></th></tr></thead><tbody>' + rows.join("") + "</tbody></table></div></section>";
+  }
+  function riskPanel() {
+    var l = ltvLevel(BIN.ltv), h = hfLevel(AAVE.hf);
+    return '<section class="card"><div class="cardhead"><h2>Liquidation risk</h2><span class="hint">Warn below HF 1.5, critical below 1.2</span></div>' +
+      '<div class="risk"><div class="rkrow"><b>Aave health factor</b><span class="chip ' + h + '">' + LV_TXT[h] + '</span></div>' + hfGauge(AAVE.hf) + '<div class="rkrow"><span class="num mid" style="font-size:20px">' + AAVE.hf.toFixed(2) + '</span><span class="sub2">Liquidated if collateral falls about ' + Math.round((1 - 1 / AAVE.hf) * 100) + '%, assuming only collateral moves</span></div></div>' +
+      '<div class="risk"><div class="rkrow"><b>Binance LTV</b><span class="chip ' + l + '">' + LV_TXT[l] + '</span></div>' + ltvGauge(BIN.ltv) + '<div class="rkrow"><span class="num mid" style="font-size:20px">' + BIN.ltv + '%</span><span class="sub2">Liquidated if BTC falls about ' + Math.round((1 - BIN.ltv / BIN.liq) * 100) + '%, from your manual collateral entry</span></div></div></section>';
+  }
+  function whatIfPanel() {
+    return '<section class="card"><div class="cardhead"><h2>What if</h2><button class="link" data-act="wireset">Reset</button></div><div class="sliders">' +
+      '<div class="sl"><label for="wi-rate"><span>Borrow rates</span><b class="num" id="wi-rate-v"></b></label><input id="wi-rate" type="range" min="50" max="200" step="5" value="' + state.wi.rate + '"></div>' +
+      '<div class="sl"><label for="wi-inc"><span>LP income</span><b class="num" id="wi-inc-v"></b></label><input id="wi-inc" type="range" min="20" max="200" step="5" value="' + state.wi.inc + '"></div>' +
+      '<div class="sl"><label for="wi-move"><span>Collateral price</span><b class="num" id="wi-move-v"></b></label><input id="wi-move" type="range" min="-60" max="30" step="1" value="' + state.wi.move + '"></div></div>' +
+      '<div class="outs"><div class="out"><div class="label">Coverage</div><div class="mid" id="wi-ratio"></div></div><div class="out"><div class="label">Net carry per day</div><div class="mid" id="wi-net"></div><div class="hint">before gas</div></div>' +
+      '<div class="out"><div class="label">Aave health factor</div><div class="mid" id="wi-hf"></div></div><div class="out"><div class="label">Binance LTV</div><div class="mid" id="wi-ltv"></div></div></div>' +
+      '<div class="hint" style="margin-top:10px">Scenario only. A price move changes health factor and LTV, not LP income.</div></section>';
+  }
+  function updateWhatIf() {
+    var w = state.wi, rate = w.rate / 100, inc = w.inc / 100, mv = w.move / 100;
+    var base = stats(7).income / 7, I = base * inc, C = RUN * rate, ratio = I / C, st = status(ratio);
+    var hf = AAVE.hf * (1 + mv), ltv = BIN.ltv / (1 + mv);
+    var set = function (id, v) { var e = $("#" + id); if (e) e.innerHTML = v; };
+    set("wi-rate-v", w.rate + "% of today"); set("wi-inc-v", w.inc + "% of 7d avg"); set("wi-move-v", (w.move > 0 ? "+" : "") + w.move + "%");
+    set("wi-ratio", ratio.toFixed(2) + "× " + chip(st));
+    set("wi-net", '<span class="' + (I - C >= 0 ? "pos" : "neg") + '">' + (I - C >= 0 ? "+" : "") + usd(I - C) + "</span>");
+    set("wi-hf", hf.toFixed(2) + ' <span class="chip ' + (hf <= 1 ? "crit" : hfLevel(hf)) + '">' + (hf <= 1 ? "Liquidated" : LV_TXT[hfLevel(hf)]) + "</span>");
+    set("wi-ltv", ltv.toFixed(0) + '% <span class="chip ' + (ltv >= BIN.liq ? "crit" : ltvLevel(ltv)) + '">' + (ltv >= BIN.liq ? "Liquidated" : LV_TXT[ltvLevel(ltv)]) + "</span>");
+  }
+  function repayPanel(s) {
+    var a = BIN.apr / 100, body, tag;
+    if (s.net > 0 && s.ratio >= 1) {
+      tag = "Surplus";
+      body = 'Net carry over ' + state.win + ' days is <b class="num pos">' + usd(s.net, 0) + '</b>. Using it to repay the highest-rate loan (Binance flexible, ' + BIN.apr.toFixed(1) + '%) would save about <b class="num">' + usd(s.net * a, 0) + "</b> a year in interest.";
+    } else {
+      var f = (s.interest - s.income) / s.win * 365;
+      tag = "Shortfall";
+      body = 'To reach 1.0× at current income, interest has to fall by about <b class="num neg">' + usd(f, 0) + '</b> a year. Repaying about <b class="num">' + usd(f / a, 0) + '</b> of the Binance loan (' + BIN.apr.toFixed(1) + '%, your highest rate) does that.';
+    }
+    return '<section class="card"><div class="cardhead"><h2>Repay or keep</h2><span class="chip ' + (tag === "Surplus" ? "covered" : "shortfall") + '">' + tag + '</span></div><p style="margin:0 0 8px">' + body + '</p><div class="hint">A suggestion from the numbers above. The app never moves money. Repaying also raises Binance buffer: ' + usd(BIN.debt * .1, 0) + ' repaid takes LTV from ' + BIN.ltv + '% to about ' + (BIN.ltv * .9).toFixed(0) + '%.</div></section>';
+  }
+  function formPanel() {
+    if (!state.form) return "";
+    var terms = state.terms, last = terms[terms.length - 1], pd = last.principal * last.apr / 100 / 365;
+    var crow = state.coll.map(function (t, i) {
+      return '<div class="term" style="grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) auto"><div class="field"><label for="cf' + i + '">Effective from</label><input id="cf' + i + '" type="date" value="' + t.from + '" data-coll="' + i + '" data-k="from"></div>' +
+        '<div class="field"><label for="ca' + i + '">Amount (BTC)</label><input id="ca' + i + '" type="number" step="0.001" value="' + t.amount + '" data-coll="' + i + '" data-k="amount"></div>' +
+        '<button class="btn small ghost" data-act="rmcoll" data-v="' + i + '"' + (state.coll.length === 1 ? " disabled" : "") + ' aria-label="Remove row">Remove</button></div>';
+    }).join("");
+    var rows = terms.map(function (t, i) {
+      return '<div class="term"><div class="field"><label for="tf' + i + '">Effective from</label><input id="tf' + i + '" type="date" value="' + t.from + '" data-term="' + i + '" data-k="from"></div>' +
+        '<div class="field"><label for="tp' + i + '">Principal (USDT)</label><input id="tp' + i + '" type="number" value="' + t.principal + '" data-term="' + i + '" data-k="principal"></div>' +
+        '<div class="field"><label for="ta' + i + '">APR %</label><input id="ta' + i + '" type="number" step="0.1" value="' + t.apr + '" data-term="' + i + '" data-k="apr"></div>' +
+        '<button class="btn small ghost" data-act="rmterm" data-v="' + i + '"' + (terms.length === 1 ? " disabled" : "") + ' aria-label="Remove row">Remove</button></div>';
+    }).join("");
+    return '<section class="card" id="formCard" aria-label="Manual loan"><div class="cardhead"><h2>' + (state.form === "edit" ? "Edit manual loan" : "Add manual loan") + '</h2><span class="hint">For debt the app cannot read from chain</span></div><div class="form">' +
+      '<div class="fgrid"><div class="field"><label for="f-label">Label</label><input id="f-label" value="Flexible loan, USDT"></div><div class="field"><label for="f-wallet">Wallet</label><select id="f-wallet"><option>0x91c2…04be · Exchange loans</option><option>0x7a3f…c91e · Main</option></select></div><div class="field"><label for="f-plat">Platform</label><select id="f-plat"><option>Binance</option><option>Other</option></select></div>' +
+      '<div class="field"><label for="f-asset">Borrowed asset</label><select id="f-asset"><option>USDT</option><option>USDC</option><option>BTC</option><option>ETH</option><option>Other (enter price key)</option></select></div><div class="field"><label for="f-close">Closed on (optional)</label><input id="f-close" type="date"></div></div>' +
+      '<div><div class="label" style="margin-bottom:6px">Terms history</div><div class="terms">' + rows + '</div><div style="margin-top:8px"><button class="btn small" data-act="addterm">Add rate change or top-up</button></div></div>' +
+      '<div class="fnote" id="termPreview">At the latest terms this accrues <b class="num">' + usd(pd) + '</b> a day (simple interest, ' + usd(pd * 30, 0) + ' per 30 days).</div><hr class="divider">' +
+      '<div class="label">Collateral and risk limits</div><div class="fgrid"><div class="field"><label for="f-ca">Collateral asset</label><select id="f-ca"><option>BTC</option><option>ETH</option><option>BNB</option></select></div><div class="field"><label for="f-mc">Margin call LTV %</label><input id="f-mc" type="number" value="75"></div><div class="field"><label for="f-lq">Liquidation LTV %</label><input id="f-lq" type="number" value="80"></div></div>' +
+      '<div><div class="label" style="margin-bottom:6px">Collateral amount history</div><div class="terms">' + crow + '</div><div style="margin-top:8px"><button class="btn small" data-act="addcoll">Add top-up or withdrawal</button></div><div class="fnote" style="margin-top:6px">Add a row whenever your collateral changes. It lets the app chart collateral ÷ debt for days before today.</div></div>' +
+      '<div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn ghost" data-act="closeform">Cancel</button><button class="btn primary" data-act="saveform">Save loan</button></div></div></section>';
+  }
+  function borrowView() {
+    var head = '<div class="pagehead"><div><h1>Borrow</h1><div class="sub">Does LP income pay the interest on your loans?</div></div>' + (hasLoans() ? winSeg() : "") + "</div>";
+    if (!hasLoans()) {
+      return head + '<section class="card empty"><h2>No loans yet</h2><p style="margin:0 0 14px">Aave debt is read from chain for your followed wallets. Add a manual loan for anything else, such as Binance.</p><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn primary" data-act="toast" data-v="Reads Aave positions for 0x7a3f…c91e (mock)">Check Aave for this wallet</button><button class="btn" data-act="form" data-v="add">Add manual loan</button></div></section>' + formPanel();
+    }
+    var s = stats(state.win), st = status(s.ratio);
+    return head + bannersFor(true) + summaryTiles(s, st) + costPanel() + formPanel() +
+      '<div class="grid g21"><section class="card"><div class="cardhead"><h2>Income against interest, per day</h2><div class="legend"><span style="--c:var(--sky)">Fees</span><span style="--c:var(--violet)">Rewards</span><span style="--c:var(--green)">Aave supply yield</span><span class="line" style="--c:var(--rose)">Interest</span></div></div>' +
+      chart(state.win) + '<div class="cardhead" style="margin:14px 0 4px"><span class="label">Cumulative net carry</span><span class="hint">after interest and gas</span></div>' + cumChart(state.win) + "</section>" + runRatePanel(s) + "</div>" +
+      loansTable(s) + cdSection() + '<div class="grid g2">' + changesCard() + steadyCard() + "</div>" + '<div class="grid g2">' + riskPanel() + '<div style="display:flex;flex-direction:column;gap:12px;min-width:0">' + repayPanel(s) + "</div></div>" + whatIfPanel() +
+      '<div class="hint">Aave synced 4 min ago · history from 14 Mar 2026 · 0 days missing prices · LP income comes from the same accrued figures as the Earnings page.</div>';
+  }
+
+  /* ---------- shell ---------- */
+  var NAV = [["overview", "Overview"], ["positions", "Positions"], ["earnings", "Earnings"], ["pools", "Pools"], ["borrow", "Borrow"], ["features", "Features"], ["addresses", "Addresses"]];
+  function renderNav() {
+    $("#nav").innerHTML = NAV.map(function (n) { return '<button data-act="nav" data-v="' + n[0] + '"' + (n[0] === state.view ? ' aria-current="page"' : "") + (n[0] === "borrow" ? ' data-new="1"' : "") + ">" + n[1] + (n[0] === "borrow" ? ' <span class="chip ok" style="padding:0 6px;font-size:10px">new</span>' : "") + "</button>"; }).join("");
+    $("#viewSeg").innerHTML = [["earnings", "Earnings card"], ["borrow", "Borrow page"]].map(function (v) { return '<button data-act="goto" data-v="' + v[0] + '" aria-pressed="' + (state.view === v[0]) + '">' + v[1] + "</button>"; }).join("");
+  }
+  function render() {
+    renderNav();
+    $("#app").innerHTML = state.view === "earnings" ? earningsView() : state.view === "borrow" ? borrowView() : '<div class="placeholder">Existing page, not part of this mock.</div>';
+    wire();
+  }
+  function wire() {
+    var map = { rate: "wi-rate", inc: "wi-inc", move: "wi-move" };
+    Object.keys(map).forEach(function (k) {
+      var el = $("#" + map[k]); if (!el) return;
+      el.addEventListener("input", function () { state.wi[k] = +el.value; updateWhatIf(); });
+    });
+    updateWhatIf();
+    [["t-hf", "hf"], ["t-ltv", "ltv"]].forEach(function (p) {
+      var el = $("#" + p[0]); if (!el) return;
+      el.addEventListener("input", function () { var v = +el.value; if (v > 0) { state.tg[p[1]] = v; updateTargets(); } });
+    });
+    updateTargets();
+    document.querySelectorAll("[data-coll]").forEach(function (el) {
+      el.addEventListener("input", function () { var t = state.coll[+el.dataset.coll]; t[el.dataset.k] = el.dataset.k === "from" ? el.value : +el.value; });
+    });
+    document.querySelectorAll("[data-term]").forEach(function (el) {
+      el.addEventListener("input", function () {
+        var t = state.terms[+el.dataset.term]; t[el.dataset.k] = el.dataset.k === "from" ? el.value : +el.value;
+        var l = state.terms[state.terms.length - 1], pd = l.principal * l.apr / 100 / 365;
+        $("#termPreview").innerHTML = 'At the latest terms this accrues <b class="num">' + usd(pd) + '</b> a day (simple interest, ' + usd(pd * 30, 0) + " per 30 days).";
+      });
+    });
+  }
+  function toast(t) {
+    var e = document.createElement("div"); e.className = "toast"; e.setAttribute("role", "status"); e.textContent = t; $("#toastHost").appendChild(e);
+    setTimeout(function () { e.remove(); }, 2200);
+  }
+  function go(v) { state.view = v; state.form = null; try { location.hash = v; } catch (e) { } render(); window.scrollTo(0, 0); }
+
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-act]"); if (!b) return;
+    var a = b.dataset.act, v = b.dataset.v;
+    if (a === "win") { state.win = +v; render(); }
+    else if (a === "cd") { state.cd = v; render(); }
+    else if (a === "per") { state.per = v; render(); }
+    else if (a === "addcoll") { var lc = state.coll[state.coll.length - 1]; state.coll.push({ from: "2026-11-07", amount: lc.amount }); render(); }
+    else if (a === "rmcoll") { state.coll.splice(+v, 1); render(); }
+    else if (a === "goto" || a === "nav") { go(v === "overview" || v === "positions" || v === "pools" || v === "features" || v === "addresses" ? "other" : v); }
+    else if (a === "toast") toast(v);
+    else if (a === "form") {
+      state.form = v;
+      state.terms = v === "edit" ? [{ from: "2026-04-02", principal: 6000, apr: 8.4 }, { from: "2026-09-20", principal: 6000, apr: 9.2 }] : [{ from: "2026-11-07", principal: 5000, apr: 9.0 }];
+      state.coll = v === "edit" ? [{ from: "2026-04-02", amount: 0.138 }, { from: "2026-10-19", amount: 0.15 }] : [{ from: "2026-11-07", amount: 0.15 }];
+      render(); var f = $("#formCard"); if (f) f.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    else if (a === "closeform") { state.form = null; render(); }
+    else if (a === "saveform") { state.form = null; render(); toast("Saved (mock). Interest is recalculated on the next sync."); }
+    else if (a === "addterm") { var l = state.terms[state.terms.length - 1]; state.terms.push({ from: "2026-11-07", principal: l.principal, apr: l.apr }); render(); }
+    else if (a === "rmterm") { state.terms.splice(+v, 1); render(); }
+    else if (a === "wireset") { state.wi = { rate: 100, inc: 100, move: 0 }; render(); }
+  });
+  $("#scenario").addEventListener("change", function (e) { state.scenario = e.target.value; render(); });
+  window.addEventListener("hashchange", function () { var h = location.hash.slice(1); if ((h === "earnings" || h === "borrow") && h !== state.view) { state.view = h; state.form = null; render(); } });
+  var h0 = ""; try { h0 = location.hash.slice(1); } catch (e) { }
+  if (h0 === "earnings" || h0 === "borrow") state.view = h0;
+  render();
+})();
+</script>

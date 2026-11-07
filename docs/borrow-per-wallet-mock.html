@@ -1,0 +1,260 @@
+<title>Borrow Per Wallet Mock</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: mock-control strip, then the two changed Borrow cards in app styling: What changed (wallet columns) and Liquidation risk (wallet cards). Tokens mirror the app's slate scale, dark first. */
+:root {
+  --bg: #020617; --surface: #0f172a; --surface2: #162033; --border: #1e293b; --border2: #334155;
+  --text: #e2e8f0; --muted: #94a3b8; --faint: #64748b;
+  --sky: #38bdf8; --green: #34d399; --rose: #fb7185; --amber: #f59e0b;
+  --rose-bg: rgba(251,113,133,.13); --amber-bg: rgba(245,158,11,.13); --green-bg: rgba(52,211,153,.13); --sky-bg: rgba(56,189,248,.12);
+  --w1: #818cf8; --w2: #2dd4bf;
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --font-display: "Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f4f6f8; --surface: #ffffff; --surface2: #eef1f5; --border: #e2e7ec; --border2: #cfd6de;
+    --text: #1b2430; --muted: #5b6675; --faint: #6b7686;
+    --sky: #2a78d6; --green: #0f7d57; --rose: #c23b36; --amber: #b36b00;
+    --rose-bg: rgba(194,59,54,.10); --amber-bg: rgba(179,107,0,.12); --green-bg: rgba(15,125,87,.11); --sky-bg: rgba(42,120,214,.10);
+    --w1: #5b5bd6; --w2: #0e8a7d; color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f4f6f8; --surface: #ffffff; --surface2: #eef1f5; --border: #e2e7ec; --border2: #cfd6de;
+  --text: #1b2430; --muted: #5b6675; --faint: #6b7686;
+  --sky: #2a78d6; --green: #0f7d57; --rose: #c23b36; --amber: #b36b00;
+  --rose-bg: rgba(194,59,54,.10); --amber-bg: rgba(179,107,0,.12); --green-bg: rgba(15,125,87,.11); --sky-bg: rgba(42,120,214,.10);
+  --w1: #5b5bd6; --w2: #0e8a7d; color-scheme: light;
+}
+:root[data-theme="dark"] { color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--text); font-family: var(--font-sans); font-size: 14px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 48px; -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; font-weight: 600; letter-spacing: -.01em; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
+.wrap { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; padding-top: 12px; }
+
+.mockbar { border: 1px dashed var(--border2); border-radius: 8px; padding: 10px 12px; display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; font-size: 12px; color: var(--muted); background: var(--surface2); }
+.mockbar .tag { text-transform: uppercase; letter-spacing: .06em; font-size: 11px; color: var(--amber); font-weight: 600; }
+.seg { display: inline-flex; border: 1px solid var(--border2); border-radius: 6px; overflow: hidden; }
+.seg button { background: none; border: 0; padding: 3px 10px; font-size: 12px; color: var(--muted); }
+.seg button + button { border-left: 1px solid var(--border2); }
+.seg button[aria-pressed="true"] { background: var(--sky-bg); color: var(--sky); font-weight: 600; }
+
+.card { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 16px; min-width: 0; }
+.cardhead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 12px; margin-bottom: 12px; }
+.cardhead h2 { font-size: 15px; }
+.hint { font-size: 12px; color: var(--faint); }
+.label { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.pos { color: var(--green); } .neg { color: var(--rose); }
+
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+.d1 { background: var(--w1); } .d2 { background: var(--w2); }
+.addr { color: var(--faint); font-size: 11px; font-family: var(--font-mono); }
+
+/* What changed: wallet columns */
+.tscroll { overflow-x: auto; }
+table.chg { width: 100%; min-width: 34rem; border-collapse: collapse; font-size: 13px; }
+.chg th, .chg td { padding: 6px 10px; text-align: right; white-space: nowrap; }
+.chg th:first-child, .chg td:first-child { text-align: left; position: sticky; left: 0; background: var(--surface); }
+.chg thead th { font-weight: 500; vertical-align: bottom; padding-bottom: 8px; border-bottom: 1px solid var(--border2); }
+.chg thead th .nm { display: block; font-weight: 600; color: var(--text); font-size: 13px; }
+.chg tr.sec td { padding-top: 14px; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.chg td.k { color: var(--muted); }
+.chg tr.tot td { border-top: 1px solid var(--border2); font-weight: 600; }
+.chg tr.tot td.k { color: var(--text); }
+.chg .allcol { background: var(--surface2); }
+.chg thead th.allcol { border-radius: 6px 6px 0 0; }
+.chg td.allcol:first-child { background: var(--surface); }
+.take { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; margin-top: 14px; }
+.take > div { border-radius: 6px; background: var(--surface2); padding: 10px 12px; font-size: 13px; min-width: 0; }
+.take .nm { font-weight: 600; display: block; margin-bottom: 2px; }
+.fine { margin-top: 10px; font-size: 12px; color: var(--faint); }
+
+/* Liquidation risk */
+.chip { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.chip.ok { background: var(--green-bg); color: var(--green); }
+.chip.warn { background: var(--amber-bg); color: var(--amber); }
+.chip.crit { background: var(--rose-bg); color: var(--rose); }
+.watch { display: flex; gap: 10px; align-items: flex-start; border-radius: 8px; padding: 10px 14px; border: 1px solid var(--amber); background: var(--amber-bg); font-size: 13px; margin-bottom: 14px; }
+.watch .bi { font-weight: 700; color: var(--amber); width: 18px; text-align: center; flex: none; }
+.rgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.wcard { border: 1px solid var(--border); border-radius: 8px; padding: 14px; background: var(--surface); min-width: 0; border-top: 3px solid var(--w1); }
+.wcard.w2 { border-top-color: var(--w2); }
+.wcard.is-warn { box-shadow: 0 0 0 1px var(--amber); }
+.whead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 10px; }
+.whead b { font-family: var(--font-display); font-size: 15px; }
+.loanrow { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.loanrow:first-of-type { margin-top: 12px; }
+.lname { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.big { font-family: var(--font-mono); font-size: 30px; font-weight: 500; letter-spacing: -.02em; line-height: 1.1; }
+.bigrow { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.bigrow .sm { font-size: 12px; color: var(--muted); }
+.gauge { position: relative; height: 10px; margin: 18px 0 22px; }
+.gauge .bar { position: absolute; inset: 0; border-radius: 99px; overflow: hidden; background: var(--surface2); }
+.gauge .bar span { position: absolute; top: 0; bottom: 0; }
+.gauge .mk { position: absolute; top: -4px; width: 3px; height: 18px; border-radius: 2px; background: var(--text); transform: translateX(-50%); }
+.gauge .tk { position: absolute; top: 15px; transform: translateX(-50%); font-size: 10px; color: var(--muted); white-space: nowrap; }
+.z-r { background: color-mix(in srgb, var(--rose) 70%, transparent); } .z-a { background: color-mix(in srgb, var(--amber) 70%, transparent); } .z-g { background: color-mix(in srgb, var(--green) 70%, transparent); }
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 4px; }
+.facts div { min-width: 0; }
+.facts .v { font-family: var(--font-mono); font-size: 14px; font-variant-numeric: tabular-nums; }
+.facts .l { font-size: 11px; color: var(--muted); }
+.plain { margin-top: 10px; font-size: 13px; border-radius: 6px; background: var(--surface2); padding: 8px 10px; }
+.plain b { font-weight: 600; }
+
+[hidden] { display: none !important; }
+@media (max-width: 520px) { .big { font-size: 26px; } .facts { grid-template-columns: 1fr 1fr; } }
+</style>
+
+<div class="wrap">
+  <div class="mockbar">
+    <span class="tag">Mock, example figures</span>
+    <span>Header wallet:
+      <span class="seg" role="group" aria-label="Header wallet">
+        <button id="b-all" aria-pressed="true">All wallets</button>
+        <button id="b-one" aria-pressed="false">Main only</button>
+      </span>
+    </span>
+    <span class="hint">With one wallet picked, both cards keep today's single-wallet layout.</span>
+  </div>
+
+  <!-- ===================== What changed ===================== -->
+  <section class="card" aria-labelledby="h-changes">
+    <div class="cardhead">
+      <h2 id="h-changes">What changed in 30 days</h2>
+      <span class="hint">Loan filter: All loans</span>
+    </div>
+    <div class="tscroll">
+      <table class="chg">
+        <thead>
+          <tr>
+            <th></th>
+            <th class="allcol" data-multi><span class="nm">All wallets</span><span class="addr">combined</span></th>
+            <th><span class="nm"><i class="dot d1"></i>Main</span><span class="addr">0x564b…57ee</span></th>
+            <th data-multi><span class="nm"><i class="dot d2"></i>Second</span><span class="addr">0xa30d…9ad0</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="sec"><td>Collateral</td><td class="allcol" data-multi></td><td></td><td data-multi></td></tr>
+          <tr><td class="k">Start, Oct 9</td><td class="allcol num" data-multi>$273,200</td><td class="num">$201,400</td><td class="num" data-multi>$71,800</td></tr>
+          <tr><td class="k">Price moves</td><td class="allcol num neg" data-multi>−$2,030</td><td class="num pos">+$7,960</td><td class="num neg" data-multi>−$9,990</td></tr>
+          <tr><td class="k">Deposits and withdrawals</td><td class="allcol num pos" data-multi>+$30,000</td><td class="num pos">+$30,000</td><td class="num" data-multi>$0</td></tr>
+          <tr><td class="k">Aave supply yield</td><td class="allcol num pos" data-multi>+$2,100</td><td class="num pos">+$1,510</td><td class="num pos" data-multi>+$590</td></tr>
+          <tr class="tot"><td class="k">Now</td><td class="allcol num" data-multi>$303,270</td><td class="num">$240,870</td><td class="num" data-multi>$62,400</td></tr>
+
+          <tr class="sec"><td>Debt</td><td class="allcol" data-multi></td><td></td><td data-multi></td></tr>
+          <tr><td class="k">Start, Oct 9</td><td class="allcol num" data-multi>$144,400</td><td class="num">$104,100</td><td class="num" data-multi>$40,300</td></tr>
+          <tr><td class="k">Interest added</td><td class="allcol num neg" data-multi>+$900</td><td class="num neg">+$640</td><td class="num neg" data-multi>+$260</td></tr>
+          <tr><td class="k">Borrowed or repaid</td><td class="allcol num neg" data-multi>+$10,958</td><td class="num neg">+$9,618</td><td class="num neg" data-multi>+$1,340</td></tr>
+          <tr class="tot"><td class="k">Now</td><td class="allcol num" data-multi>$156,258</td><td class="num">$114,358</td><td class="num" data-multi>$41,900</td></tr>
+
+          <tr class="sec"><td>Collateral ÷ debt</td><td class="allcol" data-multi></td><td></td><td data-multi></td></tr>
+          <tr class="tot"><td class="k">Start → now</td><td class="allcol num" data-multi>1.89× → 1.94×</td><td class="num pos">1.93× → 2.11× ▲</td><td class="num neg" data-multi>1.78× → 1.49× ▼</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="take">
+      <div data-multi><span class="nm">All wallets</span>Ratio rose from 1.89× to 1.94×. Biggest driver: deposits (+$30,000).</div>
+      <div><span class="nm"><i class="dot d1"></i>Main</span>Ratio rose from 1.93× to 2.11×. Biggest driver: deposits (+$30,000).</div>
+      <div data-multi><span class="nm"><i class="dot d2"></i>Second</span>Ratio fell from 1.78× to 1.49×. Biggest driver: price moves (−$9,990).</div>
+    </div>
+    <p class="fine">The combined column hides that Second lost ground while Main gained. Each column is worked out day by day, so the parts add up to its total. Colored dots match the wallet colors used elsewhere on the page.</p>
+  </section>
+
+  <!-- ===================== Liquidation risk ===================== -->
+  <section class="card" aria-labelledby="h-risk">
+    <div class="cardhead">
+      <h2 id="h-risk">Liquidation risk</h2>
+      <span class="hint">Closest to liquidation first. Warn below health factor 1.5, critical below 1.2.</span>
+    </div>
+
+    <div class="watch" data-multi>
+      <span class="bi">!</span>
+      <div><b>Second is closest to liquidation.</b> Its collateral can fall about 24% before Aave liquidates it. Main has about 43%.</div>
+    </div>
+
+    <div class="rgrid">
+      <!-- Second (warn) -->
+      <article class="wcard w2 is-warn" data-multi>
+        <div class="whead">
+          <b><i class="dot d2"></i>Second <span class="addr">0xa30d…9ad0</span></b>
+          <span class="chip warn">Watch</span>
+        </div>
+        <div class="loanrow">
+          <div class="lname"><span>Aave v3 health factor</span><span>liquidated at 1.00</span></div>
+          <div class="bigrow"><span class="big">1.31</span><span class="sm">1 loan: USDC variable debt</span></div>
+          <div class="gauge" role="img" aria-label="Health factor 1.31">
+            <div class="bar"><span class="z-r" style="left:0;width:13.3%"></span><span class="z-a" style="left:13.3%;width:20%"></span><span class="z-g" style="left:33.3%;width:66.7%"></span></div>
+            <i class="mk" style="left:20.7%"></i>
+            <span class="tk" style="left:0">1.0</span><span class="tk" style="left:13.3%">1.2</span><span class="tk" style="left:33.3%">1.5</span><span class="tk" style="left:100%">2.5</span>
+          </div>
+          <div class="facts">
+            <div><div class="v">$62,400</div><div class="l">Collateral now</div></div>
+            <div><div class="v">$41,900</div><div class="l">Debt</div></div>
+            <div><div class="v neg">$47,630</div><div class="l">Collateral at liquidation</div></div>
+          </div>
+          <p class="plain"><b>Cushion: about 24%</b> ($14,770). If your collateral loses that much value while the debt stays the same, Aave can liquidate it. Repaying about $8,400 would bring the health factor to 1.50.</p>
+        </div>
+      </article>
+
+      <!-- Main (ok) with an Aave loan and a Binance loan -->
+      <article class="wcard">
+        <div class="whead">
+          <b><i class="dot d1"></i>Main <span class="addr">0x564b…57ee</span></b>
+          <span class="chip ok">Safe</span>
+        </div>
+        <div class="loanrow">
+          <div class="lname"><span>Aave v3 health factor</span><span>liquidated at 1.00</span></div>
+          <div class="bigrow"><span class="big">1.76</span><span class="sm">1 loan: USDC variable debt</span></div>
+          <div class="gauge" role="img" aria-label="Health factor 1.76">
+            <div class="bar"><span class="z-r" style="left:0;width:13.3%"></span><span class="z-a" style="left:13.3%;width:20%"></span><span class="z-g" style="left:33.3%;width:66.7%"></span></div>
+            <i class="mk" style="left:50.7%"></i>
+            <span class="tk" style="left:0">1.0</span><span class="tk" style="left:13.3%">1.2</span><span class="tk" style="left:33.3%">1.5</span><span class="tk" style="left:100%">2.5</span>
+          </div>
+          <div class="facts">
+            <div><div class="v">$240,870</div><div class="l">Collateral now</div></div>
+            <div><div class="v">$114,358</div><div class="l">Debt</div></div>
+            <div><div class="v neg">$136,860</div><div class="l">Collateral at liquidation</div></div>
+          </div>
+          <p class="plain"><b>Cushion: about 43%</b> ($104,010) before liquidation.</p>
+        </div>
+        <div class="loanrow">
+          <div class="lname"><span>Binance loan, manual entry</span><span>liquidation LTV 83%</span></div>
+          <div class="bigrow"><span class="big">38%</span><span class="sm">LTV · $20,000 USDT against $52,000</span></div>
+          <div class="gauge" role="img" aria-label="LTV 38 percent">
+            <div class="bar"><span class="z-g" style="left:0;width:70%"></span><span class="z-a" style="left:70%;width:12%"></span><span class="z-r" style="left:82%;width:18%"></span></div>
+            <i class="mk" style="left:38%"></i>
+            <span class="tk" style="left:0">0%</span><span class="tk" style="left:70%">70 margin call</span><span class="tk" style="left:92%">83 liquidation</span>
+          </div>
+          <p class="plain"><b>Cushion: about 54%</b> on the collateral you entered ($24,100 left at liquidation). Margin call comes first, at about 45% lower.</p>
+        </div>
+      </article>
+    </div>
+    <p class="fine">Cushion assumes only the collateral's price moves and the debt stays put. A Binance loan uses the collateral and limits you typed in, so update them when they change.</p>
+  </section>
+</div>
+
+<script>
+(function () {
+  var all = document.getElementById("b-all"), one = document.getElementById("b-one");
+  function set(multi) {
+    all.setAttribute("aria-pressed", String(multi));
+    one.setAttribute("aria-pressed", String(!multi));
+    document.querySelectorAll("[data-multi]").forEach(function (el) { el.hidden = !multi; });
+  }
+  all.addEventListener("click", function () { set(true); });
+  one.addEventListener("click", function () { set(false); });
+})();
+</script>

@@ -15,6 +15,7 @@ import { FeaturesPage } from "./pages/FeaturesPage";
 import { FeeClaimsPage } from "./pages/FeeClaimsPage";
 import { AddressesPage } from "./pages/AddressesPage";
 import { PoolsPage } from "./pages/PoolsPage";
+import { BorrowPage } from "./pages/BorrowPage";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -34,6 +35,7 @@ createRoot(document.getElementById("root")!).render(
               <Route path="positions/:id" element={<PositionDetailPage />} />
               <Route path="pools" element={<PoolsPage />} />
               <Route path="fees" element={<FeeClaimsPage />} />
+              <Route path="borrow" element={<BorrowPage />} />
               <Route path="features" element={<FeaturesPage />} />
               <Route path="addresses" element={<AddressesPage />} />
             </Route>

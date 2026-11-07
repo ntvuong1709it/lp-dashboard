@@ -62,6 +62,15 @@ When a sync sees an open position leave its range, or return to it, a Telegram m
 
 Alerts are only as timely as the sync (`Sync:IntervalMinutes`, 15 by default).
 
+## Borrow (do LP earnings pay the interest?)
+
+The **Borrow** page and the "Interest coverage" card on **Earnings** compare what your loans cost with what your LP positions earn (fees, rewards and Aave supply yield, accrued whether or not claimed), and track collateral against debt over time. Design and definitions are in [spec.md](spec.md); the mock is [docs/borrow-coverage-mock.html](docs/borrow-coverage-mock.html).
+
+- **Aave v3 on Base** is read from chain for every followed wallet during a sync: health factor, collateral, debt, rates, and daily balances. It is on by default (`Evm:Chains:0:Lending:AaveV3`, which holds the market's PoolAddressesProvider).
+- **Daily history needs an RPC that serves historical state** (an archive-capable plan, e.g. Alchemy). Without it the page still works from today forward and says so; days before today then show today's balances rather than invented movements. Each sync backfills up to 120 missing days, oldest first.
+- **Other lenders (e.g. Binance)** are entered by hand under Borrow → Add manual loan: the debt and APR with a date for every change, optional collateral amounts and liquidation LTV. The app holds no exchange keys.
+- Interest is simple APR; a week is 7 days and a month a twelfth of the year. Nothing is ever sent or executed: the page only shows numbers and suggestions.
+
 ## Wallets and privacy
 
 There is no login. The list of wallets you follow (and their labels) is stored in your browser's localStorage, and every API call names the wallet(s) it wants (`?owner=0x…[,0x…]`, required). The server never lists the wallets it tracks, so a visitor to a deployed URL starts empty and must enter an address. "Forget" only removes it from your browser; its synced data stays in the database, so adding it again restores everything immediately.

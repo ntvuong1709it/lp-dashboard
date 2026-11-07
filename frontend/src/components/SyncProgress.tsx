@@ -27,9 +27,14 @@ const stateStyles: Record<SyncTaskState, { label: string; className: string }> =
   };
 
 const taskName = (t: SyncTaskStatus) =>
-  `${t.chain} · ${protocolLabels[t.protocol] ?? t.protocol}`;
+  `${t.chain} · ${t.market ?? protocolLabels[t.protocol] ?? t.protocol}`;
 
 function stepText(t: SyncTaskStatus): string {
+  // A lending market read has steps but no stages.
+  if (t.market) {
+    if (!t.detail) return "Starting";
+    return t.detailTotal > 0 ? `${t.detail} ${t.detailDone}/${t.detailTotal}` : t.detail;
+  }
   if (!t.stage) return "";
   const label =
     t.stage === "SyncingPositions" && t.positionsTotal > 0
@@ -150,8 +155,9 @@ export function SyncProgressDetails({ status }: { status: SyncStatus }) {
                 {(t.state === "Succeeded" ||
                   t.state === "CompletedWithErrors") && (
                   <div className="text-slate-500">
-                    {t.positionsTotal}{" "}
-                    {t.positionsTotal === 1 ? "position" : "positions"} processed
+                    {t.market
+                      ? "Borrow history up to date"
+                      : `${t.positionsTotal} ${t.positionsTotal === 1 ? "position" : "positions"} processed`}
                   </div>
                 )}
                 {t.errors.length > 0 && (

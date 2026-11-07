@@ -61,6 +61,11 @@ public sealed class SyncController(SyncCoordinator coordinator, IWatchedAddressR
     private static SyncStatus Visible(SyncStatus status, IReadOnlyCollection<string> owners)
     {
         var tasks = status.Tasks.Where(t => owners.Contains(t.Owner)).ToList();
-        return status with { Tasks = tasks, LastErrors = tasks.SelectMany(t => t.Errors).ToList(), RecentErrors = [] };
+        // Borrow-sync errors are not tied to a task; they name the wallet, so keep those that name one of the visitor's.
+        var errors = tasks.SelectMany(t => t.Errors)
+            .Concat(status.LastErrors.Where(e => owners.Any(o => e.Contains(o, StringComparison.OrdinalIgnoreCase))))
+            .Distinct()
+            .ToList();
+        return status with { Tasks = tasks, LastErrors = errors, RecentErrors = [] };
     }
 }

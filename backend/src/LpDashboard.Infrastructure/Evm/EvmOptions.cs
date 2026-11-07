@@ -29,6 +29,22 @@ public sealed class EvmChainOptions
     public string PriceChainKey { get; set; } = string.Empty;
     public string NativePriceKey { get; set; } = "coingecko:ethereum";
     public List<EvmProtocolOptions> Protocols { get; set; } = [];
+    /// <summary>Lending markets read for borrow tracking (Aave v3).</summary>
+    public EvmLendingOptions Lending { get; set; } = new();
+}
+
+public sealed class EvmLendingOptions
+{
+    public AaveV3Options? AaveV3 { get; set; }
+}
+
+public sealed class AaveV3Options
+{
+    public bool Enabled { get; set; } = true;
+    /// <summary>The market's PoolAddressesProvider, from Aave's address book; the pool and data provider are looked up from it.</summary>
+    public string PoolAddressesProvider { get; set; } = string.Empty;
+    /// <summary>Block to start looking for the wallet's first Aave activity from (before the market existed is fine, just slower).</summary>
+    public long StartBlock { get; set; }
 }
 
 public sealed class EvmProtocolOptions

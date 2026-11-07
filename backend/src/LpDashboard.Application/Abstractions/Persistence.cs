@@ -76,6 +76,32 @@ public interface ISyncCursorRepository
     void Add(SyncCursor cursor);
 }
 
+public interface IManualLoanRepository
+{
+    /// <summary>Loans of these wallets, with their terms and collateral history.</summary>
+    Task<List<ManualLoan>> ListAsync(IReadOnlyCollection<string> owners, CancellationToken ct);
+
+    /// <summary>Tracked, with terms and collateral history, so it can be edited.</summary>
+    Task<ManualLoan?> GetAsync(int id, CancellationToken ct);
+
+    void Add(ManualLoan loan);
+    void Remove(ManualLoan loan);
+}
+
+public interface ILendingRepository
+{
+    Task<LendingAccount?> GetAccountAsync(Chain chain, string owner, CancellationToken ct);
+    Task<List<LendingAccount>> ListAccountsAsync(IReadOnlyCollection<string> owners, CancellationToken ct);
+    Task<List<LendingReserve>> ListReservesAsync(Chain chain, string owner, CancellationToken ct);
+    Task<List<LendingReserve>> ListReservesAsync(IReadOnlyCollection<string> owners, CancellationToken ct);
+    Task<List<LendingDay>> ListDaysAsync(Chain chain, string owner, CancellationToken ct);
+    Task<List<LendingDay>> ListDaysAsync(IReadOnlyCollection<string> owners, DateOnly from, CancellationToken ct);
+    void Add(LendingAccount account);
+    void Add(LendingReserve reserve);
+    void Add(LendingDay day);
+    void Remove(LendingReserve reserve);
+}
+
 public interface IUnitOfWork
 {
     Task SaveChangesAsync(CancellationToken ct);

@@ -266,6 +266,8 @@ export type SyncTaskState =
 export interface SyncTaskStatus {
   chain: Chain;
   protocol: Protocol;
+  /** Set for a lending market read (e.g. "Aave v3"); `protocol` is then not meaningful. */
+  market: string | null;
   owner: string;
   /** Set for partial runs (one wallet, one position, rescan); null for a full sync. */
   scope: string | null;
@@ -529,4 +531,200 @@ export interface PositionPerformanceDto {
 export interface PortfolioPerformanceDto {
   positions: PositionPerformanceDto[];
   portfolio: HodlBreakEvenDto | null;
+}
+
+// ---- Borrow (loans against LP collateral) ----
+
+export type CoverageStatus = "NoDebt" | "Shortfall" | "Thin" | "Covered";
+export type RiskLevel = "Ok" | "Warn" | "Critical";
+export type RepayMode = "None" | "Surplus" | "Shortfall";
+export type TrendEventKind =
+  | "CollateralAdded"
+  | "CollateralRemoved"
+  | "Borrowed"
+  | "Repaid";
+
+export interface AssetOptionDto {
+  symbol: string;
+  priceKey: string;
+  stable: boolean;
+}
+
+export interface TermDto {
+  effectiveFrom: string;
+  principal: number;
+  aprPercent: number;
+}
+
+export interface CollateralRowDto {
+  effectiveFrom: string;
+  amount: number;
+}
+
+export interface ManualLoanDto {
+  id: number;
+  owner: string;
+  label: string;
+  platform: string | null;
+  assetSymbol: string;
+  assetPriceKey: string | null;
+  collateralSymbol: string | null;
+  collateralPriceKey: string | null;
+  marginCallLtvPercent: number | null;
+  liquidationLtvPercent: number | null;
+  closedOn: string | null;
+  terms: TermDto[];
+  collateral: CollateralRowDto[];
+}
+
+export interface LoanCostDto {
+  perDayUsd: number;
+  perWeekUsd: number;
+  perMonthUsd: number;
+  perYearUsd: number;
+}
+
+export interface LoanRiskDto {
+  kind: "HealthFactor" | "Ltv" | "None";
+  value: number | null;
+  level: RiskLevel;
+  dropToLiquidationPercent: number | null;
+  liquidationLtvPercent: number | null;
+  marginCallLtvPercent: number | null;
+}
+
+export interface LoanDto {
+  key: string;
+  kind: "aave" | "manual";
+  source: string;
+  label: string;
+  owner: string;
+  debtSymbol: string;
+  manualId: number | null;
+  debtTokens: number;
+  debtUsd: number;
+  aprPercent: number;
+  interestInWindowUsd: number;
+  cost: LoanCostDto;
+  collateralUsd: number | null;
+  collateralRatio: number | null;
+  collateralRatioChange: number | null;
+  risk: LoanRiskDto;
+  hasMissingPrices: boolean;
+}
+
+export interface CoverageDto {
+  lpFeesUsd: number;
+  lpRewardsUsd: number;
+  supplyYieldUsd: number;
+  interestUsd: number;
+  gasUsd: number;
+  lpIncomeUsd: number;
+  netCarryUsd: number;
+  ratio: number | null;
+  status: CoverageStatus;
+}
+
+export interface RunRateDto {
+  interestPerDayUsd: number;
+  incomePerDayUsd: number;
+  lpFeesAndRewardsPerDayUsd: number;
+  openPositionValueUsd: number;
+  requiredLpAprPercent: number | null;
+  currentLpAprPercent: number | null;
+}
+
+export interface WalletCostsDto {
+  owner: string;
+  loanKeys: string[];
+  subtotal: LoanCostDto;
+}
+
+export interface CostsDto {
+  wallets: WalletCostsDto[];
+  total: LoanCostDto;
+  incomeAtPace: LoanCostDto;
+  leftOver: LoanCostDto;
+}
+
+export interface RepayDto {
+  mode: RepayMode;
+  amountUsd: number;
+  loanLabel: string | null;
+  aprPercent: number;
+  savingPerYearUsd: number;
+}
+
+export interface TrendHeadlineDto {
+  collateralUsd: number;
+  debtUsd: number;
+  ratioNow: number | null;
+  ratioStart: number | null;
+  ltvPercentNow: number | null;
+  excludedLoans: string[];
+}
+
+export interface BorrowSummaryDto {
+  from: string;
+  to: string;
+  days: number;
+  hasLoans: boolean;
+  coverage: CoverageDto;
+  runRate: RunRateDto;
+  costs: CostsDto;
+  worstRisk: LoanRiskDto | null;
+  worstRiskLabel: string | null;
+  repay: RepayDto;
+  trend: TrendHeadlineDto;
+  dataQuality: { hasMissingPrices: boolean; missingPriceKeys: string[]; historyNotes: string[] };
+}
+
+export interface DailyCoverageDto {
+  date: string;
+  feesUsd: number;
+  rewardsUsd: number;
+  supplyYieldUsd: number;
+  interestUsd: number;
+  gasUsd: number;
+  netUsd: number;
+}
+
+export interface TrendPointDto {
+  date: string;
+  collateralUsd: number;
+  debtUsd: number;
+  ratio: number | null;
+  ltvPercent: number | null;
+}
+
+export interface TrendEventDto {
+  date: string;
+  kind: TrendEventKind;
+  usd: number;
+  label: string;
+}
+
+export interface CollateralHistoryDto {
+  points: TrendPointDto[];
+  events: TrendEventDto[];
+  warnRatio: number | null;
+  liquidationRatio: number | null;
+  excludedLoans: string[];
+}
+
+export interface ChangesDto {
+  from: string;
+  to: string;
+  collateralStartUsd: number;
+  priceMovesUsd: number;
+  depositsUsd: number;
+  supplyYieldUsd: number;
+  collateralEndUsd: number;
+  debtStartUsd: number;
+  interestUsd: number;
+  borrowedUsd: number;
+  debtPriceMovesUsd: number;
+  debtEndUsd: number;
+  ratioStart: number | null;
+  ratioEnd: number | null;
 }

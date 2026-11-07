@@ -20,6 +20,8 @@ public sealed record SyncTaskStatus
 {
     public Chain Chain { get; init; }
     public Protocol Protocol { get; init; }
+    /// <summary>Set for a lending market read (e.g. "Aave v3") instead of a position protocol; <see cref="Protocol"/> is then not meaningful.</summary>
+    public string? Market { get; init; }
     public string Owner { get; init; } = string.Empty;
     /// <summary>Set for partial runs (one wallet, one position, rescan); null for a full sync.</summary>
     public string? Scope { get; init; }
@@ -115,9 +117,11 @@ public sealed class SyncCoordinator(IServiceScopeFactory scopeFactory, TimeProvi
 
             List<(Chain Chain, Protocol Protocol)> targets;
             List<string> owners;
+            List<ILendingProvider> lendingProviders;
             using (var scope = scopeFactory.CreateScope())
             {
                 targets = scope.ServiceProvider.GetServices<IPositionProvider>().Select(p => (p.Chain, p.Protocol)).ToList();
+                lendingProviders = scope.ServiceProvider.GetServices<ILendingProvider>().ToList();
                 owners = (await scope.ServiceProvider.GetRequiredService<IWatchedAddressRepository>().ListAsync(ct))
                     .Where(a => a.ChainFamily == ChainFamily.Evm)
                     .Select(a => a.Address)
@@ -143,6 +147,19 @@ public sealed class SyncCoordinator(IServiceScopeFactory scopeFactory, TimeProvi
                     }
                 }
             }
+            var positionTaskCount = tasks.Count;
+
+            // Borrow tracking runs after the position sync but is listed up front, so the status shows it and counts it in the percent.
+            var lendingJobs = new List<(ILendingProvider Provider, string Owner)>();
+            foreach (var owner in LendingOwners(requests, owners))
+            {
+                foreach (var provider in lendingProviders)
+                {
+                    lendingJobs.Add((provider, owner));
+                    tasks.Add(new SyncTaskStatus { Chain = provider.Chain, Market = provider.Market, Owner = owner });
+                }
+            }
+
             Update(s => s with
             {
                 ConfiguredProviders = targets.Select(t => $"{t.Chain}/{t.Protocol}").ToList(),
@@ -153,12 +170,12 @@ public sealed class SyncCoordinator(IServiceScopeFactory scopeFactory, TimeProvi
                 AddError("No chain providers configured. Set Evm:Chains:<n>:RpcUrl (e.g. via user-secrets).");
             }
 
-            if (tasks.Count == 0 && targets.Count > 0)
+            if (positionTaskCount == 0 && targets.Count > 0)
             {
                 AddError("Nothing to sync: the requested wallet is not watched or has no matching chain provider.");
             }
 
-            for (var i = 0; i < tasks.Count; i++)
+            for (var i = 0; i < positionTaskCount; i++)
             {
                 var (chain, protocol, owner) = (tasks[i].Chain, tasks[i].Protocol, tasks[i].Owner);
                 var progress = new TaskProgress(this, i);
@@ -190,6 +207,8 @@ public sealed class SyncCoordinator(IServiceScopeFactory scopeFactory, TimeProvi
                     });
                 }
             }
+
+            await SyncLendingAsync(lendingJobs, positionTaskCount, ct);
         }
         finally
         {
@@ -203,6 +222,47 @@ public sealed class SyncCoordinator(IServiceScopeFactory scopeFactory, TimeProvi
             _gate.Release();
         }
     }
+
+    /// <summary>
+    /// Borrow tracking: reads each wallet's Aave account and fills in daily history. Runs after the position sync and never
+    /// fails it; problems show up in the run's errors. Single-position syncs skip it.
+    /// </summary>
+    private async Task SyncLendingAsync(List<(ILendingProvider Provider, string Owner)> jobs, int firstTask, CancellationToken ct)
+    {
+        for (var j = 0; j < jobs.Count; j++)
+        {
+            var (provider, owner) = jobs[j];
+            var index = firstTask + j;
+            var progress = new TaskProgress(this, index);
+            UpdateTask(index, t => t with { State = SyncTaskState.Running, StartedAt = time.GetUtcNow().UtcDateTime });
+
+            using var scope = scopeFactory.CreateScope();
+            try
+            {
+                var errors = await scope.ServiceProvider.GetRequiredService<Borrow.LendingSyncService>().SyncAsync(provider, owner, ct, progress);
+                foreach (var error in errors) progress.ReportError(error);
+                UpdateTask(index, t => t with
+                {
+                    State = errors.Count == 0 ? SyncTaskState.Succeeded : SyncTaskState.CompletedWithErrors,
+                    Detail = null,
+                    Percent = 100,
+                    FinishedAt = time.GetUtcNow().UtcDateTime
+                });
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogError(ex, "{Market} sync failed for {Owner}", provider.Market, owner);
+                progress.ReportError($"{provider.Market} {owner}: {ex.Message}");
+                UpdateTask(index, t => t with { State = SyncTaskState.Failed, Percent = 100, FinishedAt = time.GetUtcNow().UtcDateTime });
+            }
+        }
+    }
+
+    /// <summary>Wallets to read lending markets for: every one on a full sync, else those with a whole-wallet request (single-position syncs skip it).</summary>
+    private static List<string> LendingOwners(List<SyncRequest> requests, List<string> owners) =>
+        requests.Any(r => r.IsFull)
+            ? owners
+            : owners.Where(o => requests.Any(r => r.TokenId is null && o.Equals(r.Owner, StringComparison.OrdinalIgnoreCase))).ToList();
 
     private bool HasPendingTrigger() => _trigger.Reader.CanCount && _trigger.Reader.Count > 0;
 
@@ -255,6 +315,12 @@ public sealed class SyncCoordinator(IServiceScopeFactory scopeFactory, TimeProvi
                     var start = StageStart(stage, t.PositionsDone, t.PositionsTotal);
                     var end = StageEnd(stage, t.PositionsDone, t.PositionsTotal);
                     percent = Math.Max(percent, Math.Round(start + (end - start) * Math.Min(1, (double)value.Done / value.Total), 1));
+                }
+                else if (t.Market is not null && (value.Overall is not null || value.Total > 0))
+                {
+                    // A lending read has no stages; its steps report their share of the run and the task reaches 100 when it is saved.
+                    var share = value.Overall ?? (double)value.Done / value.Total;
+                    percent = Math.Max(percent, Math.Round(95.0 * Math.Clamp(share, 0, 1), 1));
                 }
                 return t with { Detail = value.Step, DetailDone = value.Done, DetailTotal = value.Total, Percent = percent };
             });
