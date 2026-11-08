@@ -14,6 +14,8 @@ public static class DependencyInjection
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<SyncCoordinator>();
         services.TryAddSingleton<IAlertNotifier, NullAlertNotifier>();
+        services.AddSingleton<LpDashboard.Application.Auth.LoginThrottle>();
+        services.AddScoped<LpDashboard.Application.Auth.AuthService>();
         services.AddScoped<SyncService>();
         services.AddScoped<PriceService>();
         services.AddScoped<MarketTickerService>();

@@ -21,6 +21,27 @@ internal sealed class WatchedAddressRepository(AppDbContext db) : IWatchedAddres
     public void Remove(WatchedAddress address) => db.WatchedAddresses.Remove(address);
 }
 
+internal sealed class AuthRepository(AppDbContext db) : IAuthRepository
+{
+    public Task<AuthCredential?> GetCredentialAsync(CancellationToken ct) =>
+        db.AuthCredentials.OrderBy(c => c.Id).FirstOrDefaultAsync(ct);
+
+    public void Add(AuthCredential credential) => db.AuthCredentials.Add(credential);
+
+    public Task<AuthSession?> FindSessionAsync(string tokenHash, CancellationToken ct) =>
+        db.AuthSessions.FirstOrDefaultAsync(s => s.TokenHash == tokenHash, ct);
+
+    public void Add(AuthSession session) => db.AuthSessions.Add(session);
+
+    public void Remove(AuthSession session) => db.AuthSessions.Remove(session);
+
+    public Task RemoveSessionsAsync(int? exceptId, CancellationToken ct) =>
+        db.AuthSessions.Where(s => exceptId == null || s.Id != exceptId).ExecuteDeleteAsync(ct);
+
+    public Task RemoveExpiredSessionsAsync(DateTime now, CancellationToken ct) =>
+        db.AuthSessions.Where(s => s.ExpiresAt <= now).ExecuteDeleteAsync(ct);
+}
+
 internal sealed class TokenRepository(AppDbContext db) : ITokenRepository
 {
     public Task<Token?> FindAsync(Chain chain, string address, CancellationToken ct) =>

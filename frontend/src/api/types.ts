@@ -16,6 +16,14 @@ export type PositionEventType =
 export interface WatchedAddress {
   address: string;
   chainFamily: "Evm" | "Solana";
+  /** The name saved with the wallet; empty when there is none. */
+  label: string;
+}
+
+export interface AuthStatus {
+  /** True until a password exists (or after a reset): the page asks for a new password. */
+  setupRequired: boolean;
+  authenticated: boolean;
 }
 
 export interface TokenDto {
@@ -335,6 +343,7 @@ export interface ProblemDetails {
   title?: string;
   detail?: string;
   status?: number;
+  code?: string;
 }
 
 export interface PnlHistoryDto {

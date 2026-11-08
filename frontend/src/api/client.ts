@@ -31,42 +31,15 @@ import type {
   PositionDetailDto,
   PositionDto,
   PositionStatus,
-  ProblemDetails,
   SnapshotPointDto,
   SyncStatus,
   TickerDto,
   WatchedAddress,
   WeeklyClaimsDto,
 } from "./types";
+import { request } from "./http";
 
-export class ApiError extends Error {
-  readonly status: number;
-
-  constructor(status: number, message: string) {
-    super(message);
-    this.status = status;
-  }
-}
-
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
-  });
-  if (!response.ok) {
-    let message = `${response.status} ${response.statusText}`;
-    try {
-      const problem = (await response.json()) as ProblemDetails;
-      message = problem.detail ?? problem.title ?? message;
-    } catch {
-      // Non-JSON error body.
-    }
-    throw new ApiError(response.status, message);
-  }
-  return response.status === 204
-    ? (undefined as T)
-    : ((await response.json()) as T);
-}
+export { ApiError } from "./http";
 
 function query(params: Record<string, string | undefined | null>) {
   const search = new URLSearchParams();
@@ -79,20 +52,16 @@ function query(params: Record<string, string | undefined | null>) {
 
 const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-/** Registers a wallet with the server (idempotent), then remembers it in this browser. */
+/** Adds a wallet (with an optional label) to the account's list, which every device shows. Idempotent. */
 export function useAddAddress() {
   const client = useQueryClient();
-  const { addAddress } = useOwner();
   return useMutation({
     mutationFn: (body: { address: string; label?: string }) =>
       request<WatchedAddress>("/api/addresses", {
         method: "POST",
-        body: JSON.stringify({ address: body.address }),
+        body: JSON.stringify({ address: body.address, label: body.label }),
       }),
-    onSuccess: (dto, body) => {
-      addAddress(dto.address, body.label);
-      void client.invalidateQueries();
-    },
+    onSuccess: () => void client.invalidateQueries(),
   });
 }
 

@@ -38,7 +38,7 @@ npm.cmd run dev
 | DB              | EF Core, `Database:Provider` = `Sqlite` (default) or `Postgres`; one migrations assembly per provider; repositories + unit of work in Application; enums/BigInteger stored as strings; DateTimes forced to UTC       |
 | Sync            | `SyncBackgroundService` every `Sync:IntervalMinutes` (15) + on startup + `POST /api/sync`; one DI scope per (owner, chain, protocol); cursor per (chain, protocol, owner) only advances when all positions succeeded |
 | Snapshots       | One per open position per `Sync:SnapshotIntervalMinutes` (60). No historical backfill                                                                                                                                |
-| Security        | localhost only, no auth; RPC URL (contains key) only in user-secrets and never logged; address input validated (EVM regex / Solana base58); CORS limited to Vite origin                                              |
+| Security        | single password login (PBKDF2, revocable server-side sessions in an HttpOnly cookie, per-IP failed-login limit, same-origin check on writes; see README "Login and wallets"); RPC URL (contains key) only in user-secrets and never logged; address input validated (EVM regex / Solana base58); CORS limited to Vite origin                                              |
 | Fee-claim weeks | ISO weeks (Monday start) in the browser's time zone (`timeZone` query param, IANA id)                                                                                                                                |
 
 ## Metric definitions (Domain/Metrics/PositionMetricsCalculator.cs)
@@ -107,8 +107,12 @@ frontend/
 
 | Method   | Path                                             | Notes                                                             |
 | -------- | ------------------------------------------------ | ----------------------------------------------------------------- |
-| GET/POST | `/api/addresses`                                 | POST `{address,label}`; 400 invalid, 409 duplicate; triggers sync |
-| DELETE   | `/api/addresses/{id}`                            |                                                                   |
+| GET/POST | `/api/addresses`                                 | the account's wallets; POST `{address,label}` is idempotent (an existing label wins); 400 invalid; triggers sync |
+| PATCH    | `/api/addresses/{address}`                       | `{label}`; empty clears it                                        |
+| DELETE   | `/api/addresses/{address}`                       | stops following and syncing; stored data is kept                  |
+| GET      | `/api/auth/status`                               | open: `{setupRequired, authenticated}`                            |
+| POST     | `/api/auth/setup`, `/api/auth/login`             | open: `{password}` → 204 + session cookie; 429 after 5 misses     |
+| POST     | `/api/auth/logout`, `logout-all`, `change-password` | needs a session; every other `/api/**` route does too (401)    |
 | GET      | `/api/positions?owner=&status=&protocol=&chain=` | defaults to all watched wallets                                   |
 | GET      | `/api/positions/{id}`                            | position + events                                                 |
 | GET      | `/api/positions/{id}/snapshots?from=&to=`        | value, value+fees, HODL series                                    |

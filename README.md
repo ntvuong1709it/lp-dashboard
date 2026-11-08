@@ -34,7 +34,7 @@ BASE_RPC_URL=https://base-mainnet.g.alchemy.com/v2/<KEY>
 docker compose up --build   # http://localhost:5080
 ```
 
-The database is `data/lpdashboard.db` in the repo folder (git-ignored; set `DATA_DIR` in `.env` to use another folder). Compose runs SQLite in DELETE journal mode because WAL does not work on Windows bind mounts. The port is bound to `127.0.0.1` only because the app has no authentication.
+The database is `data/lpdashboard.db` in the repo folder (git-ignored; set `DATA_DIR` in `.env` to use another folder). Compose runs SQLite in DELETE journal mode because WAL does not work on Windows bind mounts. The app asks for a password (see "Login and wallets"); the port is still bound to `127.0.0.1`, so it is not offered to your LAN unless you change it.
 
 ## Configuration
 
@@ -48,6 +48,9 @@ Defaults are in `backend/src/LpDashboard.Api/appsettings.json`; override with us
 | `Alerts:Telegram:BotToken` / `ChatId` | empty | Enables Telegram alerts (below). Never logged. |
 | `Database:Provider` | `Sqlite` | `Postgres` is wired but has no migrations yet. |
 | `ConnectionStrings:Default` | `Data Source=lpdashboard.db` | Relative paths resolve against the API content root. |
+| `Auth:ResetPassword` | empty | Forgot the password? Set any new value (e.g. `reset-1`) and restart: the setup page opens once and your data stays. See "Login and wallets". |
+| `ASPNETCORE_FORWARDEDHEADERS_ENABLED` | off | Set to `true` behind a TLS-terminating proxy (Azure sets it via `deploy/azure.ps1`) so the login cookie gets `Secure` and failed-login limits use the real client IP. Leave it off when the app is reachable directly, because the headers are then spoofable. |
+| `Cors:Origins` | `["http://localhost:5173"]` | Also the origins allowed to make changing requests (login, add wallet…). Add your dev origin if Vite runs on another port. |
 
 Without an RPC URL the API still runs; the sync status reports "No chain providers configured".
 
@@ -71,15 +74,22 @@ The **Borrow** page and the "Interest coverage" card on **Earnings** compare wha
 - **Other lenders (e.g. Binance)** are entered by hand under Borrow → Add manual loan: the debt and APR with a date for every change, optional collateral amounts and liquidation LTV. The app holds no exchange keys.
 - Interest is simple APR; a week is 7 days and a month a twelfth of the year. Nothing is ever sent or executed: the page only shows numbers and suggestions.
 
-## Wallets and privacy
+## Login and wallets
 
-There is no login. The list of wallets you follow (and their labels) is stored in your browser's localStorage, and every API call names the wallet(s) it wants (`?owner=0x…[,0x…]`, required). The server never lists the wallets it tracks, so a visitor to a deployed URL starts empty and must enter an address. "Forget" only removes it from your browser; its synced data stays in the database, so adding it again restores everything immediately.
+The site has one account protected by one password (8 to 128 characters, no username). Log in once per device and the wallets, their labels and all stored data are the same everywhere; nothing needs retyping.
 
-This is not secrecy: positions are public on-chain data, and anyone who knows a wallet address can look it up, or fetch a position by id. Other things to know when hosting it publicly:
+- **First run.** A new server shows "Set your password". Until it is set, every `/api` call except `/health` answers 401, so nothing is visible, **but whoever opens the page first can set the password**. Do it right after deploying, before sharing the URL.
+- **Sessions.** A random token in an `HttpOnly`, `SameSite=Lax` cookie (`Secure` over HTTPS) that lasts up to a year and renews while you use it. Only its SHA-256 is stored, so a leaked database cannot be used to sign in. **Log out** ends this device; **Addresses → Account** changes the password (which signs out other devices) or signs out every device.
+- **Brute force.** Five wrong passwords from one address pause login from it for 15 minutes; each wrong answer is also delayed.
+- **Forgot the password.** Set `Auth__ResetPassword` to a value you have not used before (e.g. `reset-1`) and restart. All devices are signed out and the setup page opens once, still protected by nothing but who gets there first, so do it straight away. Your data is untouched. Leaving the setting in place does not reopen setup on later restarts; use a different value to reset again.
+- **Wallets** are saved to the account (`GET/POST /api/addresses`, `PATCH`/`DELETE …/{address}`). Removing one stops syncing it; its stored data stays, so adding it again restores everything. Wallets that were kept in an older version's browser storage are uploaded, labels included, the first time you log in on that browser.
+- API calls still name the wallet(s) they want (`?owner=0x…[,0x…]`). Once logged in you can look up any address; the password is the only gate.
 
-- `/api/backup` is disabled unless `Backup:Enabled` is true (it contains every wallet ever entered). The Docker compose file enables it because it only listens on localhost.
-- The background sync keeps syncing every wallet ever entered, and out-of-range alerts go to the one configured Telegram chat for all of them.
-- Run a single instance; sync state is in memory.
+Other things to know when hosting it publicly:
+
+- `/api/backup` is disabled unless `Backup:Enabled` is true (it contains every wallet ever entered). It now needs a login too. The Docker compose file enables it because it only listens on localhost.
+- The background sync keeps syncing every wallet in the account, and out-of-range alerts go to the one configured Telegram chat.
+- Run a single instance; sync state, sessions' renewal and the login limiter are in memory or in one SQLite file.
 
 ## Backups
 
@@ -125,7 +135,8 @@ $env:BASE_RPC_URL = "https://base-mainnet.g.alchemy.com/v2/<key>"
 
 Things to know before exposing it:
 
-- **No authentication.** Anyone with the URL can use it and trigger syncs (RPC quota). Put App Service Authentication (Entra ID) in front, or restrict access by IP, unless you want it public; see "Wallets and privacy".
+- **Claim the site right after the first deploy.** It is protected by one password, but until you set it the setup page is open to anyone who finds the URL. Open `https://<name>.azurewebsites.net` straight after `deploy/azure.ps1` (and after the first CI deploy of a version that adds login) and set the password; see "Login and wallets". For more protection, App Service Authentication or an IP restriction can sit in front as well.
+- The script sets `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`, so the app sees HTTPS (the cookie is `Secure`) and the real client IP (the login limiter works per visitor).
 - **SQLite on `/home`** (persistent, SMB-backed) with `DELETE` journaling. Keep the app at **one instance** (no scale-out); the background sync and the file are single-writer. For more than that, Postgres needs a migrations assembly first (not built).
 - `Backup:Enabled` is `false` there. Secrets (RPC URL, Telegram) are app settings, not in the image or repo.
 - Health probe: `/health`.

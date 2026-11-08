@@ -11,6 +11,7 @@ import { SetupScreen } from "./SetupScreen";
 import { UpdatedAgo } from "./UpdatedAgo";
 import { SyncErrorList } from "./ui";
 import { ProgressBar, SyncProgressDetails, describeSync } from "./SyncProgress";
+import { useAuth } from "../lib/auth";
 import { shortAddress } from "../lib/format";
 import { useOwner } from "../lib/owner";
 import { setTheme, useTheme } from "../lib/theme";
@@ -71,6 +72,7 @@ export function Layout() {
             <HideBalancesToggle />
             <ThemeToggle />
             <SyncIndicator />
+            <LogoutButton />
           </div>
         </div>
         <div className="border-t border-slate-800">
@@ -94,11 +96,24 @@ function Content() {
   const { addresses } = useOwner();
   const needsSetup = health?.providers.length === 0;
 
-  // The wallets a visitor follows live in their browser, so a new visitor starts by entering one.
+  // A brand-new account has no wallets yet, so it starts by entering one.
   if (addresses.length === 0 && pathname !== "/addresses")
     return <Navigate to="/addresses" replace />;
   if (needsSetup && pathname !== "/addresses") return <SetupScreen />;
   return <Outlet />;
+}
+
+function LogoutButton() {
+  const { logout } = useAuth();
+  return (
+    <button
+      className="rounded-md border border-slate-700 px-2 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
+      title="Sign out of this device"
+      onClick={() => void logout()}
+    >
+      Log out
+    </button>
+  );
 }
 
 function ThemeToggle() {

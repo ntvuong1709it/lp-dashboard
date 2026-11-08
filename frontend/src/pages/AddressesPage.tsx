@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useAddAddress, useHealth, useSyncStatus } from "../api/client";
+import { AccountPanel } from "../components/AccountPanel";
 import { ResyncControls } from "../components/ResyncControls";
 import {
   CopyButton,
@@ -17,10 +18,16 @@ function LabelCell({ address, label }: { address: string; label: string }) {
   const { setLabel } = useOwner();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(label);
+  const [error, setError] = useState<unknown>(null);
 
-  const save = () => {
-    setLabel(address, value);
-    setEditing(false);
+  const save = async () => {
+    try {
+      await setLabel(address, value);
+      setError(null);
+      setEditing(false);
+    } catch (e) {
+      setError(e);
+    }
   };
 
   if (!editing) {
@@ -49,13 +56,13 @@ function LabelCell({ address, label }: { address: string; label: string }) {
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === "Enter") save();
+          if (e.key === "Enter") void save();
           if (e.key === "Escape") setEditing(false);
         }}
       />
       <button
         className="text-xs text-sky-400 hover:underline"
-        onClick={save}
+        onClick={() => void save()}
       >
         Save
       </button>
@@ -65,6 +72,7 @@ function LabelCell({ address, label }: { address: string; label: string }) {
       >
         Cancel
       </button>
+      {error != null && <ErrorText error={error} />}
     </span>
   );
 }
@@ -76,6 +84,7 @@ export function AddressesPage() {
   const { addresses, selected, setOwner, removeAddress } = useOwner();
   const [address, setAddress] = useState("");
   const [label, setLabel] = useState("");
+  const [removeError, setRemoveError] = useState<unknown>(null);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -98,9 +107,8 @@ export function AddressesPage() {
             Enter a wallet address to get started
           </div>
           The dashboard is read-only: it reads positions from the chain for the
-          address you give it. The addresses you follow are remembered in this
-          browser only, so anyone else opening this site starts with an empty
-          list.
+          address you give it. The wallets you add are saved to your account,
+          so every device you sign in on shows the same list.
         </div>
       )}
 
@@ -134,12 +142,17 @@ export function AddressesPage() {
         )}
         <p className="mt-2 text-xs text-slate-500">
           Solana addresses are stored but not synced yet (EVM/Base only for
-          now). The first sync of a wallet can take a while. Labels are kept in
-          this browser only.
+          now). The first sync of a wallet can take a while. Wallets and labels
+          are saved to your account and shared by all your devices.
         </p>
       </Panel>
 
       <Panel title="Your wallets">
+        {removeError != null && (
+          <div className="mb-2">
+            <ErrorText error={removeError} />
+          </div>
+        )}
         {!addresses.length ? (
           <Empty>No wallets yet.</Empty>
         ) : (
@@ -181,14 +194,15 @@ export function AddressesPage() {
                         onClick={() => {
                           if (
                             !confirm(
-                              `Forget ${a.address} in this browser? Its data stays on the server, so adding it again brings everything back.`,
+                              `Remove ${a.address} from your wallets? It stops syncing on every device. Its stored data stays on the server, so adding it again brings everything back.`,
                             )
                           )
                             return;
-                          removeAddress(a.address);
+                          setRemoveError(null);
+                          removeAddress(a.address).catch(setRemoveError);
                         }}
                       >
-                        Forget
+                        Remove
                       </button>
                     </td>
                   </tr>
@@ -243,6 +257,8 @@ export function AddressesPage() {
           </div>
         )}
       </Panel>
+
+      <AccountPanel />
 
       {health?.backupEnabled && (
         <Panel title="Backup">

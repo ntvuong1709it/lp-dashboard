@@ -67,6 +67,7 @@ public static class DependencyInjection
         services.AddScoped<ISyncCursorRepository, SyncCursorRepository>();
         services.AddScoped<IManualLoanRepository, ManualLoanRepository>();
         services.AddScoped<ILendingRepository, LendingRepository>();
+        services.AddScoped<IAuthRepository, AuthRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         return services;
     }

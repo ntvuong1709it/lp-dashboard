@@ -1,6 +1,8 @@
 using System.Text.Json.Serialization;
+using LpDashboard.Api.Auth;
 using LpDashboard.Api.Background;
 using LpDashboard.Application;
+using LpDashboard.Application.Auth;
 using LpDashboard.Application.Sync;
 using LpDashboard.Infrastructure;
 using LpDashboard.Infrastructure.Persistence;
@@ -15,6 +17,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 
 builder.Services.Configure<SyncOptions>(builder.Configuration.GetSection(SyncOptions.SectionName));
+builder.Services.Configure<AuthOptions>(builder.Configuration.GetSection(AuthOptions.SectionName));
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration, builder.Environment.ContentRootPath);
 builder.Services.AddHostedService<SyncBackgroundService>();
@@ -27,6 +30,8 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync();
+    // A requested password reset signs every device out before anyone can use the old sessions.
+    await scope.ServiceProvider.GetRequiredService<AuthService>().ApplyPendingResetAsync(CancellationToken.None);
 }
 
 app.UseExceptionHandler();
@@ -38,6 +43,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors();
+app.UseMiddleware<AuthMiddleware>();
 
 // Serve the built frontend (Docker image / `npm run build` copied into wwwroot) when present.
 var spa = app.Environment.WebRootFileProvider.GetFileInfo("index.html");

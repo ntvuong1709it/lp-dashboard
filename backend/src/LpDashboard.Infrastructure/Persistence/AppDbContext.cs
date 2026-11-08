@@ -23,6 +23,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<LendingAccount> LendingAccounts => Set<LendingAccount>();
     public DbSet<LendingReserve> LendingReserves => Set<LendingReserve>();
     public DbSet<LendingDay> LendingDays => Set<LendingDay>();
+    public DbSet<AuthCredential> AuthCredentials => Set<AuthCredential>();
+    public DbSet<AuthSession> AuthSessions => Set<AuthSession>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
     {
@@ -137,6 +139,19 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             e.Property(x => x.Owner).HasMaxLength(64);
             e.Property(x => x.Reserve).HasMaxLength(64);
             e.HasIndex(x => new { x.Chain, x.Owner, x.Reserve, x.Date }).IsUnique();
+        });
+
+        modelBuilder.Entity<AuthCredential>(e =>
+        {
+            e.Property(x => x.PasswordHash).HasMaxLength(256);
+            e.Property(x => x.ResetNonce).HasMaxLength(200);
+        });
+
+        modelBuilder.Entity<AuthSession>(e =>
+        {
+            e.Property(x => x.TokenHash).HasMaxLength(64);
+            e.Property(x => x.UserAgent).HasMaxLength(200);
+            e.HasIndex(x => x.TokenHash).IsUnique();
         });
 
         ApplyGlobalConverters(modelBuilder);

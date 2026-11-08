@@ -102,6 +102,25 @@ public interface ILendingRepository
     void Remove(LendingReserve reserve);
 }
 
+public interface IAuthRepository
+{
+    /// <summary>The single credential row, tracked so it can be updated.</summary>
+    Task<AuthCredential?> GetCredentialAsync(CancellationToken ct);
+
+    void Add(AuthCredential credential);
+
+    Task<AuthSession?> FindSessionAsync(string tokenHash, CancellationToken ct);
+
+    void Add(AuthSession session);
+
+    void Remove(AuthSession session);
+
+    /// <summary>Deletes sessions immediately (not through the unit of work); keeps <paramref name="exceptId"/> if given.</summary>
+    Task RemoveSessionsAsync(int? exceptId, CancellationToken ct);
+
+    Task RemoveExpiredSessionsAsync(DateTime now, CancellationToken ct);
+}
+
 public interface IUnitOfWork
 {
     Task SaveChangesAsync(CancellationToken ct);

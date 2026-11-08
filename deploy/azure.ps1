@@ -45,6 +45,8 @@ $settings = @(
     "WEBSITES_ENABLE_APP_SERVICE_STORAGE=true",
     "ConnectionStrings__Default=Data Source=/home/data/lpdashboard.db",
     "Database__SqliteJournalMode=DELETE",
+    # TLS ends at Azure's proxy: trust X-Forwarded-Proto/For so the login cookie is Secure and the limiter sees the real IP.
+    "ASPNETCORE_FORWARDEDHEADERS_ENABLED=true",
     "Evm__Chains__0__RpcUrl=$env:BASE_RPC_URL",
     "Backup__Enabled=false"
 )
