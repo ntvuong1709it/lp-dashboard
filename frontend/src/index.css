@@ -30,6 +30,16 @@
   --wallet-5: #fb923c;
   --wallet-6: #22d3ee;
   --marker: #fff;
+  /* Section bands in the "What changed" table: collateral sky, debt amber, ratio violet (green/red stay for up/down). */
+  --band-col-bg: #0e2a40;
+  --band-col: #7dd3fc;
+  --band-col-bar: #0ea5e9;
+  --band-debt-bg: #34260d;
+  --band-debt: #fbbf24;
+  --band-debt-bar: #f59e0b;
+  --band-ratio-bg: #261c4a;
+  --band-ratio: #c4b5fd;
+  --band-ratio-bar: #8b5cf6;
   color-scheme: dark;
 }
 
@@ -69,6 +79,15 @@
   --wallet-5: #c2410c;
   --wallet-6: #0e7490;
   --marker: #0f1720;
+  --band-col-bg: #e0f0fa;
+  --band-col: #0369a1;
+  --band-col-bar: #0369a1;
+  --band-debt-bg: #fdf0dc;
+  --band-debt: #b45309;
+  --band-debt-bar: #b45309;
+  --band-ratio-bg: #ede7fb;
+  --band-ratio: #6d28d9;
+  --band-ratio-bar: #6d28d9;
 }
 
 h1,

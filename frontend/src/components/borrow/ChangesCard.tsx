@@ -67,7 +67,7 @@ function Combined({ days, loan }: { days: number; loan: string }) {
         <>
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
-              <div className="mb-1 text-xs uppercase tracking-[.05em] text-slate-400">Collateral</div>
+              <Band tone="col">Collateral</Band>
               <Row label={`Start, ${shortDay(c.from)}`} strong>{formatUsd(c.collateralStartUsd)}</Row>
               <Row label="Price moves">{good(c.priceMovesUsd)}</Row>
               <Row label="Deposits and withdrawals">{good(c.depositsUsd)}</Row>
@@ -75,7 +75,7 @@ function Combined({ days, loan }: { days: number; loan: string }) {
               <Row label="Now" strong top>{nowWithPct(c.collateralStartUsd, c.collateralEndUsd)}</Row>
             </div>
             <div>
-              <div className="mb-1 text-xs uppercase tracking-[.05em] text-slate-400">Debt</div>
+              <Band tone="debt">Debt</Band>
               <Row label={`Start, ${shortDay(c.from)}`} strong>{formatUsd(c.debtStartUsd)}</Row>
               <Row label="Interest added">{bad(c.interestUsd)}</Row>
               <Row label="Borrowed or repaid">{bad(c.borrowedUsd)}</Row>
@@ -96,8 +96,8 @@ function Summary({ c }: { c: ChangesDto }) {
   const moved = c.ratioEnd < c.ratioStart ? "fell" : "rose";
   return (
     <>
-      <p className="mt-3 text-sm">
-        Collateral ÷ debt {moved} from <b className="num">{c.ratioStart.toFixed(2)}×</b> to <b className="num">{c.ratioEnd.toFixed(2)}×</b>.
+      <p className={`mt-4 px-2.5 py-2 text-sm ${TONES.ratio.band} ${TONES.ratio.bar}`}>
+        <b className="mr-1.5 text-[15px]">Collateral ÷ debt</b> {moved} from <b className="num">{c.ratioStart.toFixed(2)}×</b> to <b className="num">{c.ratioEnd.toFixed(2)}×</b>.
         {driver && (
           <>
             {" "}Biggest driver: <b>{driver.name}</b> (
@@ -164,34 +164,27 @@ function ByWallet({ days, loan, wallets }: { days: number; loan: string; wallets
                 </tr>
               </thead>
               <tbody>
-                <Section title="Collateral" columns={columns} />
+                <Section title="Collateral" tone="col" columns={columns} />
                 <Line label={`Start${from ? `, ${shortDay(from)}`: ""}`} columns={columns} value={(c) => formatUsd(c.collateralStartUsd)} />
                 <Line label="Price moves" columns={columns} value={(c) => good(c.priceMovesUsd)} />
                 <Line label="Deposits and withdrawals" columns={columns} value={(c) => good(c.depositsUsd)} />
                 {any((c) => c.supplyYieldUsd) && <Line label="Aave supply yield" columns={columns} value={(c) => good(c.supplyYieldUsd)} />}
-                <Line label="Now" columns={columns} value={(c) => nowWithPct(c.collateralStartUsd, c.collateralEndUsd)} total />
+                <Line label="Now" columns={columns} value={(c) => nowWithPct(c.collateralStartUsd, c.collateralEndUsd)} total tone="col" />
 
-                <Section title="Debt" columns={columns} />
+                <Section title="Debt" tone="debt" columns={columns} />
                 <Line label={`Start${from ? `, ${shortDay(from)}`: ""}`} columns={columns} value={(c) => formatUsd(c.debtStartUsd)} />
                 <Line label="Interest added" columns={columns} value={(c) => bad(c.interestUsd)} />
                 <Line label="Borrowed or repaid" columns={columns} value={(c) => bad(c.borrowedUsd)} />
                 {any((c) => c.debtPriceMovesUsd, 0.5) && <Line label="Debt asset price" columns={columns} value={(c) => bad(c.debtPriceMovesUsd)} />}
-                <Line label="Now" columns={columns} value={(c) => nowWithPct(c.debtStartUsd, c.debtEndUsd, true)} total />
+                <Line label="Now" columns={columns} value={(c) => nowWithPct(c.debtStartUsd, c.debtEndUsd, true)} total tone="debt" />
 
-                <Section title="Collateral ÷ debt" columns={columns} />
-                <Line label="Start → now" columns={columns} value={ratioCell} total />
+                <Section title="Collateral ÷ debt" tone="ratio" columns={columns} />
+                <Line label="Start → now" columns={columns} value={ratioCell} total tone="ratio" />
+                <Line label="Biggest driver" columns={columns} value={driverCell} wrap />
               </tbody>
             </table>
           </div>
 
-          <div className="mt-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-            {columns.map((c) => (
-              <div key={c.key} className="min-w-0 rounded-md bg-slate-800/60 px-3 py-2.5 text-sm">
-                <span className="mb-1 block font-semibold">{c.head}</span>
-                <Takeaway c={c.data!} />
-              </div>
-            ))}
-          </div>
           <p className="mt-3 text-xs text-slate-500">
             Each column is worked out day by day, so each deposit counts at the price of its day and the parts add up to its total.
             Only wallets with a loan are listed. A price move in the debt asset shows only when it is over 50 cents.
@@ -202,14 +195,39 @@ function ByWallet({ days, loan, wallets }: { days: number; loan: string; wallets
   );
 }
 
-function Section({ title, columns }: { title: string; columns: Column[] }) {
+type Tone = "col" | "debt" | "ratio";
+
+/** Written out in full so Tailwind sees every class. `band` is the heading row, `tint` the "Now" row under it. */
+const TONES: Record<Tone, { band: string; bar: string; tint: string }> = {
+  col: { band: "bg-(--band-col-bg) text-(--band-col)", bar: "shadow-[inset_3px_0_0_var(--band-col-bar)]", tint: "bg-(--band-col-bg)" },
+  debt: { band: "bg-(--band-debt-bg) text-(--band-debt)", bar: "shadow-[inset_3px_0_0_var(--band-debt-bar)]", tint: "bg-(--band-debt-bg)" },
+  ratio: { band: "bg-(--band-ratio-bg) text-(--band-ratio)", bar: "shadow-[inset_3px_0_0_var(--band-ratio-bar)]", tint: "bg-(--band-ratio-bg)" },
+};
+
+/** The same band as a block heading, for the single-wallet layout. */
+function Band({ tone, children }: { tone: Tone; children: ReactNode }) {
+  const t = TONES[tone];
+  return <div className={`mb-1 px-2.5 py-2 text-[15px] font-semibold ${t.band} ${t.bar}`}>{children}</div>;
+}
+
+/** A tinted heading band for Collateral, Debt or Collateral ÷ debt, with a gap above it. */
+function Section({ title, tone, columns }: { title: string; tone: Tone; columns: Column[] }) {
+  const t = TONES[tone];
   return (
-    <tr>
-      <td className="pt-4 text-[11px] uppercase tracking-[.05em] text-slate-400">{title}</td>
-      {columns.map((c) => (
-        <td key={c.key} className={c.combined ? "bg-slate-800/60" : ""} />
-      ))}
-    </tr>
+    <>
+      <tr aria-hidden>
+        <td className="h-3" />
+        {columns.map((c) => (
+          <td key={c.key} className={c.combined ? "bg-slate-800/60" : ""} />
+        ))}
+      </tr>
+      <tr>
+        <th scope="rowgroup" className={`px-2.5 py-2 text-left text-[15px] font-semibold ${t.band} ${t.bar}`}>{title}</th>
+        {columns.map((c) => (
+          <td key={c.key} className={t.band} />
+        ))}
+      </tr>
+    </>
   );
 }
 
@@ -218,17 +236,26 @@ function Line({
   columns,
   value,
   total,
+  tone,
+  wrap,
 }: {
   label: string;
   columns: Column[];
   value: (c: ChangesDto) => ReactNode;
   total?: boolean;
+  tone?: Tone;
+  wrap?: boolean;
 }) {
+  const t = tone ? TONES[tone] : null;
+  const bg = (c?: Column) => (t ? t.tint : c?.combined ? "bg-slate-800/60" : "");
   return (
-    <tr className={total ? "border-t border-slate-700 font-semibold" : ""}>
-      <td className={`whitespace-nowrap px-2.5 py-1.5 ${total ? "" : "text-slate-400"}`}>{label}</td>
+    <tr className={total ? `font-semibold ${t ? "text-[15px]" : "border-t border-slate-700"}` : ""}>
+      <td className={`whitespace-nowrap px-2.5 py-1.5 ${total ? "" : "text-slate-400"} ${bg()} ${t?.bar ?? ""}`}>{label}</td>
       {columns.map((c) => (
-        <td key={c.key} className={`whitespace-nowrap px-2.5 py-1.5 text-right num ${c.combined ? "bg-slate-800/60" : ""}`}>
+        <td
+          key={c.key}
+          className={`px-2.5 py-1.5 text-right ${wrap ? "align-top" : "num whitespace-nowrap"} ${bg(c)}`}
+        >
           {c.data ? value(c.data) : null}
         </td>
       ))}
@@ -246,19 +273,14 @@ function ratioCell(c: ChangesDto) {
   );
 }
 
-function Takeaway({ c }: { c: ChangesDto }) {
-  if (c.ratioStart == null || c.ratioEnd == null) return <span className="text-slate-500">No debt to compare.</span>;
-  const driver = biggestDriver(c);
+/** What moved the ratio most, in the same column as the numbers above it. */
+function driverCell(c: ChangesDto) {
+  const driver = c.ratioStart == null || c.ratioEnd == null ? null : biggestDriver(c);
+  if (!driver) return <span className="text-slate-500">–</span>;
   return (
-    <span>
-      Ratio {c.ratioEnd < c.ratioStart ? "fell" : "rose"} from <b className="num">{c.ratioStart.toFixed(2)}×</b> to{" "}
-      <b className="num">{c.ratioEnd.toFixed(2)}×</b>.
-      {driver && (
-        <>
-          {" "}Biggest driver: {driver.name} (
-          <span className={`num ${driver.usd >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{formatUsd(driver.usd, true)}</span>).
-        </>
-      )}
-    </span>
+    <>
+      <span className="block text-slate-300">{driver.name}</span>
+      <span className={`num ${driver.usd >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{formatUsd(driver.usd, true)}</span>
+    </>
   );
 }
