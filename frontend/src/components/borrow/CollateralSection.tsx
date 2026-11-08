@@ -13,6 +13,7 @@ import {
 import { useCollateralHistory } from "../../api/client";
 import type { LoanDto, TrendEventDto } from "../../api/types";
 import { shortDay } from "../../lib/borrow";
+import { weekdayDate } from "../../lib/dates";
 import { chart as theme } from "../../lib/chartTheme";
 import { formatUsd } from "../../lib/format";
 import { useOwner } from "../../lib/owner";
@@ -150,7 +151,7 @@ export function CollateralSection({
                 <CartesianGrid stroke={theme.grid} vertical={false} />
                 <XAxis dataKey="date" stroke={theme.axis} fontSize={11} tickFormatter={shortDay} minTickGap={28} />
                 <YAxis stroke={theme.axis} fontSize={11} tickFormatter={(v) => `${Number(v).toFixed(1)}×`} width={44} domain={["auto", "auto"]} />
-                <Tooltip contentStyle={tip} labelFormatter={(d) => shortDay(String(d))} formatter={(v) => [`${Number(v).toFixed(2)}×`, "Collateral ÷ debt"]} />
+                <Tooltip contentStyle={tip} labelFormatter={(d) => weekdayDate(String(d))} formatter={(v) => [`${Number(v).toFixed(2)}×`, "Collateral ÷ debt"]} />
                 {data.warnRatio != null && <ReferenceLine y={data.warnRatio} stroke="var(--color-amber-400)" strokeDasharray="4 3" label={{ value: `warn ${data.warnRatio.toFixed(2)}×`, fill: "var(--color-amber-400)", fontSize: 10, position: "insideTopRight" }} />}
                 {data.liquidationRatio != null && <ReferenceLine y={data.liquidationRatio} stroke={ROSE} strokeDasharray="4 3" label={{ value: `liquidation ${data.liquidationRatio.toFixed(2)}×`, fill: ROSE, fontSize: 10, position: "insideBottomRight" }} />}
                 <Line dataKey="ratio" name="Collateral ÷ debt" stroke="var(--color-slate-100)" strokeWidth={2} dot={false} />
@@ -182,7 +183,7 @@ function TrendTooltip({
   const events = eventsByDate.get(String(label)) ?? [];
   return (
     <div className="rounded-md px-3 py-2 text-xs shadow-lg" style={tip}>
-      <div className="mb-1 text-slate-300">{shortDay(String(label))}</div>
+      <div className="mb-1 text-slate-300">{weekdayDate(String(label))}</div>
       {payload.map((p) => (
         <div key={p.name} className="flex items-center justify-between gap-4" style={{ color: p.color }}>
           <span>{p.name}</span>

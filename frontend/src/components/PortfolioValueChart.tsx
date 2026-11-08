@@ -1,4 +1,5 @@
 import { chart } from "../lib/chartTheme";
+import { weekdayDateTime } from "../lib/dates";
 import { useMemo } from "react";
 import { usePersistentState } from "../lib/usePersistentState";
 import {
@@ -110,7 +111,7 @@ export function PortfolioValueChart({ owner }: { owner: string | null }) {
                       | number
                       | undefined;
                     const estimated = items?.[0]?.payload?.estimated as boolean | undefined;
-                    return `${new Date(t as number).toLocaleString()}${count ? ` · ${count} positions` : ""}${estimated ? " · estimated" : ""}`;
+                    return `${weekdayDateTime(t as number)}${count ? ` · ${count} positions` : ""}${estimated ? " · estimated" : ""}`;
                   }}
                   formatter={(v) => formatUsd(v as number)}
                 />

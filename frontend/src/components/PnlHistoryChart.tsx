@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { usePnlHistory } from "../api/client";
 import { chart } from "../lib/chartTheme";
+import { weekdayOf } from "../lib/dates";
 import { formatUsd } from "../lib/format";
 import { Empty, ErrorText, Skeleton } from "./ui";
 
@@ -62,7 +63,7 @@ export function CumulativePnlChart({
           <ReferenceLine y={0} stroke={chart.axis} strokeDasharray="3 3" />
           <Tooltip
             contentStyle={tip}
-            labelFormatter={(t) => new Date(t as number).toLocaleDateString()}
+            labelFormatter={(t) => weekdayOf(t as number)}
             formatter={(v) => formatUsd(v as number)}
           />
           <Line dataKey="pnl" name="Cumulative P/L" stroke={chart.a} dot={false} />

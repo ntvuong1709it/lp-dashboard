@@ -1,5 +1,6 @@
 import { isNearEdge } from "../lib/attention";
 import { chart } from "../lib/chartTheme";
+import { weekdayDate, weekdayDateTime } from "../lib/dates";
 import { useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
@@ -548,7 +549,7 @@ function ValueChart({ id }: { id: number }) {
                   background: chart.tooltip.background,
                   border: chart.tooltip.border,
                 }}
-                labelFormatter={(t) => new Date(t as number).toLocaleString()}
+                labelFormatter={(t) => weekdayDateTime(t as number)}
                 formatter={(v) => formatUsd(v as number)}
               />
               <Legend />
@@ -623,6 +624,7 @@ function EarningsPerDayPanel({ id }: { id: number }) {
                   background: chart.tooltip.background,
                   border: chart.tooltip.border,
                 }}
+                labelFormatter={(d) => weekdayDate(String(d))}
                 formatter={(v) => formatUsd(v as number)}
               />
               <Legend />

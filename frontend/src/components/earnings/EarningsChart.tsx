@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import type { DailyEarningsDto } from "../../api/types";
 import { chart as theme } from "../../lib/chartTheme";
+import { weekdayDate } from "../../lib/dates";
 import { chartSeries, grainAverage, shortDate, type ChartPoint, type Grain } from "../../lib/earnings";
 import { formatUsd } from "../../lib/format";
 import { usePersistentState } from "../../lib/usePersistentState";
@@ -66,7 +67,7 @@ function tickLabel(grain: Grain, date: string) {
 function tipLabel(grain: Grain, p: ChartPoint) {
   const text =
     grain === "day"
-      ? shortDate(p.date)
+      ? weekdayDate(p.date)
       : grain === "week"
         ? `Week of ${shortDate(p.date)} – ${shortDate(p.end)}`
         : monthLabel(p.date, true);

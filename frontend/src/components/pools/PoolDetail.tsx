@@ -3,6 +3,7 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Too
 import { usePoolHistory } from "../../api/client";
 import type { PoolDto, PoolHistoryPointDto, PoolHistorySeriesDto } from "../../api/types";
 import { chart } from "../../lib/chartTheme";
+import { weekdayDate } from "../../lib/dates";
 import { protocolLabels } from "../../lib/format";
 import { UNRELIABLE_VOLUME_NOTE, apr, feeLabel, hasUnreliableVolume, usd } from "../../lib/pools";
 import { ErrorText, Skeleton } from "../ui";
@@ -155,7 +156,7 @@ function MetricChart({ metric: m, pool, history }: { metric: Metric; pool: PoolD
       <Tooltip
         contentStyle={tip}
         cursor={{ fill: chart.cursor, stroke: chart.axis }}
-        labelFormatter={(d) => shortDate(String(d))}
+        labelFormatter={(d) => weekdayDate(String(d))}
         formatter={(v) => [m.format(v as number), m.label]}
       />
     </>

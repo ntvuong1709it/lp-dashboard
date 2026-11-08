@@ -14,6 +14,7 @@ import {
 import type { DailyCoverageDto } from "../../api/types";
 import { shortDay } from "../../lib/borrow";
 import { chart as theme } from "../../lib/chartTheme";
+import { weekdayDate } from "../../lib/dates";
 import { formatUsd } from "../../lib/format";
 import { Panel } from "../ui";
 
@@ -50,7 +51,7 @@ export function IncomeChart({ days }: { days: DailyCoverageDto[] }) {
             <Tooltip
               cursor={{ fill: theme.cursor }}
               contentStyle={tip}
-              labelFormatter={(d) => shortDay(String(d))}
+              labelFormatter={(d) => weekdayDate(String(d))}
               formatter={(v, name) => [formatUsd(v as number), name]}
             />
             <Bar dataKey="feesUsd" name="Swap fees" stackId="a" fill={theme.a} />
@@ -73,7 +74,7 @@ export function IncomeChart({ days }: { days: DailyCoverageDto[] }) {
             <ReferenceLine y={0} stroke={theme.axis} strokeDasharray="3 3" />
             <Tooltip
               contentStyle={tip}
-              labelFormatter={(d) => shortDay(String(d))}
+              labelFormatter={(d) => weekdayDate(String(d))}
               formatter={(v) => [formatUsd(v as number, true), "Net carry"]}
             />
             <Area dataKey="cumulative" name="Net carry" stroke={theme.a} fill={theme.a} fillOpacity={0.15} strokeWidth={2} />
