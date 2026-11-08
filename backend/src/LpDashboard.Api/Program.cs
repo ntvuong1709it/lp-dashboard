@@ -6,6 +6,7 @@ using LpDashboard.Application.Auth;
 using LpDashboard.Application.Sync;
 using LpDashboard.Infrastructure;
 using LpDashboard.Infrastructure.Persistence;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,6 +34,13 @@ using (var scope = app.Services.CreateScope())
     // A requested password reset signs every device out before anyone can use the old sessions.
     await scope.ServiceProvider.GetRequiredService<AuthService>().ApplyPendingResetAsync(CancellationToken.None);
 }
+
+// Behind Azure's TLS-terminating proxy the app only sees http; trust X-Forwarded-Proto/Host so Request.Scheme/IsHttps
+// (origin check, Secure cookie) reflect what the browser used. The proxy is the only way in, so default networks are cleared.
+var forwarded = new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost };
+forwarded.KnownIPNetworks.Clear();
+forwarded.KnownProxies.Clear();
+app.UseForwardedHeaders(forwarded);
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
