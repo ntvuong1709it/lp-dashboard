@@ -40,15 +40,6 @@ export function Layout() {
             <NavLink to="/" end className={navClass}>
               Overview
             </NavLink>
-            <NavLink to="/positions" className={navClass}>
-              Positions
-            </NavLink>
-            <NavLink to="/pools" className={navClass}>
-              Pools
-            </NavLink>
-            <NavLink to="/pnl" className={navClass}>
-              Profit &amp; loss
-            </NavLink>
             <NavLink
               to="/fees"
               className={({ isActive }) =>
@@ -60,8 +51,14 @@ export function Layout() {
             <NavLink to="/borrow" className={navClass}>
               Borrow
             </NavLink>
-            <NavLink to="/features" className={navClass}>
-              Features
+            <NavLink to="/positions" className={navClass}>
+              Positions
+            </NavLink>
+            <NavLink to="/pools" className={navClass}>
+              Pools
+            </NavLink>
+            <NavLink to="/pnl" className={navClass}>
+              Profit &amp; loss
             </NavLink>
             <NavLink to="/addresses" className={navClass}>
               Addresses

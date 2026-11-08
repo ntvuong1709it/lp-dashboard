@@ -13,7 +13,6 @@ import { ActivityPage } from "./pages/ActivityPage";
 import { PnlPage } from "./pages/PnlPage";
 import { PositionsPage } from "./pages/PositionsPage";
 import { PositionDetailPage } from "./pages/PositionDetailPage";
-import { FeaturesPage } from "./pages/FeaturesPage";
 import { FeeClaimsPage } from "./pages/FeeClaimsPage";
 import { AddressesPage } from "./pages/AddressesPage";
 import { PoolsPage } from "./pages/PoolsPage";
@@ -40,7 +39,6 @@ createRoot(document.getElementById("root")!).render(
                   <Route path="pools" element={<PoolsPage />} />
                   <Route path="fees" element={<FeeClaimsPage />} />
                   <Route path="borrow" element={<BorrowPage />} />
-                  <Route path="features" element={<FeaturesPage />} />
                   <Route path="addresses" element={<AddressesPage />} />
                 </Route>
               </Routes>
