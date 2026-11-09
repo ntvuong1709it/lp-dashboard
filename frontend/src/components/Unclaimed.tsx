@@ -83,6 +83,41 @@ function formatRewardToken(r: RewardTokenTotal): string {
   return `${formatAmount(r.amount)} ${r.symbol}${price}`;
 }
 
+/** "12.3%" — one decimal, two below 1% so small shares don't read as zero. */
+function formatPercent(part: number, whole: number): string {
+  const pct = (part / whole) * 100;
+  return `${pct.toFixed(pct < 1 ? 2 : 1)}%`;
+}
+
+/** Reward token amount and price, drawn in the rewards colour so the AERO value stands out. */
+function RewardTokenLine({
+  r,
+  valueUsd,
+  large = false,
+}: {
+  r: RewardTokenTotal;
+  /** USD value of the whole amount; falls back to amount × price. */
+  valueUsd?: number;
+  large?: boolean;
+}) {
+  const value = valueUsd ?? (r.priceUsd == null ? null : r.amount * r.priceUsd);
+  return (
+    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 num">
+      <span className={`font-semibold text-amber-300 ${large ? "text-lg" : "text-sm"}`}>
+        {formatAmount(r.amount)} {r.symbol}
+      </span>
+      {value != null && (
+        <span className={`font-semibold text-amber-200 ${large ? "text-base" : "text-xs"}`}>
+          ≈ {formatUsd(value)}
+        </span>
+      )}
+      <span className="text-xs text-slate-400">
+        {r.priceUsd == null ? "price unknown" : `@ ${formatPrice(r.priceUsd)} USD each`}
+      </span>
+    </div>
+  );
+}
+
 export function UnclaimedCard({
   fees,
   rewards,
@@ -171,6 +206,9 @@ export function ReadyToClaimPanel({
   );
   const max = rows[0]?.total ?? 0;
   const sum = rows.reduce((s, r) => s + r.total, 0);
+  const positionValue = rows.reduce((s, r) => s + r.p.metrics.currentValueUsd, 0);
+  const tokens = useMemo(() => rewardTotals(rows.map((r) => r.p)), [rows]);
+  const rewardsSum = rows.reduce((s, r) => s + r.rewards, 0);
 
   return (
     <Panel
@@ -179,6 +217,15 @@ export function ReadyToClaimPanel({
         <span className="text-sm text-slate-400">
           Total{" "}
           <span className="font-semibold text-sky-400 num">{formatUsd(sum)}</span>
+          {positionValue > 0 && (
+            <span className="num">
+              {" · "}
+              <span className="font-semibold text-slate-200">
+                {formatPercent(sum, positionValue)}
+              </span>{" "}
+              of position value
+            </span>
+          )}
         </span>
       }
     >
@@ -188,6 +235,18 @@ export function ReadyToClaimPanel({
         <p className="text-sm text-slate-400">Nothing to claim right now.</p>
       ) : (
         <>
+          {tokens.map((t) => (
+            <div
+              key={t.symbol}
+              className="mb-3 rounded-lg border border-amber-500/40 bg-amber-400/10 px-3 py-2"
+            >
+              <RewardTokenLine
+                r={t}
+                valueUsd={tokens.length === 1 ? rewardsSum : undefined}
+                large
+              />
+            </div>
+          ))}
           <Legend />
           <ul className="mt-2 max-h-96 overflow-y-auto">
             {rows.map(({ p, fees, rewards, total }) => (
@@ -226,17 +285,38 @@ export function ReadyToClaimPanel({
                       fraction={max > 0 ? total / max : 0}
                     />
                   </div>
-                  <div className="mt-1.5 text-xs text-slate-400 num">
-                    fees {formatUsd(fees)} · rewards {formatUsd(rewards)}
-                    {p.pendingReward > 0 &&
-                      ` (${formatRewardToken({
-                        symbol: p.rewardTokenSymbol ?? "reward",
-                        amount: p.pendingReward,
-                        priceUsd: p.metrics.rewardPriceUsd ?? null,
-                      })})`}
-                    {p.metrics.currentValueUsd > 0 &&
-                      ` · ${((total / p.metrics.currentValueUsd) * 100).toFixed(1)}% of position value`}
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs num">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                      <span className="text-slate-300">
+                        <span className={`mr-1.5 inline-block h-2 w-2 rounded-sm ${FEES_BAR}`} />
+                        Fees <span className="font-semibold">{formatUsd(fees)}</span>
+                      </span>
+                      <span className="text-slate-300">
+                        <span className={`mr-1.5 inline-block h-2 w-2 rounded-sm ${REWARDS_BAR}`} />
+                        Rewards <span className="font-semibold">{formatUsd(rewards)}</span>
+                      </span>
+                    </div>
+                    {p.metrics.currentValueUsd > 0 && (
+                      <span className="text-slate-400">
+                        <span className="font-semibold text-slate-200">
+                          {formatPercent(total, p.metrics.currentValueUsd)}
+                        </span>{" "}
+                        of position value
+                      </span>
+                    )}
                   </div>
+                  {p.pendingReward > 0 && (
+                    <div className="mt-1.5">
+                      <RewardTokenLine
+                        r={{
+                          symbol: p.rewardTokenSymbol ?? "reward",
+                          amount: p.pendingReward,
+                          priceUsd: p.metrics.rewardPriceUsd ?? null,
+                        }}
+                        valueUsd={rewards}
+                      />
+                    </div>
+                  )}
                 </button>
               </li>
             ))}
