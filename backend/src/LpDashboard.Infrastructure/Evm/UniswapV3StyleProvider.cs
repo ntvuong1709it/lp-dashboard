@@ -39,6 +39,8 @@ internal sealed class UniswapV3StyleProvider : IPositionProvider
     private readonly bool _isSlipstream;
     private readonly Dictionary<string, EvmDeploymentOptions> _deployments;
 
+    // Relevant logs of the owner's non-NFT transactions, keyed by "owner:txHash"; receipts never change.
+    private readonly ConcurrentDictionary<string, IReadOnlyList<EvmLog>> _txLogCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, TokenInfo> _tokens = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, string> _poolByKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, (int? Fee, int TickSpacing)> _poolParams = new(StringComparer.OrdinalIgnoreCase);
@@ -78,18 +80,27 @@ internal sealed class UniswapV3StyleProvider : IPositionProvider
     {
         owner = owner.ToLowerInvariant();
         var result = new List<DiscoveredPosition>();
+        HashSet<string>? ownerTxs = null;
+        if (_isSlipstream && _chain.UseAlchemyTransfers)
+        {
+            ownerTxs = await _rpc.GetTransactionHashesAsync(owner, 0, await _rpc.GetBlockNumberAsync(ct), ct);
+        }
         foreach (var npm in _deployments.Keys)
         {
-            result.AddRange(await DiscoverAsync(npm, owner, ct));
+            result.AddRange(await DiscoverAsync(npm, owner, ownerTxs, ct));
         }
         return result;
     }
 
-    private async Task<List<DiscoveredPosition>> DiscoverAsync(string npm, string owner, CancellationToken ct)
+    private async Task<List<DiscoveredPosition>> DiscoverAsync(string npm, string owner, HashSet<string>? ownerTxs, CancellationToken ct)
     {
         var transfers = await GetTransfersAsync(npm, owner, ct);
 
         var gauges = await FilterGaugesAsync(npm, OutgoingTargets(transfers, owner), ct);
+        if (ownerTxs is not null)
+        {
+            transfers.AddRange(await FindMediatedStakesAsync(npm, owner, ownerTxs, transfers, gauges, ct));
+        }
         transfers = await ResolveIntermediariesAsync(npm, owner, transfers, gauges, ct);
         gauges.UnionWith(await FilterGaugesAsync(npm, OutgoingTargets(transfers, owner).Except(gauges).ToList(), ct));
 
@@ -117,6 +128,67 @@ internal sealed class UniswapV3StyleProvider : IPositionProvider
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// A zap can mint an NFT and stake it for the owner in one tx (0x0 → zap → gauge), so the owner is never a party to any
+    /// transfer and the transfer query misses it. Read the receipts of the owner's other transactions (cached, they never
+    /// change) and, where a gauge credited the owner for such an NFT, add synthetic "received" and "staked" transfers.
+    /// </summary>
+    private async Task<List<NftTransfer>> FindMediatedStakesAsync(
+        string npm, string owner, HashSet<string> ownerTxs, List<NftTransfer> known, HashSet<string> gauges, CancellationToken ct)
+    {
+        var knownTxs = known.Select(t => t.TxHash).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var candidates = ownerTxs.Where(h => !knownTxs.Contains(h)).ToList();
+
+        var missing = candidates.Where(h => !_txLogCache.ContainsKey($"{owner}:{h}")).ToList();
+        if (missing.Count > 0)
+        {
+            var npms = _deployments.Keys.ToHashSet();
+            var ownerTopic = Abi.TopicOf(owner);
+            var receipts = await _rpc.GetReceiptsAsync(missing, ct);
+            foreach (var (hash, receipt) in receipts)
+            {
+                _txLogCache[$"{owner}:{hash}"] = receipt.Logs
+                    .Where(l => l.Topics.Count == 4 && ((l.Topics[0] == TransferTopic && npms.Contains(l.Address)) || l.Topics[2] == ownerTopic))
+                    .ToList();
+            }
+        }
+
+        var stakes = candidates
+            .SelectMany(h => FindMediatedStakes(_txLogCache[$"{owner}:{h}"], npm, owner))
+            .ToList();
+        gauges.UnionWith(await FilterGaugesAsync(npm, stakes.Select(s => s.Gauge).Distinct().Except(gauges).ToList(), ct));
+
+        var result = new List<NftTransfer>();
+        foreach (var s in stakes.Where(s => gauges.Contains(s.Gauge)))
+        {
+            result.Add(new NftTransfer(s.TokenId, Abi.ToAddress(s.FirstHop.Topics[1]), owner,
+                s.FirstHop.BlockNumber, s.FirstHop.LogIndex, s.FirstHop.TxHash));
+            result.Add(new NftTransfer(s.TokenId, owner, s.Gauge, s.LastHop.BlockNumber, s.LastHop.LogIndex, s.LastHop.TxHash));
+        }
+        return result;
+    }
+
+    internal sealed record MediatedStake(BigInteger TokenId, EvmLog FirstHop, EvmLog LastHop, string Gauge);
+
+    /// <summary>NFTs that ended a tx in a contract that also logged the owner as the account (topic 2) for that tokenId, without the owner ever holding them.</summary>
+    internal static IEnumerable<MediatedStake> FindMediatedStakes(IReadOnlyList<EvmLog> txLogs, string npm, string owner)
+    {
+        var ownerTopic = Abi.TopicOf(owner);
+        var hops = txLogs.Where(l => l.Address == npm && l.Topics.Count == 4 && l.Topics[0] == TransferTopic).GroupBy(l => l.Topics[3]);
+        foreach (var group in hops)
+        {
+            var ordered = group.OrderBy(l => l.LogIndex).ToList();
+            if (ordered.Any(l => Abi.ToAddress(l.Topics[1]) == owner || Abi.ToAddress(l.Topics[2]) == owner)) continue;
+
+            var last = ordered[^1];
+            var gauge = Abi.ToAddress(last.Topics[2]);
+            if (txLogs.Any(l => l.Address == gauge && l.Topics.Count == 4 && l.Topics[0] != TransferTopic && l.Topics[2] == ownerTopic && l.Topics[3] == group.Key))
+            {
+                yield return new MediatedStake(Abi.ToUInt(group.Key), ordered[0], last, gauge);
+            }
+        }
     }
 
     private static List<string> OutgoingTargets(IEnumerable<NftTransfer> transfers, string owner) =>
