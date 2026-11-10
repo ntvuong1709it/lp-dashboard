@@ -21,6 +21,8 @@ public static class DependencyInjection
         services.AddScoped<MarketTickerService>();
         services.AddScoped<PositionQueryService>();
         services.AddScoped<LpDashboard.Application.Pools.PoolExplorerService>();
+        services.AddScoped<LpDashboard.Application.Pools.EntryPlanService>();
+        services.AddScoped<LpDashboard.Application.Pools.WalletBalanceService>();
         services.AddScoped<LpDashboard.Application.Borrow.ManualLoanService>();
         services.AddScoped<LpDashboard.Application.Borrow.LendingSyncService>();
         services.AddScoped<LpDashboard.Application.Borrow.BorrowQueryService>();

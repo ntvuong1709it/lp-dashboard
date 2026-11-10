@@ -742,3 +742,167 @@ export interface ChangesDto {
   ratioStart: number | null;
   ratioEnd: number | null;
 }
+
+// ---- Enter-pool planner (POST /api/pools/{id}/entry-plan) ----
+
+export interface PoolTokenDto {
+  address: string;
+  symbol: string;
+  decimals: number;
+}
+
+/** The pool as the chain reports it. Tokens are in the pool's own order, which can differ from the pool list's. */
+export interface PoolStateDto {
+  poolId: string;
+  poolAddress: string;
+  protocol: Protocol;
+  token0: PoolTokenDto;
+  token1: PoolTokenDto;
+  feePercent: number | null;
+  tickSpacing: number;
+  tvlUsd: number;
+  sqrtPriceX96: string;
+  tick: number;
+  /** Token1 per token0. */
+  poolPrice: number;
+  usd0: number;
+  usd1: number;
+  pricesAsOf: string;
+  readAt: string;
+}
+
+export interface SnappedRangeDto {
+  tickLower: number;
+  tickUpper: number;
+  priceLower: number;
+  priceUpper: number;
+  lowerPercent: number;
+  upperPercent: number;
+  tickWidth: number;
+}
+
+export type SwapSide = "None" | "SellToken0" | "SellToken1";
+
+export interface EntryAmountsDto {
+  side: SwapSide;
+  swapAmountIn: number;
+  swapProceeds: number;
+  swapNotionalUsd: number;
+  swapCostUsd: number;
+  gasUsd: number;
+  entryCostUsd: number;
+  amount0: number;
+  amount1: number;
+  amount0Usd: number;
+  amount1Usd: number;
+  valueUsd: number;
+  startValueUsd: number;
+  token0Share: number;
+  token1Share: number;
+  liquidity: number;
+  deposit0: number;
+  deposit1: number;
+  dustUsd: number;
+  swapShareOfTvl: number | null;
+  swapShareWarning: boolean;
+}
+
+export type HedgeInstrument = "PerpShort" | "BorrowAndSell";
+export type HedgedLegs = "None" | "Token0" | "Token1" | "Both";
+
+export interface ShortLegDto {
+  token: 0 | 1;
+  amount: number;
+  notionalUsd: number;
+  atLowerBound: number;
+  atUpperBound: number;
+  notionalAtLowerBoundUsd: number;
+  notionalAtUpperBoundUsd: number;
+  rehedgeIfDown: number;
+  rehedgeIfUp: number;
+  liquidationPriceUsd: number | null;
+}
+
+export interface HedgeScenarioDto {
+  movePct: number;
+  poolPrice: number;
+  daysInRange: number;
+  feesUsd: number;
+  priceEffectUsd: number;
+  hedgePnlUsd: number;
+  hedgeCostUsd: number;
+  entryCostUsd: number;
+  noHedgeNetUsd: number;
+  hedgedNetUsd: number;
+}
+
+export interface HedgePlanDto {
+  legs: HedgedLegs;
+  instrument: HedgeInstrument;
+  ratio: number;
+  shorts: ShortLegDto[];
+  notionalUsd: number;
+  /** Positive: the hedge earns this per day. Negative: it costs. */
+  carryPerDayUsd: number;
+  tradingFeesUsd: number;
+  hedgeCostUsd: number;
+  marginUsd: number;
+  capitalUsedUsd: number;
+  liquidationMovePct: number | null;
+  liquidationPoolPrice: number | null;
+  liquidatesBeforeRangeTop: boolean;
+  feesUsd: number;
+  unhedgedApr: number;
+  hedgedNetApr: number;
+  lowerBoundMovePct: number;
+  upperBoundMovePct: number;
+  scenarios: HedgeScenarioDto[];
+  noHedgeMinUsd: number;
+  noHedgeMaxUsd: number;
+  hedgedMinUsd: number;
+  hedgedMaxUsd: number;
+}
+
+export interface EntryPlanDto {
+  pool: PoolStateDto;
+  range: SnappedRangeDto;
+  requestedLowerPercent: number | null;
+  requestedUpperPercent: number | null;
+  priceInRange: boolean;
+  entry: EntryAmountsDto;
+  swapSellToken: string | null;
+  swapBuyToken: string | null;
+  swapCostPct: number;
+  gasUsd: number;
+  incomeBasis: "fees" | "emissions";
+  incomeAprPct: number;
+  hedge: HedgePlanDto | null;
+}
+
+export interface EntryPlanRequest {
+  lowerPercent: number;
+  upperPercent: number;
+  budgetUsd?: number;
+  holdings?: { token: string; amount: number }[];
+  /** A token address of the pool, or "split". */
+  paysWith?: string;
+  swapCostPct: number;
+  gasUsd: number;
+  incomeAprPct: number;
+  incomeBasis: "fees" | "emissions";
+  hedge?: {
+    instrument: "perp" | "borrow";
+    /** 0 to 1. */
+    ratio: number;
+    ratePct: number;
+    leverage: number;
+    openFeePct: number;
+  };
+}
+
+export interface WalletBalancesDto {
+  owner: string;
+  chain: Chain;
+  nativeRaw: string | null;
+  balances: { token: string; raw: string | null }[];
+}

@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pools side panel with Enter this range: mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--page:#020617;--surface-2:#0f172a;--surface-1:#162033;--border:#1e293b;--border-strong:#334155;--text-primary:#e2e8f0;--text-secondary:#94a3b8;--text-muted:#64748b;--bg-accent:rgba(56,189,248,.13);--text-accent:#38bdf8;--border-accent:#38bdf8;--text-success:#34d399;--text-danger:#fb7185;--c-unhedged:#fb7185;--c-hedged:#34d399;--amber:#f59e0b}
+@media (prefers-color-scheme: light){:root{--page:#f4f6f8;--surface-2:#ffffff;--surface-1:#eef1f5;--border:#e2e7ec;--border-strong:#cfd6de;--text-primary:#1b2430;--text-secondary:#5b6675;--text-muted:#6b7686;--bg-accent:rgba(42,120,214,.12);--text-accent:#2a78d6;--border-accent:#2a78d6;--text-success:#0f7d57;--text-danger:#c23b36;--c-unhedged:#c23b36;--c-hedged:#0f7d57;--amber:#b36b00}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text-primary);font:14px/1.5 "IBM Plex Sans",system-ui,sans-serif}
+h1,h2,h3{font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif;font-weight:600;margin:0}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.mockbar{border-bottom:1px dashed var(--border-strong);padding:8px 16px;font-size:12px;color:var(--text-muted);text-align:center}
+.appbar{background:var(--surface-2);border-bottom:1px solid var(--border)}
+.appbar .in{max-width:110rem;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:8px;font:600 18px "Bricolage Grotesque",sans-serif}
+.logo i{display:inline-block;width:20px;height:20px;border-radius:50% 50% 50% 4px;background:#38bdf8}
+nav{display:flex;gap:4px}
+nav a{padding:6px 12px;border-radius:6px;font-size:14px;font-weight:500;color:var(--text-secondary);text-decoration:none}
+nav a.on{background:var(--border);color:var(--text-primary);box-shadow:inset 0 -2px 0 #38bdf8}
+main{max-width:110rem;margin:0 auto;padding:24px 16px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 500px;gap:16px;align-items:start}
+@media (max-width:1000px){.layout{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface-2);border:1px solid var(--border);border-radius:8px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:8px 12px;text-align:right;border-top:1px solid var(--border)}
+th{font-weight:400;color:var(--text-secondary);border-top:0;font-size:12px}
+th:first-child,td:first-child{text-align:left}
+tr.pool{cursor:pointer}tr.pool:hover td{background:var(--surface-1)}
+tr.pool.sel td{background:var(--bg-accent)}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.lbl{font-size:12px;color:var(--text-secondary)}
+.note{font-size:12px;color:var(--text-muted)}
+.pill{display:inline-block;border:1px solid var(--border-strong);background:var(--page);border-radius:6px;padding:1px 8px;font-size:12px;color:var(--text-secondary);margin-right:4px}
+.sec{border-top:1px solid var(--border);padding:12px 0 0;margin-top:12px}
+.sec h4{font-size:12px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;color:var(--text-secondary);margin:0 0 8px}
+.seg{display:inline-flex;border:1px solid var(--border-strong);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:transparent;color:var(--text-secondary);padding:3px 10px;font:inherit;font-size:13px;cursor:pointer}
+.seg button.on{background:var(--bg-accent);color:var(--text-accent)}
+.preset{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.preset button{border:1px solid var(--border-strong);background:transparent;color:var(--text-primary);border-radius:6px;padding:6px 4px;font:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center}
+.preset button span{font-size:11px;color:var(--text-muted)}
+.preset button.on{border-color:var(--border-accent);background:var(--bg-accent);color:var(--text-accent)}
+input[type=number],select{background:var(--page);color:var(--text-primary);border:1px solid var(--border-strong);border-radius:6px;padding:5px 8px;font:inherit;width:100px}
+select{width:auto;padding:4px}
+input[type=range]{width:100%;accent-color:#38bdf8}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bound{background:var(--page);border:1px solid var(--border);border-radius:8px;padding:8px}
+.bound b{display:block;color:var(--text-accent);font-weight:500;font-size:16px;text-align:center}
+.apr{background:var(--page);border:1px solid var(--border);border-radius:8px;padding:12px}
+.apr .big{font:500 34px "IBM Plex Mono",monospace;color:var(--text-accent)}
+.new{border:1px dashed var(--border-accent);border-radius:10px;padding:12px;margin-top:14px;position:relative}
+.new .badge{position:absolute;top:-10px;left:12px;background:var(--surface-2);padding:0 6px;font-size:11px;color:var(--text-accent);letter-spacing:.05em}
+.new h3{font-size:15px;margin-bottom:8px}
+.m{background:var(--surface-1);border-radius:8px;padding:8px 10px}
+.m b{display:block;font:500 17px "IBM Plex Mono",monospace}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.plan{font-size:14px;margin:8px 0}
+.good{color:var(--text-success)}.bad{color:var(--text-danger)}
+.warn{font-size:12px;color:var(--amber);margin-top:6px}
+.tbl{font-size:12px}.tbl th,.tbl td{padding:3px 4px}
+.cmp{margin-top:10px;background:var(--surface-1);border-radius:8px;padding:10px}
+.cmp td.k{text-align:left;color:var(--text-secondary)}
+.cmp tr.tot td{font-weight:600;border-top:1px solid var(--border-strong)}
+.verdict{margin-top:8px;font-size:13px}
+.dep{margin-top:10px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;background:var(--page)}
+.dep .r{display:flex;justify-content:space-between;align-items:center;padding:3px 0}
+.dep button{border:1px solid var(--border-strong);background:transparent;color:var(--text-secondary);border-radius:6px;padding:1px 8px;font:inherit;font-size:12px;cursor:pointer;margin-left:8px}
+.cur{background:var(--page);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:8px}
+.curp{font-size:22px;font-weight:500;color:var(--text-primary)}
+.rbar{position:relative;height:10px;border-radius:5px;background:var(--surface-1);margin:14px 0 4px}
+.rbar i{position:absolute;top:0;bottom:0;border-radius:5px;background:var(--border-accent);opacity:.6}
+.rbar u{position:absolute;top:-4px;width:3px;height:18px;background:var(--text-primary);border-radius:2px}
+.bi{display:flex;align-items:center;justify-content:space-between;margin:4px 0 2px}
+.bi button{width:30px;height:30px;border:0;border-radius:6px;background:transparent;color:var(--text-secondary);font-size:18px;cursor:pointer}
+.bi button:hover{background:var(--surface-1)}
+.bi .pc{color:var(--text-accent);font-size:16px;font-weight:500;display:flex;align-items:center;gap:2px}
+.bi input{width:64px;text-align:center;color:var(--text-accent);font:inherit;font-weight:500;padding:3px 4px}
+.snap{font-size:12px;color:var(--text-secondary);margin-top:6px}
+.row{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="mockbar">Mockup with sample data. Left: the existing Pools table. Right: the existing range panel, with the new "Enter this range" section (dashed) at the bottom. Nothing is sent or signed.</div>
+<header class="appbar"><div class="in">
+  <span class="logo"><i></i>LP Dashboard</span>
+  <nav aria-label="Sections"><a href="#">Overview</a><a href="#">Earnings</a><a href="#">Borrow</a><a href="#">Positions</a><a href="#" class="on">Pools</a><a href="#">Profit &amp; loss</a><a href="#">Addresses</a></nav>
+</div></header>
+<main>
+<h2 class="sr-only">Pools page with the pool table on the left and a side panel on the right that now includes an Enter this range planner with a hedge comparison.</h2>
+<div class="layout">
+  <section class="panel" aria-label="Pools">
+    <table>
+      <thead><tr><th>Pool</th><th>Fee</th><th>TVL</th><th>Vol 24h</th><th>Fee APR</th><th>Reward APR</th></tr></thead>
+      <tbody id="pools">
+        <tr class="pool sel" data-u0="3400" data-u1="1" data-n="WETH / USDC" data-f="0.05" data-a="22" data-e="31" data-w0="1.2" data-w1="800" data-t="48200000" data-ts="10" data-d0="18" data-d1="6"><td>WETH / USDC <span class="lbl">Slipstream</span> <span style="color:var(--text-success);font-size:11px">you hold</span></td><td class="mono">0.05%</td><td class="mono">$48.2M</td><td class="mono">$61.0M</td><td class="mono">22.4%</td><td class="mono">31%</td></tr>
+        <tr class="pool" data-u0="3400" data-u1="1" data-n="WETH / USDC" data-f="0.3" data-a="14" data-e="0" data-w0="1.2" data-w1="800" data-t="12100000" data-ts="60" data-d0="18" data-d1="6"><td>WETH / USDC <span class="lbl">Uniswap v3</span></td><td class="mono">0.30%</td><td class="mono">$12.1M</td><td class="mono">$6.4M</td><td class="mono">14.0%</td><td class="mono">-</td></tr>
+        <tr class="pool" data-u0="98000" data-u1="1" data-n="cbBTC / USDC" data-f="0.05" data-a="19" data-e="24" data-w0="0.04" data-w1="800" data-t="31700000" data-ts="10" data-d0="8" data-d1="6"><td>cbBTC / USDC <span class="lbl">Slipstream</span></td><td class="mono">0.05%</td><td class="mono">$31.7M</td><td class="mono">$27.9M</td><td class="mono">19.3%</td><td class="mono">24%</td></tr>
+        <tr class="pool" data-u0="0.62" data-u1="1" data-n="AERO / USDC" data-f="0.3" data-a="38" data-e="12" data-w0="1500" data-w1="400" data-t="9400000" data-ts="60" data-d0="18" data-d1="6"><td>AERO / USDC <span class="lbl">Slipstream</span></td><td class="mono">0.30%</td><td class="mono">$9.4M</td><td class="mono">$8.8M</td><td class="mono">38.1%</td><td class="mono">12%</td></tr>
+        <tr class="pool" data-u0="3400" data-u1="98000" data-n="WETH / cbBTC" data-f="0.05" data-a="17" data-e="18" data-w0="1.2" data-w1="0.01" data-t="6500000" data-ts="10" data-d0="18" data-d1="8"><td>WETH / cbBTC <span class="lbl">Slipstream</span> <span class="lbl">(volatile pair)</span></td><td class="mono">0.05%</td><td class="mono">$6.5M</td><td class="mono">$4.1M</td><td class="mono">17.2%</td><td class="mono">18%</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="panel" style="padding:16px" aria-label="Range for the selected pool">
+    <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="font-size:18px" id="pname">WETH / USDC</h2></div>
+    <div style="margin:8px 0 6px"><span class="pill">Aerodrome Slipstream</span><span class="pill">base</span><span class="pill" id="pfee">0.05%</span><span class="pill" id="pts">10 ticks</span></div>
+    <div class="cur"><div class="lbl">Current price</div><div class="curp mono" id="curp"></div><div class="lbl" id="curusd"></div></div>
+    <div class="note" style="margin-bottom:12px" id="prices"></div>
+
+    <div style="display:flex;justify-content:space-between;margin-bottom:6px"><b style="font-size:14px;font-weight:500">Position range</b><span class="note">around today's price</span></div>
+    <div class="preset" id="presets"><button data-w="2">Tight<span>±2%</span></button><button data-w="10" class="on">Standard<span>±10%</span></button><button data-w="25">Wide<span>±25%</span></button></div>
+    <label class="lbl" style="display:block;margin-top:10px">Range around the current price: <span class="mono" id="wt" style="color:var(--text-primary)">±10%</span><input type="range" id="wd" min="1" max="50" step="0.5" value="10"></label>
+    <div class="two" style="margin-top:8px">
+      <div class="bound"><div class="lbl" style="display:flex;justify-content:space-between"><span>Lower bound</span><span class="mono" id="pa" style="color:var(--text-primary)"></span></div>
+        <div class="bi"><button type="button" id="lo-" aria-label="Move the lower bound closer to the price">−</button><span class="pc">-<input type="number" id="lo" value="10" min="0.1" max="99" step="0.5" aria-label="Lower bound, percent below the current price">%</span><button type="button" id="lo+" aria-label="Move the lower bound further from the price">+</button></div>
+        <div class="lbl" style="text-align:center" id="lw"></div></div>
+      <div class="bound"><div class="lbl" style="display:flex;justify-content:space-between"><span>Upper bound</span><span class="mono" id="pb" style="color:var(--text-primary)"></span></div>
+        <div class="bi"><button type="button" id="hi-" aria-label="Move the upper bound closer to the price">−</button><span class="pc">+<input type="number" id="hi" value="10" min="0.1" max="500" step="0.5" aria-label="Upper bound, percent above the current price">%</span><button type="button" id="hi+" aria-label="Move the upper bound further from the price">+</button></div>
+        <div class="lbl" style="text-align:center" id="uw"></div></div></div>
+    <div class="rbar"><i id="rb-i"></i><u id="rb-u"></u></div>
+    <div class="row" style="justify-content:space-between;margin-top:2px"><span class="lbl mono" id="rb-l"></span><span class="lbl mono" id="rb-c" style="color:var(--text-primary)"></span><span class="lbl mono" id="rb-h"></span></div>
+    <div class="snap" id="snap"></div>
+    <div style="margin-top:10px"><label class="lbl">Capital (USD)<br><input type="number" id="bud" value="5000" min="100" step="500"></label> <span class="note" id="budnote"></span></div>
+
+    <div class="apr" style="margin-top:12px"><div class="lbl">Estimated fee APR (7d volume)</div><div class="big" id="aprbig">22.4%</div><div class="note">Existing section: earnings, what fees cover, last 30 days, other pools (collapsed in this mockup).</div></div>
+
+    <div class="new">
+      <span class="badge">NEW</span>
+      <h3>Enter this range</h3>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <div class="seg" id="mode"><button data-m="budget" class="on">Capital above</button><button data-m="wallet">Tokens I hold</button></div>
+        <label class="lbl" id="srcwrap">Paying with <select id="src"><option value="usdc">All quote token</option><option value="weth">All base token</option><option value="mix">50 / 50</option></select></label>
+      </div>
+      <div id="in-wallet" style="display:none;margin-top:8px">
+        <div class="two"><label class="lbl"><span class="tn0">WETH</span> in wallet<br><input type="number" id="w0" value="1.2" min="0" step="0.05" style="width:100%"></label><label class="lbl"><span class="tn1">USDC</span> in wallet<br><input type="number" id="w1" value="800" min="0" step="50" style="width:100%"></label></div>
+        <div class="note" style="margin-top:4px">Prefilled from your watched wallet, editable. Wallet: <select id="wallet"><option>Main wallet (0x1a2b…9f)</option><option>Trading (0x7c3d…02)</option></select></div>
+      </div>
+      <div class="row"><label class="lbl">Swap fee + slippage (%)<br><input type="number" id="cost" value="0.10" min="0" step="0.01" style="width:90px"></label><label class="lbl">Gas: swap + mint (USD)<br><input type="number" id="gas" value="0.80" min="0" step="0.1" style="width:90px"></label></div>
+
+      <div class="plan" id="plan-line"></div>
+      <div class="warn" id="swapwarn" style="display:none"></div>
+      <div class="g3" style="margin-top:8px">
+        <div class="m"><span class="lbl">Need <span class="tn0">WETH</span></span><b id="r0"></b><span class="lbl mono" id="r0u"></span></div>
+        <div class="m"><span class="lbl">Need <span class="tn1">USDC</span></span><b id="r1"></b><span class="lbl mono" id="r1u"></span></div>
+        <div class="m"><span class="lbl">Swap and gas cost</span><b id="sc"></b><span class="lbl mono" id="scp"></span></div>
+      </div>
+      <div class="note" style="margin-top:6px" id="ratio"></div>
+      <div class="dep">
+        <div class="lbl" style="margin-bottom:2px">Deposit this</div>
+        <div class="r"><span class="mono" id="d0"></span><button type="button" id="c0">Copy</button></div>
+        <div class="r"><span class="mono" id="d1"></span><button type="button" id="c1">Copy</button></div>
+        <div class="note" id="dust"></div>
+      </div>
+
+      <div class="sec">
+        <div style="display:flex;justify-content:space-between;align-items:center"><h4 style="margin:0">Hedge: with or without</h4><span class="note">Set the ratio to 0% for no hedge</span></div>
+        <div id="hedge" style="margin-top:8px">
+          <div class="row" style="margin-top:0">
+            <label class="lbl">Hedge with<br><select id="hty"><option value="perp">Perp short</option><option value="borrow">Borrow and sell</option></select></label>
+            <label class="lbl">Hedge ratio <span class="mono" id="hp-t" style="color:var(--text-primary)">100%</span><br><input type="range" id="hp" min="0" max="100" step="5" value="100" style="width:130px"></label>
+            <label class="lbl"><span id="fl">Funding rate % / yr</span><br><input type="number" id="fund" value="8" style="width:70px"></label>
+            <label class="lbl" id="levwrap">Leverage<br><input type="number" id="lev" value="3" min="1" max="20" step="1" style="width:60px"></label>
+          </div>
+          <div class="row">
+            <label class="lbl">Income counted<br><select id="basis"><option value="fee">Swap fees (not staked)</option><option value="emis">Emissions (staked)</option></select></label>
+            <label class="lbl">Income APR %<br><input type="number" id="fapr" value="22" step="1" style="width:70px"></label>
+          </div>
+          <div class="note" id="fnote" style="margin-top:4px"></div>
+          <div class="g3" style="margin-top:8px">
+            <div class="m"><span class="lbl">Short now</span><b id="h0" style="font-size:15px"></b><span class="lbl mono" id="h0u"></span></div>
+            <div class="m"><span class="lbl">Funding / borrow per day</span><b id="hc"></b><span class="lbl mono" id="hcp"></span></div>
+            <div class="m"><span class="lbl">Net APR, hedged</span><b id="napr"></b><span class="lbl mono" id="napr2"></span></div>
+          </div>
+          <div id="marginbox" style="margin-top:8px">
+            <div class="lbl" id="margin"></div>
+            <div class="warn" id="liqwarn"></div>
+          </div>
+          <div id="scen">
+            <table class="tbl" style="margin-top:10px"><thead><tr><th>Short size</th><th>Now</th><th>At lower bound</th><th>At upper bound</th></tr></thead><tbody id="edge"></tbody></table>
+            <div class="note" id="rehedge" style="margin-top:4px"></div>
+            <div class="cmp">
+              <div class="lbl">Compare after 30 days if the price moves <span class="mono" id="mv-t" style="color:var(--text-primary)">-10%</span> (to <span class="mono" id="mv-p"></span>)</div>
+              <input type="range" id="mv" min="-30" max="30" step="1" value="-10">
+              <table class="tbl" style="margin-top:6px"><thead><tr><th></th><th>No hedge</th><th>With hedge</th></tr></thead><tbody id="cmp"></tbody></table>
+              <div class="verdict" id="verdict"></div>
+            </div>
+            <div class="lbl" style="margin-top:10px">30-day result by price move: fees while in range, hedge and entry costs included</div>
+            <div id="chart"></div>
+            <div class="lbl" style="display:flex;gap:12px"><span><span style="display:inline-block;width:12px;height:3px;background:var(--c-unhedged);vertical-align:middle"></span> No hedge</span><span><span style="display:inline-block;width:12px;height:3px;background:var(--c-hedged);vertical-align:middle"></span> With hedge</span><span>Dashed: range bounds</span></div>
+            <table class="tbl" style="margin-top:6px"><thead><tr><th>Move</th><th>No hedge</th><th>With hedge</th></tr></thead><tbody id="tb"></tbody></table>
+          </div>
+          <div class="warn" id="volnote" style="display:none">This pool has no stable leg. v1 shows the short for each token above; the price-scenario comparison for volatile pairs comes later.</div>
+          <div class="note" style="margin-top:8px">Fees are earned only while the price is in range (a straight-line path to the scenario price). A hedge sized today drifts as the price moves.</div>
+        </div>
+      </div>
+      <div class="note" style="margin-top:8px">Estimates, not quotes. Read-only: nothing is sent.</div>
+    </div>
+  </section>
+</div>
+</main>
+<script>
+(function(){
+var $=function(i){return document.getElementById(i)};
+var S={u0:3400,u1:1,names:['WETH','USDC'],a:22,e:31,t:48200000,ts:10,d0:18,d1:6,vol:false};
+var mode='budget',LN=Math.log(1.0001);
+function fmt(v,d){return v.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d})}
+function usd(v){return (v<0?'-':'')+'$'+fmt(Math.abs(v),0)}
+function usd2(v){return (v<0?'-':'')+'$'+fmt(Math.abs(v),2)}
+function amt(v){return fmt(v,v>=100?2:v>=1?4:v>=0.01?6:8)}
+function qp(v){return fmt(v,v<1?6:v<100?4:2)}
+function sgn(v){var c=v>=0?'good':'bad';return '<span class="'+c+'">'+(v>=0?'+':'-')+'$'+fmt(Math.abs(Math.round(v)),0)+'</span>'}
+function snap(p,ts){var tk=Math.round(Math.log(p)/LN/ts)*ts;return{tk:tk,p:Math.exp(tk*LN)}}
+function posVal(L,p,pa,pb){var sa=Math.sqrt(pa),sb=Math.sqrt(pb),s=Math.sqrt(Math.min(Math.max(p,pa),pb));return L*((1/s-1/sb)*p+(s-sa))}
+function xAt(L,p,pa,pb){return L*(1/Math.sqrt(Math.min(Math.max(p,pa),pb))-1/Math.sqrt(pb))}
+function inFrac(P,p2,pa,pb){var lo=Math.min(P,p2),hi=Math.max(P,p2);if(hi-lo<1e-12)return 1;return Math.max(0,Math.min(hi,pb)-Math.max(lo,pa))/(hi-lo)}
+function setNames(){[].forEach.call(document.querySelectorAll('.tn0'),function(e){e.textContent=S.names[0]});[].forEach.call(document.querySelectorAll('.tn1'),function(e){e.textContent=S.names[1]})}
+function calc(){
+  var n0=S.names[0],n1=S.names[1],u0=S.u0,u1=S.u1,P=u0/u1*1.0003;
+  $('curp').textContent=qp(P)+' '+n1+' per '+n0;
+  $('curusd').textContent='Read from the pool just now. USD reference '+usd2(u0)+' for '+n0+(u1!==1?', '+usd2(u1)+' for '+n1:'')+' (DefiLlama, 2 min ago).';
+  $('prices').textContent='The plan uses the pool price for the ratio and the USD reference for dollar values.';
+  var lo=Math.min(99,Math.max(0.1,+$('lo').value||0.1)),hi=Math.min(500,Math.max(0.1,+$('hi').value||0.1));
+  var sl=snap(P*(1-lo/100),S.ts),su=snap(P*(1+hi/100),S.ts),pa=sl.p,pb=su.p;
+  [].forEach.call($('presets').children,function(k){k.classList.toggle('on',lo===hi&&+k.dataset.w===lo)});
+  $('wt').textContent=lo===hi?'±'+lo+'%':'custom, -'+lo+'% / +'+hi+'%';$('pa').textContent=qp(pa)+' '+n1;$('pb').textContent=qp(pb)+' '+n1;
+  var bmin=P*0.4,bmax=P*1.6;$('rb-i').style.left=((pa-bmin)/(bmax-bmin)*100)+'%';$('rb-i').style.width=((pb-pa)/(bmax-bmin)*100)+'%';$('rb-u').style.left=((P-bmin)/(bmax-bmin)*100)+'%';
+  $('rb-l').textContent=qp(pa);$('rb-c').textContent='now '+qp(P);$('rb-h').textContent=qp(pb);
+  var lp=(pa/P-1)*100,up=(pb/P-1)*100;$('lw').textContent='snapped to '+fmt(lp,2)+'%';$('uw').textContent='snapped to +'+fmt(up,2)+'%';
+  $('snap').textContent='Snapped to the pool\'s '+S.ts+'-tick spacing: '+fmt(su.tk-sl.tk,0)+' ticks wide. Requested -'+lo+'% / +'+hi+'%, actual '+fmt(lp,2)+'% / +'+fmt(up,2)+'%. Amounts below use the snapped bounds.';
+  var sa=Math.sqrt(pa),sb=Math.sqrt(pb),sp=Math.sqrt(P),x=1/sp-1/sb,y=sp-sa;
+  var c=(+$('cost').value||0)/100,gas=+$('gas').value||0,w0,w1;
+  if(mode==='budget'){var B=+$('bud').value||0,sv=$('src').value;w0=sv==='usdc'?0:sv==='weth'?B/u0:B/2/u0;w1=sv==='usdc'?B/u1:sv==='weth'?0:B/2/u1}
+  else{w0=+$('w0').value||0;w1=+$('w1').value||0;$('bud').value=Math.round(w0*u0+w1*u1)}
+  $('bud').disabled=mode==='wallet';$('budnote').textContent=mode==='wallet'?'Taken from the tokens you hold below.':'';
+  var s=(w0*y-w1*x)/(y+x*P*(1-c)),sellW=s>0,a,got,a0,a1,swapUsd;
+  if(sellW){a=s;got=s*P*(1-c);a0=w0-s;a1=w1+got;swapUsd=s*u0}
+  else{var t=(w1*x-w0*y)/(x+y*(1-c)/P);a=t;got=t*(1-c)/P;a0=w0+got;a1=w1-t;swapUsd=t*u1}
+  var swapCost=swapUsd*c,entry=swapCost+gas,val=a0*u0+a1*u1,startUsd=w0*u0+w1*u1;
+  $('plan-line').innerHTML=Math.abs(a)<1e-9?'No swap needed: your tokens already match this range.':sellW?'Swap <b>'+amt(a)+' '+n0+'</b> for about <b>'+amt(got)+' '+n1+'</b>, then deposit.':'Swap <b>'+amt(a)+' '+n1+'</b> for about <b>'+amt(got)+' '+n0+'</b>, then deposit.';
+  var sw=$('swapwarn'),share=swapUsd/S.t;
+  if(share>0.001){sw.style.display='block';sw.textContent='This swap is '+fmt(share*100,2)+'% of the pool\'s TVL. Expect more price impact than the '+fmt(c*100,2)+'% above assumes.'}else sw.style.display='none';
+  $('r0').textContent=amt(a0);$('r0u').textContent=usd(a0*u0);
+  $('r1').textContent=amt(a1);$('r1u').textContent=Math.round(a1*u1/val*100)+'% of position, '+usd(a1*u1);
+  $('sc').textContent=usd2(entry);$('scp').textContent=usd2(swapCost)+' swap + '+usd2(gas)+' gas';
+  $('ratio').textContent='Required mix at this price: '+Math.round(a0*u0/val*100)+'% '+n0+' / '+Math.round(a1*u1/val*100)+'% '+n1+'. Position value after the swap: '+usd(val)+'.';
+  var sd0=Math.min(S.d0,8),sd1=Math.min(S.d1,8),f0=Math.pow(10,sd0),f1=Math.pow(10,sd1),r0=Math.floor(a0*f0)/f0,r1=Math.floor(a1*f1)/f1;
+  var dust=(a0-r0)*u0+(a1-r1)*u1;
+  $('d0').textContent=r0.toFixed(sd0)+' '+n0;$('d1').textContent=r1.toFixed(sd1)+' '+n1;
+  $('c0').dataset.v=r0.toFixed(sd0);$('c1').dataset.v=r1.toFixed(sd1);
+  $('dust').textContent='Rounded down to token decimals: leftover about '+usd2(dust)+'. Enter both amounts in the deposit screen; it may use slightly less of one token.';
+  var L=a0/x,h=+$('hp').value/100,perp=$('hty').value==='perp';
+  $('hp-t').textContent=Math.round(h*100)+'%';
+  $('levwrap').style.display=perp?'':'none';$('marginbox').style.display=perp?'':'none';
+  $('fl').textContent=perp?'Funding rate % / yr':'Borrow rate % / yr';
+  $('fnote').textContent=perp?'Positive funding: longs pay shorts, so your short earns it. Negative funding is a cost.':'Positive borrow rate: you pay interest on the borrowed token. Check the health factor on the Borrow page.';
+  var short0=a0*h,short1=S.vol?a1*h:0,notional=short0*u0+short1*u1;
+  var fr=(+$('fund').value||0)/100*(perp?-1:1),fa=(+$('fapr').value||0)/100,perDay=notional*fr/365;
+  var lev=Math.max(1,+$('lev').value||1),margin=perp?notional/lev:0,capUsed=val+margin;
+  $('h0').innerHTML=amt(short0)+' '+n0+(S.vol?'<br>'+amt(short1)+' '+n1:'');$('h0u').textContent='notional '+usd(notional);
+  $('hc').textContent=(perDay<0?'+':'')+usd2(Math.abs(perDay));$('hcp').textContent=(perDay<0?'you earn ':'you pay ')+usd(Math.abs(perDay)*30)+' / 30 days';
+  var fees30=val*fa*30/365,cost30=perDay*30+0.001*notional;
+  var net=capUsed>0?(fees30-cost30)/capUsed*365/30:0;
+  $('napr').textContent=fmt(net*100,1)+'%';$('napr2').textContent='no hedge: '+fmt(fa*100,1)+'%'+(perp&&margin>0?' · on '+usd(capUsed):'');
+  if(perp){var liqPct=1/lev-0.005,liq=P*(1+liqPct),risk=liq<pb;
+    $('margin').textContent='Margin needed '+usd(margin)+' at '+lev+'x. Liquidation price about '+qp(liq)+' '+n1+' (+'+fmt(liqPct*100,1)+'%). Range top '+qp(pb)+' (+'+fmt(up,1)+'%).';
+    $('liqwarn').style.display=risk&&h>0?'block':'none';
+    $('liqwarn').textContent='Liquidated before the top of your range. Lower the leverage or add margin.'}
+  $('scen').style.display=S.vol?'none':'block';$('volnote').style.display=S.vol?'block':'none';
+  if(S.vol)return;
+  var v0=posVal(L,P,pa,pb);
+  function res(m){var p2=P*(1+m/100),u=posVal(L,p2,pa,pb)-v0,hg=short0*(P-p2),fr2=inFrac(P,p2,pa,pb),fe=fees30*fr2;return{p2:p2,u:u,hg:hg,fe:fe,days:30*fr2,none:u+fe-entry,hed:u+hg+fe-cost30-entry}}
+  var rows='',pts=[];
+  for(var m=-30;m<=30;m+=2){var q=res(m);pts.push([m,q.none,q.hed])}
+  [-20,-10,0,10,20].forEach(function(m){var q=res(m);rows+='<tr><td>'+(m>0?'+':'')+m+'%</td><td class="mono">'+sgn(q.none)+'</td><td class="mono">'+sgn(q.hed)+'<br><span style="font-size:11px">'+sgn(q.hed-q.none)+'</span></td></tr>'});
+  $('tb').innerHTML=rows;
+  var xl=xAt(L,pa,pa,pb)*h,xn=short0,xhi=0;
+  $('edge').innerHTML='<tr><td>'+n0+'</td><td class="mono">'+amt(xn)+'</td><td class="mono">'+amt(xl)+'</td><td class="mono">'+amt(xhi)+'</td></tr><tr><td class="lbl">Notional</td><td class="mono">'+usd(xn*u0)+'</td><td class="mono">'+usd(xl*pa*u1)+'</td><td class="mono">$0</td></tr>';
+  var dn=xAt(L,P*0.95,pa,pb)*h-xn,dup=xAt(L,P*1.05,pa,pb)*h-xn;
+  $('rehedge').textContent='Re-hedge when the price moves about 5%: at -5% add '+amt(Math.abs(dn))+' '+n0+' of short, at +5% cut '+amt(Math.abs(dup))+' '+n0+'.';
+  var mv=+$('mv').value,q2=res(mv);
+  $('mv-t').textContent=(mv>0?'+':'')+mv+'%';$('mv-p').textContent=qp(q2.p2)+' '+n1;
+  function r(k,a1_,b1_,t){return '<tr'+(t?' class="tot"':'')+'><td class="k">'+k+'</td><td class="mono">'+a1_+'</td><td class="mono">'+b1_+'</td></tr>'}
+  var dash='<span class="lbl">-</span>';
+  $('cmp').innerHTML=r('Fees earned ('+fmt(q2.days,0)+' of 30 days in range)',sgn(q2.fe),sgn(q2.fe))+r('Price effect on position',sgn(q2.u),sgn(q2.u))+r('Hedge profit or loss',dash,sgn(q2.hg))+r('Funding or borrow, and trading fees',dash,sgn(-cost30))+r('Entry cost (swap and gas)',sgn(-entry),sgn(-entry))+r('Net result',sgn(q2.none),sgn(q2.hed),1)+r('Net, % of capital used',fmt(q2.none/val*100,1)+'%',fmt(q2.hed/capUsed*100,1)+'%');
+  var ns=pts.map(function(p){return p[1]}),hs=pts.map(function(p){return p[2]}),d=q2.hed-q2.none;
+  $('verdict').innerHTML='At '+(mv>0?'+':'')+mv+'% the hedge leaves you '+(d>=0?'<b class="good">'+usd(d)+' better off</b>':'<b class="bad">'+usd(-d)+' worse off</b>')+'. Across -30% to +30%: no hedge ranges from '+usd(Math.min.apply(null,ns))+' to '+usd(Math.max.apply(null,ns))+', with hedge from '+usd(Math.min.apply(null,hs))+' to '+usd(Math.max.apply(null,hs))+'.';
+  var W=460,H=150,l=48,rr=6,tp=6,bt=20,ys=[];pts.forEach(function(p){ys.push(p[1],p[2])});
+  var mn=Math.min.apply(null,ys.concat([0])),mx=Math.max.apply(null,ys.concat([0])),pad=(mx-mn)*0.08||1;mn-=pad;mx+=pad;
+  function X(m){return l+(m+30)/60*(W-l-rr)}function Y(v){return tp+(mx-v)/(mx-mn)*(H-tp-bt)}
+  function pl(i,col){return '<polyline fill="none" stroke="'+col+'" stroke-width="2" points="'+pts.map(function(p){return X(p[0]).toFixed(1)+','+Y(p[i]).toFixed(1)}).join(' ')+'"/>'}
+  var g='<line x1="'+l+'" x2="'+(W-rr)+'" y1="'+Y(0)+'" y2="'+Y(0)+'" stroke="currentColor" opacity=".35"/>';
+  [-30,-15,0,15,30].forEach(function(m){g+='<text x="'+X(m)+'" y="'+(H-5)+'" font-size="11" text-anchor="middle" fill="currentColor">'+(m>0?'+':'')+m+'%</text>'});
+  [mn+pad,0,mx-pad].forEach(function(v){g+='<text x="'+(l-5)+'" y="'+(Y(v)+4)+'" font-size="11" text-anchor="end" fill="currentColor">'+usd(v)+'</text>'});
+  [lp,up].forEach(function(m){if(m>-30&&m<30)g+='<line x1="'+X(m)+'" x2="'+X(m)+'" y1="'+tp+'" y2="'+(H-bt)+'" stroke="currentColor" stroke-dasharray="3 3" opacity=".35"/>'});
+  $('chart').innerHTML='<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="color:var(--text-secondary)" role="img" aria-label="30-day result versus price move">'+g+pl(1,'var(--c-unhedged)')+pl(2,'var(--c-hedged)')+'</svg>';
+}
+function tog(box,b){[].forEach.call(box.children,function(k){k.classList.toggle('on',k===b)})}
+['wd','lo','hi','bud','src','w0','w1','cost','gas','hp','fund','lev','fapr','mv','hty','wallet'].forEach(function(i){$(i).addEventListener('input',function(){if(i==='wd'){$('lo').value=$('wd').value;$('hi').value=$('wd').value}calc()})});
+[['lo-',-0.5,'lo'],['lo+',0.5,'lo'],['hi-',-0.5,'hi'],['hi+',0.5,'hi']].forEach(function(s){$(s[0]).addEventListener('click',function(){var e=$(s[2]);e.value=Math.max(0.1,Math.round((+e.value+s[1])*10)/10);calc()})});
+$('hty').addEventListener('change',function(){$('fund').value=$('hty').value==='perp'?8:5;calc()});
+$('basis').addEventListener('change',function(){$('fapr').value=$('basis').value==='fee'?S.a:S.e;calc()});
+$('presets').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;$('wd').value=b.dataset.w;$('lo').value=b.dataset.w;$('hi').value=b.dataset.w;calc()});
+$('mode').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;mode=b.dataset.m;tog($('mode'),b);$('in-wallet').style.display=mode==='wallet'?'block':'none';$('srcwrap').style.display=mode==='budget'?'':'none';calc()});
+['c0','c1'].forEach(function(id){$(id).addEventListener('click',function(){var b=$(id);try{navigator.clipboard.writeText(b.dataset.v)}catch(e){}b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1200)})});
+$('pools').addEventListener('click',function(e){var tr=e.target.closest('tr');if(!tr)return;[].forEach.call($('pools').children,function(k){k.classList.toggle('sel',k===tr)});
+  var d=tr.dataset,n=d.n.split(' / ');S={u0:+d.u0,u1:+d.u1,names:[n[0],n[1]],a:+d.a,e:+d.e,t:+d.t,ts:+d.ts,d0:+d.d0,d1:+d.d1,vol:+d.u1!==1};
+  $('pname').textContent=d.n;$('pfee').textContent=d.f+'%';$('pts').textContent=d.ts+' ticks';$('aprbig').textContent=d.a+'.0%';
+  $('basis').value='fee';$('fapr').value=d.a;$('w0').value=d.w0;$('w1').value=d.w1;setNames();calc()});
+$('srcwrap').style.display='';setNames();calc();
+})();
+</script>
+</body>
+</html>

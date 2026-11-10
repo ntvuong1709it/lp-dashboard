@@ -15,6 +15,8 @@ import type {
   CollateralHistoryDto,
   DailyCoverageDto,
   DailyEarningsDto,
+  EntryPlanDto,
+  EntryPlanRequest,
   LoanDto,
   ManualLoanDto,
   PositionEarningsDto,
@@ -34,6 +36,7 @@ import type {
   SnapshotPointDto,
   SyncStatus,
   TickerDto,
+  WalletBalancesDto,
   WatchedAddress,
   WeeklyClaimsDto,
 } from "./types";
@@ -261,6 +264,35 @@ export const usePoolEstimate = (
           body: JSON.stringify({ halfWidthPercent, capitalUsd, days, feePercent, knownFees }),
         },
       ),
+  });
+
+/**
+ * What to hold to enter a range of a pool (swap, amounts, costs) and what hedging it would cost. A pure calculation on the
+ * server, so the previous answer stays on screen while the next one loads, like the APR estimate.
+ */
+export const useEntryPlan = (poolId: string | null, body: EntryPlanRequest | null) =>
+  useQuery({
+    queryKey: ["entry-plan", poolId, JSON.stringify(body)],
+    enabled: poolId != null && body != null,
+    placeholderData: keepPreviousData,
+    retry: false,
+    staleTime: 10_000,
+    queryFn: () =>
+      request<EntryPlanDto>(`/api/pools/${encodeURIComponent(poolId!)}/entry-plan`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+  });
+
+/** Token and native balances of one followed wallet (raw units; the caller applies decimals). */
+export const useWalletBalances = (owner: string | null, tokens: string[]) =>
+  useQuery({
+    queryKey: ["wallet-balances", owner, tokens.join(",")],
+    enabled: owner != null && tokens.length > 0,
+    retry: false,
+    staleTime: 30_000,
+    queryFn: () =>
+      request<WalletBalancesDto>(`/api/wallet/balances${query({ owner, tokens: tokens.join(",") })}`),
   });
 
 export const usePortfolioInsights = (owner: string | null) =>

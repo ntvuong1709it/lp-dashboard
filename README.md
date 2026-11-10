@@ -74,6 +74,10 @@ The **Borrow** page and the "Interest coverage" card on **Earnings** compare wha
 - **Other lenders (e.g. Binance)** are entered by hand under Borrow → Add manual loan: the debt and APR with a date for every change, optional collateral amounts and liquidation LTV. The app holds no exchange keys.
 - Interest is simple APR; a week is 7 days and a month a twelfth of the year. Nothing is ever sent or executed: the page only shows numbers and suggestions.
 
+## Enter a pool range (what to hold, and what hedging costs)
+
+On **Pools**, the side panel's "Enter this range" section takes a pool, a range (each bound on its own) and either a USD budget or the tokens you hold, and says how much of each token to end up with, what to swap and what that costs. A hedge block compares the 30-day result with and without a short of the volatile token. The maths lives in `Domain/Metrics/EntryPlanner.cs` and `HedgePlanner.cs` (`POST /api/pools/{id}/entry-plan`); wallet balances for the prefill come from `GET /api/wallet/balances` (watched wallets only). Everything is an estimate and read-only: nothing is sent or signed. Design: [docs/enter-pool-spec.md](docs/enter-pool-spec.md).
+
 ## Login and wallets
 
 The site has one account protected by one password (8 to 128 characters, no username). Log in once per device and the wallets, their labels and all stored data are the same everywhere; nothing needs retyping.

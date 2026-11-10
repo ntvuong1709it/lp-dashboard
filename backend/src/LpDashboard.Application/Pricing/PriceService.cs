@@ -22,16 +22,20 @@ public sealed class PriceService(IPriceSource source, ITokenPriceRepository repo
 
     private readonly Dictionary<(string, long), decimal?> _historical = [];
 
-    public async Task<IReadOnlyDictionary<string, decimal>> GetCurrentAsync(IEnumerable<string> keys, CancellationToken ct)
+    public async Task<IReadOnlyDictionary<string, decimal>> GetCurrentAsync(IEnumerable<string> keys, CancellationToken ct) =>
+        (await GetCurrentWithTimeAsync(keys, ct)).ToDictionary(kv => kv.Key, kv => kv.Value.Price, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Current prices with the time each was fetched (at most <c>CurrentTtl</c> old).</summary>
+    public async Task<IReadOnlyDictionary<string, (decimal Price, DateTimeOffset At)>> GetCurrentWithTimeAsync(IEnumerable<string> keys, CancellationToken ct)
     {
         var now = time.GetUtcNow();
-        var result = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+        var result = new Dictionary<string, (decimal Price, DateTimeOffset At)>(StringComparer.OrdinalIgnoreCase);
         var missing = new List<string>();
 
         foreach (var key in keys.Distinct(StringComparer.OrdinalIgnoreCase))
         {
             if (CurrentCache.TryGetValue(key, out var cached) && now - cached.At < CurrentTtl)
-                result[key] = cached.Price;
+                result[key] = cached;
             else
                 missing.Add(key);
         }
@@ -41,7 +45,7 @@ public sealed class PriceService(IPriceSource source, ITokenPriceRepository repo
             var fetched = await source.GetCurrentAsync(missing, ct);
             foreach (var (key, price) in fetched)
             {
-                result[key] = price;
+                result[key] = (price, now);
                 CurrentCache[key] = (price, now);
             }
         }

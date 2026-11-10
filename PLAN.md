@@ -122,3 +122,4 @@ frontend/
 | POST     | `/api/sync`                                      | 202, async                                                        |
 | GET      | `/api/sync/status`                               | running, last run, providers, errors                              |
 | GET      | `/api/backup`                                    | consistent SQLite copy (VACUUM INTO), download                    |
+| POST     | `/api/pools/{id}/entry-plan`                     | pure calculation: swap, amounts, costs and hedge for a range of a listed pool; reads slot0 + USD prices ([spec](docs/enter-pool-spec.md)) |

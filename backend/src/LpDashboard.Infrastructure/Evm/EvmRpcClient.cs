@@ -119,6 +119,9 @@ internal sealed partial class EvmRpcClient(IHttpClientFactory httpClientFactory,
 
     public static RpcCall EthCall(string to, string data, string? from = null) => new("eth_call", [CallObject(to, data, from), "latest"]);
 
+    /// <summary>Native balance (wei) of an address.</summary>
+    public static RpcCall GetBalance(string holder) => new("eth_getBalance", [holder, "latest"]);
+
     /// <summary>eth_call against the state at a past block; needs a node that keeps historical state.</summary>
     public static RpcCall EthCallAt(string to, string data, long block) => new("eth_call", [CallObject(to, data, null), Abi.ToHex(block)]);
 

@@ -67,6 +67,37 @@ public static class PositionMath
     public static int SqrtPriceToTick(double sqrtPrice) =>
         (int)System.Math.Floor(System.Math.Log(sqrtPrice * sqrtPrice) / System.Math.Log(1.0001));
 
+    public const int MinTick = -887272;
+    public const int MaxTick = 887272;
+
+    /// <summary>The (fractional) tick whose price equals a decimal-adjusted price of token0 in token1.</summary>
+    public static double PriceToTickExact(double price, int decimals0, int decimals1) =>
+        System.Math.Log(price / System.Math.Pow(10, decimals0 - decimals1)) / System.Math.Log(1.0001);
+
+    /// <summary>Nearest tick that is a multiple of <paramref name="tickSpacing"/>, kept inside the tick bounds the pool supports.</summary>
+    public static int SnapTick(double tick, int tickSpacing)
+    {
+        if (tickSpacing <= 0) throw new ArgumentOutOfRangeException(nameof(tickSpacing));
+        var snapped = (long)System.Math.Floor(tick / tickSpacing + 0.5) * tickSpacing;
+        var min = (long)(MinTick / tickSpacing) * tickSpacing;
+        var max = (long)(MaxTick / tickSpacing) * tickSpacing;
+        return (int)System.Math.Clamp(snapped, min, max);
+    }
+
+    /// <summary>
+    /// Token amounts a range holds per unit of liquidity at <paramref name="price"/>, all prices decimal-adjusted (token1 per
+    /// token0): x = 1/√P − 1/√Pb, y = √P − √Pa, with P clamped into the range (all token0 below it, all token1 above).
+    /// Liquidity in this space is "human" liquidity: raw liquidity × 10^−((decimals0 + decimals1) / 2); the same
+    /// formulas then give human token amounts.
+    /// </summary>
+    public static (double Amount0, double Amount1) AmountsPerLiquidity(double price, double lowerPrice, double upperPrice)
+    {
+        var sa = System.Math.Sqrt(lowerPrice);
+        var sb = System.Math.Sqrt(upperPrice);
+        var s = System.Math.Sqrt(System.Math.Clamp(price, lowerPrice, upperPrice));
+        return (1 / s - 1 / sb, s - sa);
+    }
+
     public static (decimal Amount0, decimal Amount1) GetAmounts(
         BigInteger liquidity, BigInteger sqrtPriceX96, int tickLower, int tickUpper, int decimals0, int decimals1)
     {

@@ -1,7 +1,9 @@
 using System.Collections.Concurrent;
 using System.Numerics;
 using LpDashboard.Application.Abstractions;
+using LpDashboard.Application.Pricing;
 using LpDashboard.Domain;
+using LpDashboard.Domain.Calculations;
 using LpDashboard.Domain.Entities;
 using LpDashboard.Domain.Metrics;
 using Microsoft.Extensions.Logging;
@@ -84,7 +86,30 @@ public sealed record PoolHistoryDto(int DaysInRange, int Days, int? FirstExitDay
 public sealed record PoolAlternativeDto(
     string Id, Protocol Protocol, decimal? FeePercent, int? TickSpacing, decimal TvlUsd, double Apr, bool IsSelected);
 
-public enum EstimateFailure { PoolNotFound, NoPriceHistory, NoVolumeData }
+/// <summary>
+/// A pool read from the chain (price, tokens, decimals) with USD reference prices. Tokens are in the pool's own order,
+/// which can differ from the analytics source's; <see cref="PoolPrice"/> is token1 per token0, decimal-adjusted.
+/// </summary>
+/// <param name="PricesAsOf">When the USD prices were fetched (they are cached for up to a minute).</param>
+/// <param name="ReadAt">When the pool's slot0 was read.</param>
+public sealed record PoolStateDto(
+    string PoolId,
+    string PoolAddress,
+    Protocol Protocol,
+    TokenInfo Token0,
+    TokenInfo Token1,
+    decimal? FeePercent,
+    int TickSpacing,
+    decimal TvlUsd,
+    string SqrtPriceX96,
+    int Tick,
+    double PoolPrice,
+    double Usd0,
+    double Usd1,
+    DateTimeOffset PricesAsOf,
+    DateTimeOffset ReadAt);
+
+public enum EstimateFailure { PoolNotFound, NoPriceHistory, NoVolumeData, NoChainData, InvalidRequest }
 
 public sealed class EstimateException(EstimateFailure failure, string message) : Exception(message)
 {
@@ -97,10 +122,14 @@ public sealed class PoolExplorerService(
     IPriceSource prices,
     IPositionRepository positions,
     IEnumerable<IPositionProvider> providers,
+    PriceService priceService,
     TimeProvider time,
     ILogger<PoolExplorerService> logger)
 {
     private static readonly TimeSpan StatsTtl = TimeSpan.FromMinutes(15);
+    // Typing in the planner re-asks for the same pool many times a second; the chain is read at most this often per pool.
+    private static readonly TimeSpan PoolStateTtl = TimeSpan.FromSeconds(10);
+    private static readonly ConcurrentDictionary<string, (PoolStateDto State, DateTimeOffset At)> PoolStateCache = new();
     private static readonly TimeSpan SeriesTtl = TimeSpan.FromHours(6);
     private static readonly TimeSpan OnChainTvlTtl = TimeSpan.FromMinutes(10);
     private const int VolatilityDays = 30;
@@ -171,6 +200,52 @@ public sealed class PoolExplorerService(
             AprEstimator.BreakEvenMove(halfWidth, feeFraction, up: true) * 100,
             new PoolHistoryDto(history.DaysInRange, history.Days, history.FirstExitDay, history.LowMove * 100, history.HighMove * 100),
             await AlternativesAsync(pool, volatility, halfWidth, days, capital, request.KnownFees, ct));
+    }
+
+    /// <summary>
+    /// The pool as the chain reports it now (tokens, decimals, slot0) with USD reference prices. The analytics source's pool id
+    /// has no contract address, so the pool is looked up by token pair and fee tier or tick spacing.
+    /// </summary>
+    public async Task<PoolStateDto> ResolvePoolStateAsync(string poolId, CancellationToken ct)
+    {
+        var now = time.GetUtcNow();
+        if (PoolStateCache.TryGetValue(poolId, out var cached) && now - cached.At < PoolStateTtl) return cached.State;
+
+        var pool = FindCached(poolId) ?? throw new EstimateException(EstimateFailure.PoolNotFound, "Pool not found. Reload the pool list and try again.");
+        var provider = providers.FirstOrDefault(p => p.Chain == pool.Chain && p.Protocol == pool.Protocol)
+            ?? throw new EstimateException(EstimateFailure.NoChainData, $"No chain provider is configured for {pool.Protocol} on {pool.Chain}, so the pool price cannot be read.");
+
+        PoolChainState? chain;
+        try
+        {
+            chain = await provider.ResolvePoolAsync(pool.Token0, pool.Token1, pool.FeeHundredthsBip, pool.TickSpacing, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Could not read pool {PoolId} from the chain", poolId);
+            throw new EstimateException(EstimateFailure.NoChainData, "The pool could not be read from the chain. Try again in a moment.");
+        }
+        if (chain is null || chain.SqrtPriceX96.IsZero)
+            throw new EstimateException(EstimateFailure.NoChainData, "This pool was not found on the chain, or it has no price yet.");
+
+        var key0 = provider.GetPriceKey(chain.Token0.Address);
+        var key1 = provider.GetPriceKey(chain.Token1.Address);
+        var priced = await priceService.GetCurrentWithTimeAsync([key0, key1], ct);
+        if (!priced.TryGetValue(key0, out var p0)) throw new EstimateException(EstimateFailure.NoChainData, $"No USD price for {chain.Token0.Symbol}.");
+        if (!priced.TryGetValue(key1, out var p1)) throw new EstimateException(EstimateFailure.NoChainData, $"No USD price for {chain.Token1.Symbol}.");
+
+        var price = PositionMath.SqrtPriceX96ToPrice(chain.SqrtPriceX96, chain.Token0.Decimals, chain.Token1.Decimals);
+        if (!(price > 0) || double.IsInfinity(price))
+            throw new EstimateException(EstimateFailure.NoChainData, "The pool's price could not be read.");
+
+        // The fee the pool charges right now beats the source's (dynamic-fee pools).
+        decimal? fee = chain.Fee is { } f ? f / 10000m : pool.FeePercent;
+        var state = new PoolStateDto(
+            pool.Id, chain.PoolAddress, pool.Protocol, chain.Token0, chain.Token1, fee, chain.TickSpacing, pool.TvlUsd,
+            chain.SqrtPriceX96.ToString(), chain.Tick, price, (double)p0.Price, (double)p1.Price,
+            p0.At < p1.At ? p0.At : p1.At, now);
+        PoolStateCache[poolId] = (state, now);
+        return state;
     }
 
     /// <summary>

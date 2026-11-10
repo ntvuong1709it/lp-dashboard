@@ -46,6 +46,16 @@ public sealed record PositionChainState(
     BigInteger PendingRewardRaw,
     bool IsBurned);
 
+/// <summary>A pool as the chain reports it right now: tokens in the pool's own order (token0 has the lower address) and its slot0.</summary>
+public sealed record PoolChainState(
+    string PoolAddress,
+    TokenInfo Token0,
+    TokenInfo Token1,
+    int? Fee,
+    int TickSpacing,
+    BigInteger SqrtPriceX96,
+    int Tick);
+
 public sealed record RawPositionEvent(
     string PositionManager,
     string TokenId,
@@ -90,6 +100,17 @@ public interface IPositionProvider
     /// </summary>
     Task<IReadOnlyList<BigInteger?>> GetTokenBalancesAsync(IReadOnlyList<(string Holder, string Token)> queries, CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<BigInteger?>>(queries.Select(_ => (BigInteger?)null).ToList());
+
+    /// <summary>Native-token balance (raw wei) of each holder, in order; null where a read failed or the provider cannot read it.</summary>
+    Task<IReadOnlyList<BigInteger?>> GetNativeBalancesAsync(IReadOnlyList<string> holders, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<BigInteger?>>(holders.Select(_ => (BigInteger?)null).ToList());
+
+    /// <summary>
+    /// Finds the pool of a token pair (either order) with the given fee (Uniswap v3, hundredths of a bip) or tick spacing
+    /// (Slipstream) and reads its price. Null when no deployment has such a pool, or the provider cannot look pools up.
+    /// </summary>
+    Task<PoolChainState?> ResolvePoolAsync(string tokenA, string tokenB, int? fee, int? tickSpacing, CancellationToken ct) =>
+        Task.FromResult<PoolChainState?>(null);
 }
 
 public sealed record PricePoint(long Timestamp, decimal Price);

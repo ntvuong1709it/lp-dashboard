@@ -76,6 +76,14 @@ internal sealed class UniswapV3StyleProvider : IPositionProvider
             .ToList();
     }
 
+    public async Task<IReadOnlyList<BigInteger?>> GetNativeBalancesAsync(IReadOnlyList<string> holders, CancellationToken ct)
+    {
+        var results = await _rpc.BatchAsync(holders.Select(EvmRpcClient.GetBalance).ToList(), ct);
+        return results
+            .Select(r => r.Error is null && r.Result.ValueKind == System.Text.Json.JsonValueKind.String ? (BigInteger?)Abi.ToUInt(r.Result.GetString()!) : null)
+            .ToList();
+    }
+
     public async Task<IReadOnlyList<DiscoveredPosition>> DiscoverAsync(string owner, CancellationToken ct)
     {
         owner = owner.ToLowerInvariant();
@@ -561,7 +569,11 @@ internal sealed class UniswapV3StyleProvider : IPositionProvider
         return gauges;
     }
 
-    private async Task<string> GetPoolAddressAsync(string factory, string token0, string token1, int feeOrSpacing, CancellationToken ct)
+    private async Task<string> GetPoolAddressAsync(string factory, string token0, string token1, int feeOrSpacing, CancellationToken ct) =>
+        await TryGetPoolAddressAsync(factory, token0, token1, feeOrSpacing, ct)
+        ?? throw new InvalidOperationException($"Factory {factory} returned no pool for {token0}/{token1}/{feeOrSpacing}. Check the configured factory address.");
+
+    private async Task<string?> TryGetPoolAddressAsync(string factory, string token0, string token1, int feeOrSpacing, CancellationToken ct)
     {
         var key = $"{factory}:{token0}:{token1}:{feeOrSpacing}";
         if (_poolByKey.TryGetValue(key, out var cached)) return cached;
@@ -569,11 +581,38 @@ internal sealed class UniswapV3StyleProvider : IPositionProvider
         var signature = _isSlipstream ? "getPool(address,address,int24)" : "getPool(address,address,uint24)";
         var result = await _rpc.EthCallAsync(factory, Abi.Encode(signature, Abi.Word(token0), Abi.Word(token1), Abi.Word(feeOrSpacing)), ct);
         var pool = Abi.ToAddress(Abi.Words(result)[0]);
-        if (pool == ZeroAddress)
+        return pool == ZeroAddress ? null : _poolByKey[key] = pool;
+    }
+
+    public async Task<PoolChainState?> ResolvePoolAsync(string tokenA, string tokenB, int? fee, int? tickSpacing, CancellationToken ct)
+    {
+        var feeOrSpacing = _isSlipstream ? tickSpacing : fee;
+        if (feeOrSpacing is null) return null;
+
+        // Token order on chain is by address; the factories accept either order, but the pool's price is token1 per token0.
+        var (token0, token1) = string.CompareOrdinal(tokenA.ToLowerInvariant(), tokenB.ToLowerInvariant()) <= 0
+            ? (tokenA.ToLowerInvariant(), tokenB.ToLowerInvariant())
+            : (tokenB.ToLowerInvariant(), tokenA.ToLowerInvariant());
+
+        // Slipstream has several deployments on Base, and a pair/spacing can exist in more than one: take the busiest.
+        var pools = new List<string>();
+        foreach (var d in _deployments.Values)
         {
-            throw new InvalidOperationException($"Factory {factory} returned no pool for {token0}/{token1}/{feeOrSpacing}. Check the configured factory address.");
+            if (await TryGetPoolAddressAsync(d.Factory, token0, token1, feeOrSpacing.Value, ct) is { } p && !pools.Contains(p)) pools.Add(p);
         }
-        return _poolByKey[key] = pool;
+        if (pools.Count == 0) return null;
+
+        var pool = pools[0];
+        if (pools.Count > 1)
+        {
+            var calls = await _rpc.BatchAsync(pools.Select(p => EvmRpcClient.EthCall(p, Abi.Selector("liquidity()"))).ToList(), ct);
+            var best = pools.Select((p, i) => (Pool: p, Liquidity: calls[i].Error is null ? Abi.ToUInt(Abi.Words(calls[i].Result.GetString())[0]) : BigInteger.Zero))
+                .MaxBy(x => x.Liquidity);
+            pool = best.Pool;
+        }
+
+        var (sqrtPriceX96, tick, poolFee, spacing) = await GetPoolStateAsync(pool, ct);
+        return new PoolChainState(pool, await GetTokenAsync(token0, ct), await GetTokenAsync(token1, ct), poolFee, spacing, sqrtPriceX96, tick);
     }
 
     private async Task<(BigInteger SqrtPriceX96, int Tick, int? Fee, int TickSpacing)> GetPoolStateAsync(string pool, CancellationToken ct)
