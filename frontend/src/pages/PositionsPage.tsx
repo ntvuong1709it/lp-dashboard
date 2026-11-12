@@ -10,6 +10,7 @@ import type {
   Protocol,
 } from "../api/types";
 import { RangeBadge, RangeBar } from "../components/RangeBar";
+import { RiskBadge } from "../components/risk/RiskBadge";
 import { UpdatedAgo } from "../components/UpdatedAgo";
 import { SplitBar } from "../components/Unclaimed";
 import {
@@ -339,6 +340,7 @@ function PositionsTable({
             <SortHeader label="Catches up" k="catchUp" right sort={sort} onSort={onSort} />
             <SortHeader label="Fee APR" k="apr" right sort={sort} onSort={onSort} />
             <SortHeader label="In range" k="inRange" right sort={sort} onSort={onSort} />
+            <SortHeader label="Risk" k="risk" sort={sort} onSort={onSort} />
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-800">
@@ -358,7 +360,7 @@ function PositionsTable({
                       <WalletGroupLabel wallet={group.wallet} count={group.items.length} noun="position" />
                     </td>
                     <TotalsCells items={group.items} />
-                    <td colSpan={3} className="px-3 py-2" />
+                    <td colSpan={4} className="px-3 py-2" />
                   </tr>
                 )}
               <tr
@@ -538,6 +540,9 @@ function PositionsTable({
                     </span>
                   )}
                 </td>
+                <td className="px-3 py-2">
+                  <RiskBadge summary={p.risk} />
+                </td>
               </tr>
               </Fragment>
             );
@@ -550,7 +555,7 @@ function PositionsTable({
               {positions.length === 1 ? "position" : "positions"}
             </td>
             <TotalsCells items={positions} />
-            <td colSpan={3} className="px-3 py-2" />
+            <td colSpan={4} className="px-3 py-2" />
           </tr>
         </tfoot>
       </table>

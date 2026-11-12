@@ -1,64 +1,82 @@
-# Handover: improvement roadmap in progress
+# Handover: where the project stands
 
-Read [PLAN.md](PLAN.md) (design, metric definitions, protocol notes) and [README.md](README.md) (run/config) first. This file records where the improvement work stands.
+Last refreshed: 2026-11-11, on `main` at `6b48ca0`. Read [README.md](README.md) (run, config, login, deploy) and [PLAN.md](PLAN.md) (design, metric definitions, protocol notes) first. Note that PLAN.md's "Status" section is from the first week and is out of date; this file is the current status. The README's `Sync:IntervalMinutes` default of 15 is also stale: `appsettings.json` has 60.
 
 ## Working agreement with the user
 
-The user asked for an improvement roadmap (steps 1-6 plus a 3.5 QoL batch), **one step at a time: after finishing each step, stop and ask the user to verify; only continue on their go-ahead.** Be honest about what was and was not verified. Do not commit unless asked; the user asked for commits split into logical pieces.
+- **One step at a time.** After each step, stop, say what was verified and what was not, and wait for the user's go-ahead. Be honest about what was and was not checked (for example "UI not clicked through").
+- **Do not commit unless asked.** The user pushes branches and opens PRs themselves.
+- **Never read, print or commit `.env`, API keys or RPC URLs.** Do not copy the user's wallet address into committed files. Outbound requests to outside services may carry token and pool addresses only, never wallet addresses or other user data.
+- New features are specified in `docs/` first (interview, then spec), then built in the spec's "Build order".
 
 ## State of the repo
 
-- Branch: `improvements/price-fallback-table-docker` (cut from `main`, **not pushed, not merged**).
-- Two commits on it: `7d883ec` (price fallback, table, backup, sync tests) and `bf8bfa7` (CI, Docker, SPA hosting, README).
-- Tests: 72 passing (`cd backend; dotnet test LpDashboard.slnx`). Frontend: `cd frontend; npm run build`.
-- The GitHub Actions workflow (`.github/workflows/ci.yml`) has **never run**.
+- Branch: `main`, in sync with `origin/main`. Earlier PRs (#1 to #5) are merged. The branches `improvements/price-fallback-table-docker` and `deploy/azure-script` (local and remote) and the remote `features-page-status` are merged and can be deleted. The remotes `version-2` and `feature/unclaimed-ui` were not looked at.
+- Uncommitted: `docs/risk-screen-spec.md` and `docs/smart-lp-spec.md` (new, untracked).
+- Backend tests: 556 passing after the risk screen (`cd backend; dotnet test LpDashboard.slnx`, run 2026-11-11; 380 before it). Frontend: `cd frontend; npm run build` was not re-run for this refresh.
+- CI (`.github/workflows/ci.yml`) runs both and deploys to Azure on every push to `main`. This refresh did not check its run history.
 
-## Roadmap status
+## What is built
 
-| # | Step | Status |
-| - | ---- | ------ |
-| 1 | Real-wallet verification + protocol checks | Done. User confirmed numbers match the Aerodrome UI (positions, ticks, pending AERO). Slipstream V3 `EmissionsClaimed` and old `ClaimRewards` signatures both produce claims. |
-| 2 | Missing-price handling, sortable/filterable table, persisted UI state | Done and user-verified |
-| 3 | CI, SyncService integration tests, README, Docker, backups | Implemented and committed. **User has not explicitly approved Step 3** (they were asked, then moved on to Docker data location and commits). Ask once before starting Step 4. |
-| 3.5 | **Quality-of-life batch** | **Implemented, uncommitted, awaiting user verification** (all items except the optional dark/light theme and keyboard shortcuts). Backend 75 tests pass, frontend builds, new endpoints smoke-tested against a scratch DB; UI not clicked through by the assistant. Do Step 4 only after the user approves. |
-| 4 | Time in range, portfolio value over time, CSV export | **Implemented, uncommitted, awaiting user verification.** 95 tests pass, frontend builds, endpoints checked against a copy of the user's real DB (history's last point equals the summary value; all four CSVs download). UI not clicked through. Time in range = measured (snapshots) + estimated (tick inferred from DefiLlama prices via `PositionHistory`, covers pre-sync history and gaps; shown with "~" and a tooltip). Estimates are only as good as the prices: spot checks against deposit events whose token mix proves the true pool price were 0.6-1.3% (60-130 ticks) off, which can flip the call near a range edge (e.g. a one-sided position showing ~10% instead of ~0%). Possible refinement: use event token mix (one-sided = out of range, both tokens = in range) as ground truth. The estimate samples HOURLY (finest the price cache supports); 3-11 h sampling missed short dips (#1167 showed 100%, hourly shows ~98.9%). DefiLlama's chart endpoint 400s above 500 points per request across all tokens (1 token <=500, 2 tokens <=250), so `PriceService.GetSeriesAsync` fetches in windows of 480/tokens; a unit test enforces that limit. Cold list load ~12 s on 17 positions (once; prices then cached in the DB), warm ~70 ms; the summary endpoint skips the estimate. `formatShare` never prints 100.00% unless exactly 100. |
-| 5 | Out-of-range alerts (Telegram/Discord/email/browser) | Not started |
-| 6 | New chains/protocols: Uniswap v4, Ethereum, Solana, Robinhood | Not started |
-| 7 | Public hosting limits (deferred by the user, do later) | Not started. Background sync covers every wallet ever entered (RPC quota) and alerts for all go to one Telegram chat. Plan: per-wallet last-seen time (new migration), background-sync only wallets seen in the last N days, `Sync:PinnedAddresses` for the operator, cap on active wallets, manual-sync cooldown, per-IP rate limit on `POST /api/addresses` and `/api/sync`. |
+| Area | Status |
+| --- | --- |
+| Positions, P&L, fees, rewards, IL, P/L vs HODL, unclaimed fees and rewards | Built. Verified against the Aerodrome UI on a real wallet (positions, ticks, pending AERO). Uniswap v3 and all four Aerodrome Slipstream deployments on Base. |
+| Slipstream staking edge cases | Built, including positions minted and staked in one transaction (`MediatedStakeTests`, `StakePeriodTests`). |
+| Time in range, portfolio value over time, reconstructed history before first sync | Built. Estimates use hourly DefiLlama prices and are shown with "~". |
+| Pages | Overview/Earnings (with Activity), Borrow, Positions, Pools, P&L, Addresses. Features page was removed. |
+| Pools explorer | Built: history, on-chain TVL, trailing and in-range APR, pool comparison, HODL break-even, gauge emissions, data flags. |
+| Enter pool planner (swap amounts and hedge sizing) | Built 2026-11-10; spec [docs/enter-pool-spec.md](docs/enter-pool-spec.md). **Not yet verified by the user** against a real wallet and the Aerodrome deposit screen. |
+| Risk screen | Built 2026-11-11 (steps 1 to 4 of [docs/risk-screen-spec.md](docs/risk-screen-spec.md), section 15 lists where it differs): token and pool verdicts with evidence (GoPlus, honeypot.is, DexScreener, node reads; Basescan optional), Risk column and "Risk check" section on Pools, Risk column and panel on Positions, star toggle, `/risk` page with lookup, nightly re-check, hourly pool-balance snapshots, Telegram alerts. Migration `AddRiskScreen` (four new tables). **Not yet verified by the user** against tokens they know; UI checked on a scratch instance with the Pools and Risk pages only (no positions in it, so the Positions column and drawer were not clicked through). |
+| Borrow tracking | Built: manual loans plus Aave v3 on Base, coverage verdict, collateral trend. Spec: root [spec.md](spec.md). Daily Aave history needs an archive-capable RPC. |
+| Alerts | Telegram only, for a position leaving or returning to its range (includes range and price). Other channels (Discord, email, browser) were never built. |
+| Login and wallets | Single password, server-side wallet list, forwarded-header support for Azure. See README "Login and wallets". |
+| Hosting | Docker (the user's local setup), plus Azure App Service with CI deploy on push to `main`. |
+| Price ticker | BTC, ETH, BNB, AERO in the header. |
+| CSV export | Built, then removed on 2026-11-04 (commit `23c4260`). |
 
-### Step 3.5 plan: quality-of-life batch (recommended, not built)
-Mostly small frontend work. Already done in Step 2: sortable/filterable table, persisted UI state.
-- **Quick wins**: copy buttons and explorer links for addresses, tx hashes and token IDs; links to the pool on Uniswap/Aerodrome; edit a wallet's label (today only add/remove); "hide balances" privacy toggle; totals row on the positions table; skeleton loaders instead of "Loading..."; "updated X min ago" next to the data.
-- **Sync control**: resync one wallet or one position; "rescan from block X" action for debugging.
-- **Setup and health**: friendly setup screen when no RPC URL is configured (the API already reports "No chain providers configured"); `/health` endpoint; recent-errors panel.
-- **Wallet management**: label editing (orphaned data is intentionally kept, see Open issues; no fix needed).
-- **Lower value, only if the user wants them**: dark/light theme, keyboard shortcuts.
+## Not built, and specs waiting
 
-### Step 4 (built; the plan below is what was agreed)
-1. **Time in range**: share of time a position was in range, computed from `PositionSnapshots` (hourly, only from first sync; show "n/a" where there are no snapshots rather than guessing). Per-position on table and detail page.
-2. **Portfolio value over time**: new endpoint summing snapshots across positions (API only has per-position snapshots today) plus a chart on the Portfolio page. Same history limit.
-3. **CSV export**: positions, events, weekly claims, daily earnings.
-Approach: domain calculation with tests first, then API, then UI, then ask the user to check the numbers.
+| Item | Status |
+| --- | --- |
+| **Risk screen, step 5 only** | `LP_CONCENTRATION` waits for the watcher's S1 (pool LP index); until then it reads "not checked". The rest of the screen is built (below). |
+| **Smart-LP watcher** | Spec only: [docs/smart-lp-spec.md](docs/smart-lp-spec.md). Starts with the S0 spike (no UI, no migration) to measure RPC cost; S1 onward waits until the risk screen's migration is merged. |
+| Rebalance simulator | Design only: [docs/rebalance-simulator.md](docs/rebalance-simulator.md). Its swap solver is meant to reuse `EntryPlanner`. |
+| Clickable mocks | `docs/borrow-*.html`, `docs/enter-pool-mock.html`. The risk and watcher mock was published as a private Claude artifact and is not in the repo. |
+| New chains and protocols | Not started. The `Chain` and `Protocol` enums list Ethereum, Solana, Robinhood, Uniswap v4, Orca, Raydium and Meteora, but only Base with Uniswap v3 and Aerodrome Slipstream has a provider. |
+| Postgres | Wired but no migrations assembly (`LpDashboard.Infrastructure.Migrations.Postgres` does not exist). SQLite is the only supported database. |
+| Public hosting limits | Partly open. Login exists, but the background sync still covers **every wallet ever entered** (RPC quota) and all alerts go to one Telegram chat. Plan: per-wallet last-seen time (new migration), sync only wallets seen in the last N days, `Sync:PinnedAddresses` for the operator, a cap on active wallets, a manual-sync cooldown, and per-IP rate limits on `POST /api/addresses` and `POST /api/sync`. The Smart-LP watcher's log scans make this more pressing; its spec adds its own caps and cooldowns. |
 
 ## Open issues and decisions
 
-- **Orphaned data (decided: keep, by design)**: removing a watched address does NOT delete its positions/events/snapshots/cursors, so re-adding the same wallet reuses them without a resync (data is keyed by owner address string; sync resumes from the saved cursor). The user's DB has 46 such positions from a removed wallet (`0xdd91...`), hidden from views until it is re-added. Do not add delete-on-remove. The user pushes branches and opens PRs themselves.
-- **Postgres migrations assembly** (`LpDashboard.Infrastructure.Migrations.Postgres`) is still not built.
-- **Reward price fallback**: a reward claim with no price uses the next known price of the *same reward token* (estimated, flagged "est. reward price"); the user was asked to confirm this is acceptable (alternative: leave $0 with a warning) and did not object. Cause: DefiLlama has no history for the new AERO token (`0x3f5b...a4ee`) before about Oct 23, 2026.
-- Not verified: `docker compose up` with a real `BASE_RPC_URL` was the user's own run (it worked for them); the compose env passthrough was never tested by the assistant.
+- **Orphaned data (decided: keep, by design).** Removing a watched address does NOT delete its positions, events, snapshots or cursors, so re-adding the wallet reuses them. Data is keyed by owner address and hidden from views while the address is not watched. The user's database has 46 such positions from a removed wallet. Do not add delete-on-remove. The Smart-LP spec relies on this behaviour for scored candidate wallets, and requires a test that pins it.
+- **Reward price fallback.** A reward claim with no price uses the next known price of the same reward token (estimated, flagged "est. reward price"). The user was asked, and did not object. Cause: DefiLlama has no history for the new AERO token (`0x3f5b…a4ee`) before about Oct 23, 2026.
+- **Time-in-range estimates** are as good as the prices: spot checks against deposit events were 0.6 to 1.3% (60 to 130 ticks) off, which can flip the call near a range edge. Possible refinement: use the event token mix (one-sided means out of range) as ground truth.
+- **DefiLlama chart endpoint** returns 400 above 500 points per request across all tokens, so `PriceService.GetSeriesAsync` fetches in windows of 480 divided by the number of tokens. A unit test enforces it.
+- **Not verified by the assistant:** `docker compose up` with a real `BASE_RPC_URL` was the user's own run (it worked for them); the compose env passthrough was never tested here. A past month of Aave daily history was not compared with Aave's interface.
+- **Compiler warning** to clean up when passing by: `PositionQueryService` has an unread constructor parameter `addresses`.
 
 ## How the user runs it (important)
 
-- The user runs the app through **Docker Compose** (Rancher Desktop): `docker compose up --build -d` -> http://localhost:5080. The container serves the built frontend.
-- Database: `data/lpdashboard.db` in the repo folder (git-ignored), bind-mounted at `/data`. Compose sets `Database__SqliteJournalMode=DELETE` because **WAL breaks on Windows bind mounts** (a WAL-mode file on the mount gives "disk I/O error"; convert a file offline with `PRAGMA journal_mode=DELETE` first). `data/docker-volume-copy.db` is a leftover copy and can be deleted.
-- RPC key lives in `.env` (git-ignored) as `BASE_RPC_URL=...`. **Never read, print or commit `.env` or any key.** The user pasted a key in a previous chat and was told to rotate it.
-- Tool notes for this machine: Python is not installed (use PowerShell/Node for JSON). Files use CRLF in git (`core.autocrlf=true`); in edits via Perl/sed be careful, prefer the Edit tool. `dotnet build/test` into the repo's `bin/` fails while an API instance runs; use `--artifacts-path <scratch dir>`. To test frontend changes against a new backend without touching the user's instance, run the published API and Vite on other ports (e.g. 5081/5174) against a copy of the DB, then stop them.
-- The user's wallet to test with: the one already added in their app (do not copy it into committed files).
+- Through **Docker Compose** (Rancher Desktop): `docker compose up --build -d`, then http://localhost:5080. The container serves the built frontend.
+- Database: `data/lpdashboard.db` in the repo folder (git-ignored), bind-mounted at `/data`. Compose sets `Database__SqliteJournalMode=DELETE` because **WAL breaks on Windows bind mounts** ("disk I/O error"; convert a file offline with `PRAGMA journal_mode=DELETE` first). `data/docker-volume-copy.db` is a leftover and can be deleted.
+- The RPC key lives in `.env` (git-ignored) as `BASE_RPC_URL=...`. **Never read, print or commit `.env` or any key.** A key was pasted in an earlier chat and the user was told to rotate it.
+- The user's wallet to test with is the one already added in their app (do not copy it into committed files). To test against real data without touching their instance, run the published API and Vite on other ports (for example 5081 and 5174) against a **copy** of the database, then stop them.
+
+## Tool notes for this machine
+
+- Python is not installed; use PowerShell or Node for JSON and scripts.
+- Files use CRLF in git (`core.autocrlf=true`); prefer the Edit tool over sed or perl.
+- `dotnet build` and `dotnet test` into the repo's `bin/` fail while an API instance runs; pass `--artifacts-path <scratch dir>`.
+- On Windows PowerShell use `npm.cmd` if script execution is restricted.
+- New SQLite migration: `cd backend; dotnet ef migrations add <Name> --project src/LpDashboard.Infrastructure.Migrations.Sqlite --startup-project src/LpDashboard.Api` (run `dotnet tool restore` once). **Two features adding migrations on parallel branches will conflict in the model snapshot**: merge one before creating the next.
 
 ## Where things are
 
-- Metrics: `backend/src/LpDashboard.Domain/Metrics/PositionMetricsCalculator.cs`, `EarningsCalculator.cs`
-- Sync: `backend/src/LpDashboard.Application/Sync/SyncService.cs`; tests in `backend/tests/LpDashboard.Domain.Tests/SyncServiceTests.cs` (fake provider + price source, temp SQLite; a pattern to reuse)
-- Pricing: `backend/src/LpDashboard.Application/Pricing/PriceService.cs`
-- Query/DTO layer: `backend/src/LpDashboard.Application/Queries/`
-- Frontend table logic: `frontend/src/lib/positionTable.ts`; persistence hook `frontend/src/lib/usePersistentState.ts`; pages in `frontend/src/pages/`
+- Metrics: `backend/src/LpDashboard.Domain/Metrics/` (`PositionMetricsCalculator`, `EarningsCalculator`, `TimeInRangeCalculator`, `PerformanceCalculator`, `EntryPlanner`, `HedgePlanner`, `BorrowCoverageCalculator`, `RangeTransitionDetector`, and more); position maths in `Domain/Calculations/PositionMath.cs`.
+- Sync: `Application/Sync/SyncService.cs`, `SyncCoordinator.cs`, `Api/Background/SyncBackgroundService.cs`. Tests in `backend/tests/LpDashboard.Domain.Tests/SyncServiceTests.cs` (fake provider and price source, temp SQLite; the pattern to reuse).
+- Chain access: `Infrastructure/Evm/` (`UniswapV3StyleProvider`, `EvmRpcClient` with batching, pacing and adaptive `eth_getLogs`, `AaveV3Provider`, `BlockLocator`); the provider contract is `Application/Abstractions/IPositionProvider.cs`.
+- Pricing: `Application/Pricing/PriceService.cs`, `Infrastructure/Pricing/DefiLlamaPriceSource.cs`. Pool data: `Application/Pools/`, `Infrastructure/Pools/DefiLlamaPoolStatsSource.cs`.
+- Alerts: `Application/Abstractions/IAlertNotifier.cs`, `Infrastructure/TelegramAlertNotifier.cs`; range alerts are sent from `SyncService` after the new state is saved.
+- Query and DTO layer: `Application/Queries/`. API: `Api/Controllers/`. Wallet scoping: `Api/OwnerParam.cs` (every call names its owners).
+- Frontend: pages in `frontend/src/pages/`, components in `frontend/src/components/` (`pools/`, `borrow/`, `earnings/`), logic in `frontend/src/lib/`, API hooks in `frontend/src/api/client.ts`.
+- Specs: root `spec.md` (Borrow, built), `docs/enter-pool-spec.md` (built), `docs/risk-screen-spec.md` and `docs/smart-lp-spec.md` (not built), `docs/rebalance-simulator.md` (design only).

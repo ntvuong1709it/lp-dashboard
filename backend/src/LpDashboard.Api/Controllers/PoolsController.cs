@@ -1,4 +1,5 @@
 using LpDashboard.Application.Pools;
+using LpDashboard.Application.Risk;
 using LpDashboard.Domain;
 using Microsoft.AspNetCore.Mvc;
 
@@ -6,7 +7,7 @@ namespace LpDashboard.Api.Controllers;
 
 [ApiController]
 [Route("api/pools")]
-public sealed class PoolsController(PoolExplorerService pools, EntryPlanService entryPlans) : ControllerBase
+public sealed class PoolsController(PoolExplorerService pools, EntryPlanService entryPlans, RiskService risk) : ControllerBase
 {
     /// <summary>Pools from the analytics source. <c>owner</c> is optional; when given, pools where that wallet has an open position are marked.</summary>
     [HttpGet]
@@ -27,7 +28,9 @@ public sealed class PoolsController(PoolExplorerService pools, EntryPlanService 
 
         try
         {
-            return Ok(await pools.ListAsync(new PoolQuery(chain ?? Chain.Base, protocol, minTvl ?? 0, sort, limit ?? 200, owners), ct));
+            var list = await pools.ListAsync(new PoolQuery(chain ?? Chain.Base, protocol, minTvl ?? 0, sort, limit ?? 200, owners), ct);
+            // Cached risk verdicts and stars only: listing never triggers a check.
+            return Ok(await risk.DecoratePoolsAsync(list, ct));
         }
         catch (HttpRequestException)
         {

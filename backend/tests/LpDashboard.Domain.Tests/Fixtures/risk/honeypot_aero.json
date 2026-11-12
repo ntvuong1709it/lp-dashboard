@@ -1,0 +1,81 @@
+{
+ "token": {
+  "name": "Aero",
+  "symbol": "AERO",
+  "decimals": 18,
+  "address": "0x3f5bF3EdAc59d650D8fDf9657a71F2f904A3a4Ee",
+  "totalHolders": 14607
+ },
+ "withToken": {
+  "name": "Aerodrome",
+  "symbol": "AERO",
+  "decimals": 18,
+  "address": "0x940181a94A35A4569E4529A3CDfB74e38FD98631",
+  "totalHolders": 732955
+ },
+ "summary": {
+  "risk": "low",
+  "riskLevel": 1,
+  "flags": []
+ },
+ "simulationSuccess": true,
+ "honeypotResult": {
+  "isHoneypot": false
+ },
+ "simulationResult": {
+  "buyTax": 0,
+  "sellTax": 0,
+  "transferTax": 0,
+  "buyGas": "165927",
+  "sellGas": "131281"
+ },
+ "holderAnalysis": {
+  "holders": "101",
+  "successful": "101",
+  "failed": "0",
+  "siphoned": "0",
+  "averageTax": 0,
+  "averageGas": 105282.9801980198,
+  "highestTax": 0,
+  "highTaxWallets": "0",
+  "taxDistribution": [
+   {
+    "tax": 0,
+    "count": 101
+   }
+  ],
+  "snipersFailed": 0,
+  "snipersSuccess": 0
+ },
+ "flags": [],
+ "contractCode": {
+  "openSource": true,
+  "rootOpenSource": true,
+  "isProxy": false,
+  "hasProxyCalls": false
+ },
+ "chain": {
+  "id": "8453",
+  "name": "Base",
+  "shortName": "base",
+  "currency": "ETH"
+ },
+ "router": "0x2626664c2603336E57B271c5C0b26F421741e481",
+ "pair": {
+  "pair": {
+   "name": "Uniswap V3: AERO-AERO",
+   "address": "0xb2b6Aa256594546D4C43F984f4202C7d1E08B41e",
+   "token0": "0x3f5bF3EdAc59d650D8fDf9657a71F2f904A3a4Ee",
+   "token1": "0x940181a94A35A4569E4529A3CDfB74e38FD98631",
+   "type": "UniswapV3"
+  },
+  "chainId": "8453",
+  "reserves0": "69566215546639738527941",
+  "reserves1": "50073433417072562126293",
+  "liquidity": 54616.79632473723,
+  "router": "0x2626664c2603336E57B271c5C0b26F421741e481",
+  "createdAtTimestamp": "1793089253",
+  "creationTxHash": "0xccb0d6b50962b9f45173a5091ae5bde7d6bdaebe5509146b227873ad72652440"
+ },
+ "pairAddress": "0xb2b6Aa256594546D4C43F984f4202C7d1E08B41e"
+}

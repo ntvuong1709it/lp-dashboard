@@ -1,6 +1,7 @@
 using System.Numerics;
 using LpDashboard.Domain;
 using LpDashboard.Domain.Entities;
+using LpDashboard.Domain.Risk;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
@@ -25,6 +26,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<LendingDay> LendingDays => Set<LendingDay>();
     public DbSet<AuthCredential> AuthCredentials => Set<AuthCredential>();
     public DbSet<AuthSession> AuthSessions => Set<AuthSession>();
+    public DbSet<RiskCheck> RiskChecks => Set<RiskCheck>();
+    public DbSet<StarredPool> StarredPools => Set<StarredPool>();
+    public DbSet<PoolLiquiditySnapshot> PoolLiquiditySnapshots => Set<PoolLiquiditySnapshot>();
+    public DbSet<RiskAlertState> RiskAlertStates => Set<RiskAlertState>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
     {
@@ -33,6 +38,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
         builder.Properties<ChainFamily>().HaveConversion<string>().HaveMaxLength(16);
         builder.Properties<PositionStatus>().HaveConversion<string>().HaveMaxLength(16);
         builder.Properties<PositionEventType>().HaveConversion<string>().HaveMaxLength(32);
+        builder.Properties<RiskLevel>().HaveConversion<string>().HaveMaxLength(16);
+        builder.Properties<RiskSubjectKind>().HaveConversion<string>().HaveMaxLength(16);
         builder.Properties<decimal>().HavePrecision(38, 18);
         builder.Properties<decimal?>().HavePrecision(38, 18);
     }
@@ -152,6 +159,42 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             e.Property(x => x.TokenHash).HasMaxLength(64);
             e.Property(x => x.UserAgent).HasMaxLength(200);
             e.HasIndex(x => x.TokenHash).IsUnique();
+        });
+
+        modelBuilder.Entity<RiskCheck>(e =>
+        {
+            e.Property(x => x.Subject).HasMaxLength(64);
+            e.Property(x => x.ExplorerId).HasMaxLength(100);
+            e.HasIndex(x => new { x.Kind, x.Chain, x.Subject, x.IsLatest });
+            e.HasIndex(x => new { x.Kind, x.Chain, x.ExplorerId, x.IsLatest });
+            e.HasIndex(x => x.CheckedAt);
+        });
+
+        modelBuilder.Entity<StarredPool>(e =>
+        {
+            e.Property(x => x.ExplorerId).HasMaxLength(100);
+            e.Property(x => x.Symbol).HasMaxLength(100);
+            e.Property(x => x.Token0).HasMaxLength(64);
+            e.Property(x => x.Token1).HasMaxLength(64);
+            e.Property(x => x.PoolAddress).HasMaxLength(64);
+            e.HasIndex(x => new { x.Chain, x.ExplorerId }).IsUnique();
+        });
+
+        modelBuilder.Entity<PoolLiquiditySnapshot>(e =>
+        {
+            e.Property(x => x.PoolAddress).HasMaxLength(64);
+            // Mapped here because BigInteger is not a property EF discovers by convention.
+            var raw = new ValueConverter<BigInteger, string>(v => v.ToString(), v => BigInteger.Parse(v));
+            e.Property(x => x.Token0Raw).HasConversion(raw).HasMaxLength(80);
+            e.Property(x => x.Token1Raw).HasConversion(raw).HasMaxLength(80);
+            e.HasIndex(x => new { x.Chain, x.PoolAddress, x.At });
+        });
+
+        modelBuilder.Entity<RiskAlertState>(e =>
+        {
+            e.Property(x => x.Subject).HasMaxLength(64);
+            e.Property(x => x.Code).HasMaxLength(64);
+            e.HasIndex(x => new { x.Kind, x.Chain, x.Subject, x.Code, x.ClearedAt });
         });
 
         ApplyGlobalConverters(modelBuilder);

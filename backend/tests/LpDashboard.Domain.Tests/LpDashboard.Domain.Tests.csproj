@@ -19,6 +19,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="Fixtures\**\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\LpDashboard.Domain\LpDashboard.Domain.csproj" />
     <ProjectReference Include="..\..\src\LpDashboard.Application\LpDashboard.Application.csproj" />
     <ProjectReference Include="..\..\src\LpDashboard.Infrastructure\LpDashboard.Infrastructure.csproj" />

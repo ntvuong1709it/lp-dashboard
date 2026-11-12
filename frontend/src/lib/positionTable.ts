@@ -1,5 +1,6 @@
 import type { PositionDto, Protocol } from "../api/types";
 import { protocolLabels } from "./format";
+import { verdictRisk } from "./risk";
 
 export type SortKey =
   | "position"
@@ -14,7 +15,8 @@ export type SortKey =
   | "vsHodl"
   | "catchUp"
   | "apr"
-  | "inRange";
+  | "inRange"
+  | "risk";
 
 export interface SortState {
   key: SortKey;
@@ -48,6 +50,8 @@ const sortValue: Record<SortKey, (p: PositionDto, ctx: SortContext) => number | 
     ctx.catchUpDays?.has(p.id) ? (ctx.catchUpDays.get(p.id) ?? Number.MAX_SAFE_INTEGER) : null,
   apr: (p) => p.metrics.feeAprPercent,
   inRange: (p) => p.timeInRange?.percent ?? null,
+  // Worst first when sorting descending; a position with nothing checked has no verdict and goes last.
+  risk: (p) => (p.risk ? verdictRisk(p.risk.level) : null),
 };
 
 /** Rows with no value for the sort key always go last, regardless of direction. */

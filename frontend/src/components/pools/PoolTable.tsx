@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import type { PoolDto } from "../../api/types";
 import { protocolLabels } from "../../lib/format";
 import { type Sort, type SortKey, UNRELIABLE_VOLUME_NOTE, apr, feeLabel, hasUnreliableVolume, poolRate, usd } from "../../lib/pools";
+import { RiskBadge } from "../risk/RiskBadge";
+import { StarButton } from "./StarButton";
 import { TokenPair } from "./TokenPair";
 
 const columns: { key: SortKey; label: string; align: "left" | "right" }[] = [
@@ -9,6 +11,7 @@ const columns: { key: SortKey; label: string; align: "left" | "right" }[] = [
   { key: "tvlUsd", label: "TVL", align: "right" },
   { key: "fees7dUsd", label: "7d Earnings", align: "right" },
   { key: "apr", label: "Avg APY", align: "right" },
+  { key: "risk", label: "Risk", align: "left" },
 ];
 
 /** The next row up or down that can take focus, skipping the expanded detail row between pools. */
@@ -51,7 +54,7 @@ export function PoolTable({
                   key={c.key}
                   scope="col"
                   aria-sort={active ? (sort.dir < 0 ? "descending" : "ascending") : undefined}
-                  className={`whitespace-nowrap px-3 py-2 font-medium ${c.align === "left" ? "pl-10 text-left" : "text-right"}`}
+                  className={`whitespace-nowrap px-3 py-2 font-medium ${c.align === "right" ? "text-right" : c.key === "symbol" ? "pl-10 text-left" : "text-left"}`}
                 >
                   <button
                     type="button"
@@ -133,6 +136,7 @@ function PoolRows({
                 {p.held && (
                   <span className="rounded-full border border-emerald-400/60 px-1.5 text-[11px] text-emerald-400">You hold</span>
                 )}
+                <StarButton pool={p} />
               </div>
               <div className="text-xs text-slate-500">
                 {protocolLabels[p.protocol]}
@@ -154,6 +158,9 @@ function PoolRows({
         <td className="num px-3 py-2.5 text-right">
           {apr(fee)}
           {p.rewardApr ? <div className="text-xs text-emerald-400">+ {apr(p.rewardApr)} emissions</div> : null}
+        </td>
+        <td className="px-3 py-2.5">
+          <RiskBadge summary={p.risk} />
         </td>
       </tr>
       {expanded && (

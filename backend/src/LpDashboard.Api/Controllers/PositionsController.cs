@@ -1,6 +1,7 @@
 using LpDashboard.Application.Abstractions;
 using LpDashboard.Application.Addresses;
 using LpDashboard.Application.Queries;
+using LpDashboard.Application.Risk;
 using LpDashboard.Domain;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,7 +9,7 @@ namespace LpDashboard.Api.Controllers;
 
 [ApiController]
 [Route("api")]
-public sealed class PositionsController(PositionQueryService queries) : ControllerBase
+public sealed class PositionsController(PositionQueryService queries, RiskService risk) : ControllerBase
 {
     [HttpGet("positions")]
     [ProducesResponseType<IReadOnlyList<PositionDto>>(StatusCodes.Status200OK)]
@@ -17,7 +18,8 @@ public sealed class PositionsController(PositionQueryService queries) : Controll
         [FromQuery] string? owner, [FromQuery] PositionStatus? status, [FromQuery] Protocol? protocol, [FromQuery] Chain? chain, CancellationToken ct)
     {
         if (!OwnerParam.TryParse(owner, out var owners)) return InvalidOwner();
-        return Ok(await queries.ListAsync(new PositionFilter(owners, status, protocol, chain), ct));
+        var list = await queries.ListAsync(new PositionFilter(owners, status, protocol, chain), ct);
+        return Ok(await risk.DecoratePositionsAsync(list, ct));
     }
 
     [HttpGet("events")]
@@ -32,8 +34,12 @@ public sealed class PositionsController(PositionQueryService queries) : Controll
     [HttpGet("positions/{id:int}")]
     [ProducesResponseType<PositionDetailDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Get(int id, CancellationToken ct) =>
-        await queries.GetAsync(id, ct) is { } detail ? Ok(detail) : NotFound();
+    public async Task<IActionResult> Get(int id, CancellationToken ct)
+    {
+        if (await queries.GetAsync(id, ct) is not { } detail) return NotFound();
+        var decorated = await risk.DecoratePositionsAsync([detail.Position], ct);
+        return Ok(detail with { Position = decorated[0] });
+    }
 
     [HttpGet("positions/{id:int}/snapshots")]
     [ProducesResponseType<IReadOnlyList<SnapshotPointDto>>(StatusCodes.Status200OK)]

@@ -1,0 +1,21 @@
+{
+ "schemaVersion": "1.0.0",
+ "pair": {
+  "chainId": "base",
+  "pairAddress": "0x5555555555555555555555555555555555555555",
+  "pairCreatedAt": 1792710629000,
+  "liquidity": {
+   "usd": 12345.5
+  }
+ },
+ "pairs": [
+  {
+   "chainId": "base",
+   "pairAddress": "0x5555555555555555555555555555555555555555",
+   "pairCreatedAt": 1792710629000,
+   "liquidity": {
+    "usd": 12345.5
+   }
+  }
+ ]
+}

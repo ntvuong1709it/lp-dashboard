@@ -1,0 +1,12 @@
+{
+ "status": "1",
+ "message": "OK",
+ "result": [
+  {
+   "contractAddress": "0x1",
+   "contractCreator": "0x2",
+   "txHash": "0x3",
+   "timestamp": "1792710629"
+  }
+ ]
+}

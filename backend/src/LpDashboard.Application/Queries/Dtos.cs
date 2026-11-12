@@ -44,7 +44,9 @@ public sealed record PositionDto(
     DateTime? ValuedAt,
     PositionMetrics Metrics,
     /// <summary>Measured from snapshots, completed with an estimate from historical prices where there are none. Null when nothing could be covered.</summary>
-    TimeInRange? TimeInRange);
+    TimeInRange? TimeInRange,
+    /// <summary>Cached risk verdict of the position's pool and tokens; null until something was checked. Never triggers a check.</summary>
+    LpDashboard.Application.Risk.RiskSummaryDto? Risk = null);
 
 /// <param name="Estimated">At least one position's value at this time is reconstructed from events and prices, not measured.</param>
 public sealed record PortfolioHistoryPointDto(DateTime Timestamp, decimal ValueUsd, decimal UnclaimedUsd, int PositionCount, bool Estimated);

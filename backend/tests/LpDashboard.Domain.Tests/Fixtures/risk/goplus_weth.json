@@ -1,0 +1,115 @@
+{
+ "code": 1,
+ "message": "OK",
+ "result": {
+  "0x4200000000000000000000000000000000000006": {
+   "anti_whale_modifiable": "0",
+   "can_take_back_ownership": "0",
+   "external_call": "0",
+   "hidden_owner": "0",
+   "holder_count": "5362838",
+   "holders": [
+    {
+     "address": "0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb",
+     "tag": "",
+     "is_contract": 1,
+     "balance": "83768.604199259833019035",
+     "percent": "0.286101556971040575",
+     "is_locked": 0
+    },
+    {
+     "address": "0x6c561b446416e1a00e8e93e221854d6ea4171372",
+     "tag": "",
+     "is_contract": 1,
+     "balance": "42789.88785765615154933",
+     "percent": "0.146143697340009152",
+     "is_locked": 0
+    },
+    {
+     "address": "0xd4a0e0b9149bcee3c920d2e00b5de09138fd8bb7",
+     "tag": "",
+     "is_contract": 1,
+     "balance": "22602.099676069979871717",
+     "percent": "0.077194743423878251",
+     "is_locked": 0
+    },
+    {
+     "address": "0x7aea2e8a3843516afa07293a10ac8e49906dabd1",
+     "tag": "",
+     "is_contract": 1,
+     "balance": "6523.56490450678815653",
+     "percent": "0.022280448552555934",
+     "is_locked": 0
+    },
+    {
+     "address": "0x498581ff718922c3f8e6a244956af099b2652b2b",
+     "tag": "",
+     "is_contract": 1,
+     "balance": "4075.74421385209566576",
+     "percent": "0.013920212429767304",
+     "is_locked": 0
+    },
+    {
+     "address": "0x4a7af46bc8abc00048c6c7920a1488daf568366c",
+     "tag": "",
+     "is_contract": 1,
+     "balance": "3794.947670366687801462",
+     "percent": "0.012961185726968649",
+     "is_locked": 0
+    },
+    {
+     "address": "0xb47219ccd98eae1f40987c672442c2cce9a31605",
+     "tag": "",
+     "is_contract": 0,
+     "balance": "3188.8",
+     "percent": "0.010890961519415114",
+     "is_locked": 0
+    },
+    {
+     "address": "0x8c7080564b5a792a33ef2fd473fba6364d5495e5",
+     "tag": "",
+     "is_contract": 1,
+     "balance": "3162.880786060207883466",
+     "percent": "0.010802437572591304",
+     "is_locked": 0
+    },
+    {
+     "address": "0xda905450166c6574cee0cd276b898f62d7368ee9",
+     "tag": "",
+     "is_contract": 0,
+     "balance": "2896.993339555870165399",
+     "percent": "0.009894331091038906",
+     "is_locked": 0
+    },
+    {
+     "address": "0xd0b53d9277642d899df5c87a3966a349a798f224",
+     "tag": "",
+     "is_contract": 1,
+     "balance": "2811.558513054461888551",
+     "percent": "0.009602538752903951",
+     "is_locked": 0
+    }
+   ],
+   "is_anti_whale": "0",
+   "is_blacklisted": "0",
+   "is_honeypot": "0",
+   "is_mintable": "0",
+   "is_open_source": "1",
+   "is_proxy": "0",
+   "is_whitelisted": "0",
+   "owner_balance": "0",
+   "owner_change_balance": "0",
+   "owner_percent": "0",
+   "personal_slippage_modifiable": "0",
+   "selfdestruct": "0",
+   "slippage_modifiable": "0",
+   "token_name": "Wrapped Ether",
+   "token_symbol": "WETH",
+   "total_supply": "292793.248265122014056194",
+   "trading_cooldown": "0",
+   "transfer_pausable": "0",
+   "transfer_tax": "",
+   "cannot_buy": "0"
+  }
+ }
+}

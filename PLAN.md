@@ -122,4 +122,8 @@ frontend/
 | POST     | `/api/sync`                                      | 202, async                                                        |
 | GET      | `/api/sync/status`                               | running, last run, providers, errors                              |
 | GET      | `/api/backup`                                    | consistent SQLite copy (VACUUM INTO), download                    |
+| GET      | `/api/risk/tokens/{chain}/{address}?refresh=`    | token risk report; cached 24 h, `refresh=true` forces a check (429 + Retry-After inside the cooldown) ([spec](docs/risk-screen-spec.md)) |
+| GET      | `/api/risk/pools/{id}?refresh=`                  | pool verdict: its own findings and both token reports            |
+| GET      | `/api/risk/held?owner=`, `/api/risk/recent?owner=` | tokens held or followed with cached verdicts; recent changes   |
+| PUT/DELETE | `/api/pools/{id}/star`                         | follow or unfollow a pool (nightly re-check scope)               |
 | POST     | `/api/pools/{id}/entry-plan`                     | pure calculation: swap, amounts, costs and hedge for a range of a listed pool; reads slot0 + USD prices ([spec](docs/enter-pool-spec.md)) |

@@ -1,0 +1,11 @@
+{
+ "status": "1",
+ "message": "OK",
+ "result": [
+  {
+   "SourceCode": "contract X {}",
+   "ABI": "[]",
+   "ContractName": "X"
+  }
+ ]
+}

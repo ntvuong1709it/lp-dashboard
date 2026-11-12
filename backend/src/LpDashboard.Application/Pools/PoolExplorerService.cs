@@ -30,7 +30,10 @@ public sealed record PoolDto(
     decimal? RewardApr,
     bool Held,
     /// <summary>Half-width in percent of the range of the first open position the owner has in this pool, as if centred on the price.</summary>
-    double? MyHalfWidthPercent);
+    double? MyHalfWidthPercent,
+    /// <summary>Cached risk verdict of the pool's tokens (and of the pool once it was opened). Null until something was checked; never triggers a check.</summary>
+    LpDashboard.Application.Risk.RiskSummaryDto? Risk = null,
+    bool Starred = false);
 
 public sealed record PoolListDto(IReadOnlyList<PoolDto> Pools, int Total, DateTime FetchedAt);
 
@@ -171,6 +174,9 @@ public sealed class PoolExplorerService(
 
         return new PoolListDto(sorted.Take(Math.Clamp(query.Limit, 1, 1000)).ToList(), rows.Count, fetchedAt.UtcDateTime);
     }
+
+    /// <summary>The pool as the last list showed it (no network call); null when the id is not in the cached list.</summary>
+    public PoolDto? FindListed(string poolId) => FindCached(poolId) is { } p ? ToDto(p, null) : null;
 
     public async Task<PoolEstimateDto> EstimateAsync(string poolId, EstimateRequest request, CancellationToken ct)
     {

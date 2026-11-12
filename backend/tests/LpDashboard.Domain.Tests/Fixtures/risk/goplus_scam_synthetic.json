@@ -1,0 +1,125 @@
+{
+ "code": 1,
+ "message": "OK",
+ "result": {
+  "0x3f5bf3edac59d650d8fdf9657a71f2f904a3a4ee": {
+   "anti_whale_modifiable": "0",
+   "buy_tax": "0.04",
+   "can_take_back_ownership": "0",
+   "cannot_buy": "0",
+   "cannot_sell_all": "0",
+   "creator_address": "0x2222222222222222222222222222222222222222",
+   "creator_balance": "19.332011590840997914",
+   "creator_percent": "0.250000",
+   "dex": [
+    {
+     "liquidity_type": "UniV3",
+     "name": "UniswapV3",
+     "liquidity": "294.72748313964216707790",
+     "pool_fee": "0.01",
+     "pair": "0x1ad14ecac05d2f2112b143e736c27dd656fbca89"
+    },
+    {
+     "liquidity_type": "UniV3",
+     "name": "UniswapV3",
+     "liquidity": "99.283371947136",
+     "pool_fee": "0.0004",
+     "pair": "0xdfbb8469c64a660adf8e8c2f491fbf58d36d9536"
+    },
+    {
+     "liquidity_type": "UniV3",
+     "name": "UniswapV3",
+     "liquidity": "48.14441553639786897165",
+     "pool_fee": "0.003",
+     "pair": "0xac0a53ac407c45ba8dfb9146162f30478e9da816"
+    },
+    {
+     "liquidity_type": "UniV3",
+     "name": "UniswapV3",
+     "liquidity": "20.572967091884",
+     "pool_fee": "0.003",
+     "pair": "0x229cfa9fe4005952ea99c699ea06732ad7f5eb3d"
+    },
+    {
+     "liquidity_type": "UniV4",
+     "name": "UniswapV4",
+     "liquidity": "0.106303418700",
+     "pool_manager": "0x498581fF718922c3f8e6A244956aF099B2652b2b",
+     "pool_fee": "0.15",
+     "pair": "0x8968cdc1e9eb86435ff049881dd23d9426fb39859051b19b79170d84b4f1d3f0"
+    }
+   ],
+   "external_call": "0",
+   "hidden_owner": "0",
+   "holder_count": "14613",
+   "holders": [
+    {
+     "address": "0x4444444444444444444444444444444444444444",
+     "tag": "",
+     "is_contract": 0,
+     "balance": "1",
+     "percent": "0.62",
+     "is_locked": 0
+    },
+    {
+     "address": "0x1ad14ecac05d2f2112b143e736c27dd656fbca89",
+     "tag": "",
+     "is_contract": 1,
+     "balance": "1",
+     "percent": "0.20",
+     "is_locked": 0
+    },
+    {
+     "address": "0x5555555555555555555555555555555555555555",
+     "tag": "Uniswap V3: Pool",
+     "is_contract": 1,
+     "balance": "1",
+     "percent": "0.05",
+     "is_locked": 0
+    }
+   ],
+   "honeypot_with_same_creator": "0",
+   "is_anti_whale": "0",
+   "is_blacklisted": "1",
+   "is_honeypot": "1",
+   "is_in_cex": {
+    "listed": "1",
+    "cex_list": [
+     "Coinbase"
+    ]
+   },
+   "is_in_dex": "1",
+   "is_mintable": "1",
+   "is_open_source": "0",
+   "is_proxy": "1",
+   "is_whitelisted": "0",
+   "lp_holder_count": "3",
+   "lp_holders": [
+    {
+     "address": "0x44bfd564126b69490184dfe7b8c438d4ae0f6032",
+     "tag": "",
+     "value": "295.4480075187778504917",
+     "is_contract": 1,
+     "balance": "29.405025225499864253",
+     "percent": "1.000000000000000000",
+     "is_locked": 0
+    }
+   ],
+   "lp_total_supply": "329.9590753354069",
+   "owner_balance": "0",
+   "owner_change_balance": "0",
+   "owner_percent": "0",
+   "personal_slippage_modifiable": "0",
+   "selfdestruct": "0",
+   "sell_tax": "0.99",
+   "slippage_modifiable": "0",
+   "token_name": "Aero",
+   "token_symbol": "SCAM",
+   "total_supply": "2138804757.713800242466962741",
+   "trading_cooldown": "0",
+   "transfer_pausable": "1",
+   "transfer_tax": "0",
+   "owner_address": "0x2222222222222222222222222222222222222222"
+  }
+ }
+}

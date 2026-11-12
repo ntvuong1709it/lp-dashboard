@@ -46,6 +46,8 @@ Defaults are in `backend/src/LpDashboard.Api/appsettings.json`; override with us
 | `Sync:IntervalMinutes` | 15 | Background sync period. |
 | `Sync:SnapshotIntervalMinutes` | 60 | Minimum spacing of position snapshots. |
 | `Alerts:Telegram:BotToken` / `ChatId` | empty | Enables Telegram alerts (below). Never logged. |
+| `Risk:*` | see "Risk screen" | Thresholds, trusted-token list and schedule of the risk screen. |
+| `Risk:Etherscan:ApiKey` | empty | Optional. Enables the Basescan checks (verified source, contract age). Keep it in user-secrets or the environment. |
 | `Database:Provider` | `Sqlite` | `Postgres` is wired but has no migrations yet. |
 | `ConnectionStrings:Default` | `Data Source=lpdashboard.db` | Relative paths resolve against the API content root. |
 | `Auth:ResetPassword` | empty | Forgot the password? Set any new value (e.g. `reset-1`) and restart: the setup page opens once and your data stays. See "Login and wallets". |
@@ -77,6 +79,16 @@ The **Borrow** page and the "Interest coverage" card on **Earnings** compare wha
 ## Enter a pool range (what to hold, and what hedging costs)
 
 On **Pools**, the side panel's "Enter this range" section takes a pool, a range (each bound on its own) and either a USD budget or the tokens you hold, and says how much of each token to end up with, what to swap and what that costs. A hedge block compares the 30-day result with and without a short of the volatile token. The maths lives in `Domain/Metrics/EntryPlanner.cs` and `HedgePlanner.cs` (`POST /api/pools/{id}/entry-plan`); wallet balances for the prefill come from `GET /api/wallet/balances` (watched wallets only). Everything is an estimate and read-only: nothing is sent or signed. Design: [docs/enter-pool-spec.md](docs/enter-pool-spec.md).
+
+## Risk screen (should I put money in this token or pool?)
+
+A traffic light per token and per pool (Green, Yellow, Red, "Not checked", "Partial 6/9") with the evidence behind it: honeypot and sell-tax simulation (honeypot.is, GoPlus), mint/blacklist/pause powers and who controls them, upgradeable proxies, top-holder concentration, pool age and liquidity, a wash-trading heuristic, emission dependence and gauge state. It shows on the **Pools** table and side panel (above "Enter this range"), on **Positions**, and on the **Risk** page, where any Base token address can be looked up. **No flags is not a guarantee of safety.** The rules and thresholds are in [docs/risk-screen-spec.md](docs/risk-screen-spec.md); the code is `Domain/Risk/` (pure, with tests).
+
+- Outside services receive only token and pool addresses, never wallet addresses. GoPlus, honeypot.is and DexScreener need no key; Etherscan/Basescan is optional (`Risk:Etherscan:ApiKey`). A source that fails shows as a check that did not run, never as a wrong verdict.
+- A check is cached `Risk:CacheHours` (24) and runs when a pool is opened or a token looked up; Recheck is limited by `Risk:RefreshCooldownMinutes` (5). The tokens of your open positions and of starred pools are re-checked at `Risk:NightlyUtcHour` (3 UTC), and pool token balances are snapshotted every `Risk:LiquidityIntervalMinutes` (60).
+- Telegram alerts (same channel as range alerts): a held token got worse (level up, honeypot or mint/blacklist or proxy appeared, controller or implementation changed, top holder up more than 10 points), or a held pool lost more than `Risk:LiquidityDropPct` (30%) of its value against a day earlier, both at current prices. One alert per problem until it clears; the first check never alerts.
+- `Risk:TrustedTokens` (addresses) replaces the default list of well-known tokens that are exempt from the privilege rules.
+- The pool LP-concentration check waits for the pool LP index of [docs/smart-lp-spec.md](docs/smart-lp-spec.md) and reads "not checked" until then.
 
 ## Login and wallets
 

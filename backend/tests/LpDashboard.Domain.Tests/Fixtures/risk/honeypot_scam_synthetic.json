@@ -1,0 +1,20 @@
+{
+ "token": {
+  "symbol": "SCAM"
+ },
+ "summary": {
+  "risk": "honeypot",
+  "riskLevel": 90,
+  "flags": []
+ },
+ "simulationSuccess": true,
+ "honeypotResult": {
+  "isHoneypot": true,
+  "honeypotReason": "SELL_FAILED"
+ },
+ "simulationResult": {
+  "buyTax": 4,
+  "sellTax": 99,
+  "transferTax": 0
+ }
+}

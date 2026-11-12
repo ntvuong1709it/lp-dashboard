@@ -130,6 +130,8 @@ export interface PositionDto {
   metrics: PositionMetrics;
   /** Null until at least two snapshots exist for the position. */
   timeInRange: TimeInRangeDto | null;
+  /** Cached risk verdict of the position's pool and tokens; null until something was checked. */
+  risk: RiskSummaryDto | null;
 }
 
 export interface PositionEventDto {
@@ -372,6 +374,9 @@ export interface PoolDto {
   held: boolean;
   /** Half-width of your open position in this pool, as if centred on the price. */
   myHalfWidthPercent: number | null;
+  /** Cached risk verdict of the pool's tokens (and of the pool once opened); null until something was checked. */
+  risk: RiskSummaryDto | null;
+  starred: boolean;
 }
 
 export interface PoolListDto {
@@ -905,4 +910,95 @@ export interface WalletBalancesDto {
   chain: Chain;
   nativeRaw: string | null;
   balances: { token: string; raw: string | null }[];
+}
+
+/* ---------- risk screen ---------- */
+
+export type VerdictLevel = "NotChecked" | "Partial" | "Green" | "Yellow" | "Red";
+export type RiskSeverity = "Info" | "Yellow" | "Red";
+
+export interface RiskFindingDto {
+  code: string;
+  severity: RiskSeverity;
+  title: string;
+  /** The numbers behind the finding. */
+  evidence: string;
+  source: string;
+  /** The address the finding is about, when there is one. */
+  subject: string | null;
+  link: string | null;
+}
+
+export interface RiskSourceDto {
+  name: string;
+  displayName: string;
+  required: boolean;
+  answered: boolean;
+  /** Why it did not answer. */
+  detail: string | null;
+}
+
+export interface RiskLinksDto {
+  explorer: string | null;
+  honeypot: string | null;
+  dexScreener: string | null;
+}
+
+/** The verdict in the smallest form a table row needs; read from the cache, never triggers a check. */
+export interface RiskSummaryDto {
+  level: VerdictLevel;
+  checksRun: number;
+  checksTotal: number;
+  checkedAt: string | null;
+  /** Titles of the worst findings, for the tooltip. */
+  top: string[];
+}
+
+export interface TokenRiskDto {
+  chain: Chain;
+  address: string;
+  symbol: string | null;
+  level: VerdictLevel;
+  checksRun: number;
+  checksTotal: number;
+  checkedAt: string;
+  trusted: boolean;
+  findings: RiskFindingDto[];
+  sources: RiskSourceDto[];
+  links: RiskLinksDto;
+  /** When the next forced re-check is allowed; null when it already is. */
+  recheckAvailableAt: string | null;
+}
+
+export interface PoolRiskDto {
+  poolId: string;
+  poolAddress: string;
+  level: VerdictLevel;
+  checksRun: number;
+  checksTotal: number;
+  checkedAt: string;
+  findings: RiskFindingDto[];
+  sources: RiskSourceDto[];
+  token0: TokenRiskDto;
+  token1: TokenRiskDto;
+  links: RiskLinksDto;
+  recheckAvailableAt: string | null;
+}
+
+export interface RiskHeldRowDto {
+  address: string;
+  symbol: string;
+  /** "held" and/or "starred". */
+  reasons: string[];
+  risk: RiskSummaryDto | null;
+}
+
+export interface RiskChangeDto {
+  kind: "Token" | "Pool";
+  subject: string;
+  symbol: string | null;
+  at: string;
+  level: VerdictLevel;
+  description: string;
+  isWorse: boolean;
 }

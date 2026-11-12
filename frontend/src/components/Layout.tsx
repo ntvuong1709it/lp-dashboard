@@ -60,6 +60,9 @@ export function Layout() {
             <NavLink to="/pnl" className={navClass}>
               Profit &amp; loss
             </NavLink>
+            <NavLink to="/risk" className={navClass}>
+              Risk
+            </NavLink>
             <NavLink to="/addresses" className={navClass}>
               Addresses
             </NavLink>

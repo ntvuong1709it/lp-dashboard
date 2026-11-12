@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { Chain, Protocol } from "../../api/types";
 import { protocolLabels } from "../../lib/format";
 import { DEFAULT_SORT, type PoolFilters, type Sort, type SortKey, activeFilterCount, sortLabels } from "../../lib/pools";
+import { type RiskFilter, riskFilterLabels } from "../../lib/risk";
 
 export const MIN_TVL_OPTIONS = [
   { label: "Any TVL", value: 0 },
@@ -115,6 +116,21 @@ export function PoolFilterBar({
             </option>
           ))}
         </Select>
+        <Select
+          label="Risk"
+          value={filters.risk}
+          onChange={(v) => onFilters({ risk: v as RiskFilter })}
+          active={filters.risk !== "any"}
+        >
+          {(Object.keys(riskFilterLabels) as RiskFilter[]).map((k) => (
+            <option key={k} value={k}>
+              {k === "any" ? "Risk" : "Risk: " + riskFilterLabels[k]}
+            </option>
+          ))}
+        </Select>
+        <Toggle on={filters.starred} onClick={() => onFilters({ starred: !filters.starred })}>
+          ★ Following
+        </Toggle>
         <Toggle on={filters.stable} onClick={() => onFilters({ stable: !filters.stable })}>
           Stable pools
         </Toggle>

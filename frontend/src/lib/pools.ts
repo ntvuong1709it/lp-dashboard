@@ -1,4 +1,5 @@
 import type { PoolDto, PositionDto, Protocol } from "../api/types";
+import { type RiskFilter, matchesRiskFilter, verdictRisk } from "./risk";
 
 /** Deposit size the estimates assume until the user types their own. */
 export const DEFAULT_CAPITAL = 5000;
@@ -148,6 +149,10 @@ export const hasExtraRewards = (p: PoolDto) => (p.rewardApr ?? 0) > 0;
 
 export interface PoolFilters {
   query: string;
+  /** Risk verdict filter (cached verdicts only; pools nobody checked count as not checked). */
+  risk: RiskFilter;
+  /** Only pools you follow. */
+  starred: boolean;
   protocol: Protocol | null;
   stable: boolean;
   extraRewards: boolean;
@@ -160,6 +165,8 @@ export interface PoolFilters {
 
 export const DEFAULT_FILTERS: PoolFilters = {
   query: "",
+  risk: "any",
+  starred: false,
   protocol: null,
   stable: false,
   extraRewards: false,
@@ -172,6 +179,8 @@ export const DEFAULT_FILTERS: PoolFilters = {
 export function activeFilterCount(f: PoolFilters) {
   return (
     Number(f.query.trim() !== "") +
+    Number(f.risk !== "any") +
+    Number(f.starred) +
     Number(f.protocol != null) +
     Number(f.stable) +
     Number(f.extraRewards) +
@@ -185,6 +194,8 @@ export function matchesFilters(p: PoolDto, f: PoolFilters) {
   const q = f.query.trim().toLowerCase();
   if (q && !`${p.symbol} ${p.token0} ${p.token1}`.toLowerCase().includes(q)) return false;
   if (f.protocol && p.protocol !== f.protocol) return false;
+  if (!matchesRiskFilter(p.risk, f.risk)) return false;
+  if (f.starred && !p.starred) return false;
   if (f.stable && !isStablePool(p)) return false;
   if (f.extraRewards && !hasExtraRewards(p)) return false;
   if (f.correlated && !isCorrelatedPool(p)) return false;
@@ -193,7 +204,7 @@ export function matchesFilters(p: PoolDto, f: PoolFilters) {
   return true;
 }
 
-export type SortKey = "symbol" | "tvlUsd" | "fees7dUsd" | "apr";
+export type SortKey = "symbol" | "tvlUsd" | "fees7dUsd" | "apr" | "risk";
 
 export interface Sort {
   key: SortKey;
@@ -207,12 +218,15 @@ export const sortLabels: Record<SortKey, string> = {
   tvlUsd: "TVL",
   fees7dUsd: "7d Earnings",
   apr: "Avg APY",
+  risk: "Risk",
 };
 
 function sortValue(p: PoolDto, key: SortKey): string | number {
   if (key === "symbol") return `${p.symbol} ${p.protocol}`;
   // Pools with no 7-day volume rank by their 24h rate instead of sinking to the bottom.
   if (key === "apr") return totalRate(p) ?? -1;
+  // Worst first when sorting descending; pools nobody checked sit between Green and Partial.
+  if (key === "risk") return verdictRisk(p.risk?.level);
   return p[key] ?? -1;
 }
 

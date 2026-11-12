@@ -12,6 +12,7 @@ import { useWallets } from "../../lib/wallets";
 import { CopyButton, ErrorText, Segmented } from "../ui";
 import { NumberField, Tile, input } from "./entryBits";
 import { HedgeBlock, type HedgeInputs } from "./HedgeBlock";
+import { RedRiskBanner } from "./PoolRiskSection";
 
 export type EntryMode = "budget" | "wallet";
 
@@ -137,6 +138,10 @@ export function EntryPanel({
       <div className="mb-2 flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold">Enter this range</h3>
         {isFetching && <span className="text-xs text-slate-500">Updating…</span>}
+      </div>
+
+      <div className="mb-3 empty:hidden">
+        <RedRiskBanner poolId={pool.id} />
       </div>
 
       <div className="flex flex-wrap items-center gap-3">

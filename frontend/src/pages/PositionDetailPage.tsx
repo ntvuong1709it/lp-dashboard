@@ -63,6 +63,7 @@ import { useHideBalances } from "../lib/privacy";
 import { claimInsight } from "../lib/claimInsight";
 import { PerformancePanel } from "../components/PerformancePanel";
 import { PositionBreakEven } from "../components/BreakEvenCallout";
+import { PositionRiskPanel } from "../components/risk/PositionRiskPanel";
 
 export function PositionDetailPage({
   id: idProp,
@@ -279,6 +280,8 @@ export function PositionDetailPage({
         <RangePanel position={p} events={data.events} />
         <BreakdownPanel position={p} events={data.events} />
       </div>
+
+      <PositionRiskPanel position={p} />
 
       <ValueChart id={id} />
 

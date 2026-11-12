@@ -121,6 +121,50 @@ public interface IAuthRepository
     Task RemoveExpiredSessionsAsync(DateTime now, CancellationToken ct);
 }
 
+public interface IRiskRepository
+{
+    /// <summary>The current (latest) check of a token or pool, untracked.</summary>
+    Task<RiskCheck?> GetLatestAsync(RiskSubjectKind kind, Chain chain, string subject, CancellationToken ct);
+
+    /// <summary>Current checks of these subjects (those that have one).</summary>
+    Task<List<RiskCheck>> ListLatestAsync(RiskSubjectKind kind, Chain chain, IReadOnlyCollection<string> subjects, CancellationToken ct);
+
+    /// <summary>Current pool checks by the pool explorer's id.</summary>
+    Task<List<RiskCheck>> ListLatestPoolsByExplorerIdAsync(Chain chain, IReadOnlyCollection<string> explorerIds, CancellationToken ct);
+
+    /// <summary>Checks that recorded at least one change, newest first, optionally limited to these token or pool addresses.</summary>
+    Task<List<RiskCheck>> ListRecentChangesAsync(Chain chain, IReadOnlyCollection<string>? subjects, int take, CancellationToken ct);
+
+    /// <summary>Adds the check as the latest of its subject; the previous latest stops being latest. Saved by the unit of work.</summary>
+    Task AddCheckAsync(RiskCheck check, CancellationToken ct);
+
+    /// <summary>Deletes all but the newest <paramref name="keep"/> checks of a subject, immediately (not through the unit of work).</summary>
+    Task PruneChecksAsync(RiskSubjectKind kind, Chain chain, string subject, int keep, CancellationToken ct);
+
+    Task<List<StarredPool>> ListStarsAsync(Chain chain, CancellationToken ct);
+    Task<StarredPool?> FindStarAsync(Chain chain, string explorerId, CancellationToken ct);
+    void Add(StarredPool star);
+    void Remove(StarredPool star);
+
+    void Add(PoolLiquiditySnapshot snapshot);
+
+    /// <summary>The newest snapshot at or before <paramref name="at"/>, within <paramref name="maxAge"/> of it.</summary>
+    Task<PoolLiquiditySnapshot?> GetSnapshotAtOrBeforeAsync(Chain chain, string pool, DateTime at, TimeSpan maxAge, CancellationToken ct);
+
+    Task<PoolLiquiditySnapshot?> GetLatestSnapshotAsync(Chain chain, string pool, CancellationToken ct);
+
+    /// <summary>Deletes snapshots older than the cut-off, immediately.</summary>
+    Task PruneSnapshotsAsync(DateTime olderThan, CancellationToken ct);
+
+    /// <summary>The open (not cleared) alert record for this subject and code, tracked.</summary>
+    Task<RiskAlertState?> FindOpenAlertAsync(RiskSubjectKind kind, Chain chain, string subject, string code, CancellationToken ct);
+
+    /// <summary>All open alert records of a subject, tracked.</summary>
+    Task<List<RiskAlertState>> ListOpenAlertsAsync(RiskSubjectKind kind, Chain chain, string subject, CancellationToken ct);
+
+    void Add(RiskAlertState state);
+}
+
 public interface IUnitOfWork
 {
     Task SaveChangesAsync(CancellationToken ct);
