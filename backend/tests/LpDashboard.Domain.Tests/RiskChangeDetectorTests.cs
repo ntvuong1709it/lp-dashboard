@@ -209,14 +209,14 @@ public class RiskChangeDetectorTests
     public void Pool_level_and_finding_changes_are_reported()
     {
         var green = Eval(Clean());
-        PoolRiskAssessment Pool(DateTime? created, LpConcentrationFacts? lp = null) => RiskEvaluator.EvaluatePool(
-            new PoolRiskFacts(RiskTestData.PoolAddr, RiskTestData.Now, [RiskTestData.Ok(RiskSources.DexScreener, true), RiskTestData.Ok(RiskSources.LpIndex)], created, 10, 0, null, lp),
+        PoolRiskAssessment Pool(DateTime? created) => RiskEvaluator.EvaluatePool(
+            new PoolRiskFacts(RiskTestData.PoolAddr, RiskTestData.Now, [RiskTestData.Ok(RiskSources.DexScreener, true)], created, 10, 0),
             green, green, Options);
 
         Assert.True(RiskChangeDetector.ComparePool(null, Pool(RiskTestData.Now.AddDays(-50))).IsFirstCheck);
 
-        var c = RiskChangeDetector.ComparePool(Pool(RiskTestData.Now.AddDays(-50)), Pool(RiskTestData.Now.AddDays(-50), new LpConcentrationFacts(RiskTestData.Whale, 60, false)));
-        Assert.Contains(c.Changes, x => x.Kind == RiskChangeKind.Appeared && x.Code == RiskCodes.LpConcentration);
+        var c = RiskChangeDetector.ComparePool(Pool(RiskTestData.Now.AddDays(-50)), Pool(RiskTestData.Now.AddDays(-3)));
+        Assert.Contains(c.Changes, x => x.Kind == RiskChangeKind.Appeared && x.Code == RiskCodes.PoolYoung);
         Assert.Contains(c.Changes, x => x.Kind == RiskChangeKind.LevelWorsened);
     }
 }

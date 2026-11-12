@@ -38,12 +38,6 @@ public sealed class RiskOptions
     /// <summary>A stablecoin priced further than this from $1 is Yellow.</summary>
     public decimal StableDepegPct { get; set; } = 1m;
 
-    /// <summary>One wallet's share of the active pool liquidity at or above this is Red.</summary>
-    public decimal LpConcentrationRedPct { get; set; } = 50m;
-
-    /// <summary>... at or above this is Yellow.</summary>
-    public decimal LpConcentrationYellowPct { get; set; } = 30m;
-
     /// <summary>More than this share of a pool's APR coming from gauge emissions is Yellow.</summary>
     public decimal EmissionDependentPct { get; set; } = 80m;
 

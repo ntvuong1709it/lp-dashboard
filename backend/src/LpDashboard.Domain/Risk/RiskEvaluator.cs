@@ -187,23 +187,6 @@ public static class RiskEvaluator
     {
         var findings = new List<RiskFinding>();
 
-        if (f.LpConcentration is { } lp)
-        {
-            var partial = lp.Partial ? "; partial history: the LP index does not reach the pool's first block, so this may be understated" : "";
-            var evidence = $"{lp.TopHolderAddress} provides {Pct(lp.TopSharePct)} of the liquidity active at the current tick{partial}";
-            if (lp.TopSharePct >= o.LpConcentrationRedPct)
-                findings.Add(new(RiskCodes.LpConcentration, RiskSeverity.Red, "One wallet owns most of the pool", evidence, "pool LP index", lp.TopHolderAddress));
-            else if (lp.TopSharePct >= o.LpConcentrationYellowPct)
-                findings.Add(new(RiskCodes.LpConcentration, RiskSeverity.Yellow, "One wallet owns a large part of the pool", evidence, "pool LP index", lp.TopHolderAddress));
-            else
-                findings.Add(new(RiskCodes.LpConcentration, RiskSeverity.Info, "LP concentration", evidence, "pool LP index", lp.TopHolderAddress));
-        }
-        else
-        {
-            findings.Add(new(RiskCodes.LpConcentration, RiskSeverity.Info, "LP concentration not checked",
-                "The pool LP index is not built yet (docs/smart-lp-spec.md), so one wallet's share of the pool is unknown", "pool LP index"));
-        }
-
         if (f.PoolCreatedAt is { } created)
         {
             var age = (f.CollectedAt - created).TotalDays;

@@ -88,7 +88,7 @@ A traffic light per token and per pool (Green, Yellow, Red, "Not checked", "Part
 - A check is cached `Risk:CacheHours` (24) and runs when a pool is opened or a token looked up; Recheck is limited by `Risk:RefreshCooldownMinutes` (5). The tokens of your open positions and of starred pools are re-checked at `Risk:NightlyUtcHour` (3 UTC), and pool token balances are snapshotted every `Risk:LiquidityIntervalMinutes` (60).
 - Telegram alerts (same channel as range alerts): a held token got worse (level up, honeypot or mint/blacklist or proxy appeared, controller or implementation changed, top holder up more than 10 points), or a held pool lost more than `Risk:LiquidityDropPct` (30%) of its value against a day earlier, both at current prices. One alert per problem until it clears; the first check never alerts.
 - `Risk:TrustedTokens` (addresses) replaces the default list of well-known tokens that are exempt from the privilege rules.
-- The pool LP-concentration check waits for the pool LP index of [docs/smart-lp-spec.md](docs/smart-lp-spec.md) and reads "not checked" until then.
+- There is no check of how much of a pool one wallet owns: it would need a pool-level `eth_getLogs` scan, which costs too much RPC (and a Free-tier Alchemy key allows only 10 blocks per request).
 
 ## Login and wallets
 

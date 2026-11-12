@@ -64,7 +64,6 @@ public static class RiskSources
     public const string Etherscan = "etherscan";
     public const string Prices = "prices";
     public const string PoolStats = "poolstats";
-    public const string LpIndex = "lpindex";
 
     public static string DisplayName(string source) => source switch
     {
@@ -75,7 +74,6 @@ public static class RiskSources
         Etherscan => "Basescan",
         Prices => "DefiLlama prices",
         PoolStats => "pool explorer",
-        LpIndex => "pool LP index",
         _ => source,
     };
 }
@@ -101,7 +99,6 @@ public static class RiskCodes
     public const string TrustedToken = "TRUSTED_TOKEN";
 
     // Pool
-    public const string LpConcentration = "LP_CONCENTRATION";
     public const string PoolYoung = "POOL_YOUNG";
     public const string EmissionDependent = "EMISSION_DEPENDENT";
     public const string GaugeKilled = "GAUGE_KILLED";
@@ -125,7 +122,6 @@ public static class RiskCodes
         TokenYoung => [RiskSources.DexScreener, RiskSources.Etherscan],
         ThinLiquidity or WashSuspect => [RiskSources.DexScreener],
         PriceHistoryMissing or StableDepeg => [RiskSources.Prices],
-        LpConcentration => [RiskSources.LpIndex],
         PoolYoung => [RiskSources.DexScreener],
         EmissionDependent => [RiskSources.PoolStats],
         GaugeKilled => [RiskSources.Rpc],

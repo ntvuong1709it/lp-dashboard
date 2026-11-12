@@ -12,7 +12,7 @@ Last refreshed: 2026-11-11, on `main` at `6b48ca0`. Read [README.md](README.md) 
 ## State of the repo
 
 - Branch: `main`, in sync with `origin/main`. Earlier PRs (#1 to #5) are merged. The branches `improvements/price-fallback-table-docker` and `deploy/azure-script` (local and remote) and the remote `features-page-status` are merged and can be deleted. The remotes `version-2` and `feature/unclaimed-ui` were not looked at.
-- Uncommitted: `docs/risk-screen-spec.md` and `docs/smart-lp-spec.md` (new, untracked).
+- Uncommitted: the removal of the Smart-LP watcher and of the risk screen's `LP_CONCENTRATION` check (see "Dropped" below).
 - Backend tests: 556 passing after the risk screen (`cd backend; dotnet test LpDashboard.slnx`, run 2026-11-11; 380 before it). Frontend: `cd frontend; npm run build` was not re-run for this refresh.
 - CI (`.github/workflows/ci.yml`) runs both and deploys to Azure on every push to `main`. This refresh did not check its run history.
 
@@ -38,17 +38,19 @@ Last refreshed: 2026-11-11, on `main` at `6b48ca0`. Read [README.md](README.md) 
 
 | Item | Status |
 | --- | --- |
-| **Risk screen, step 5 only** | `LP_CONCENTRATION` waits for the watcher's S1 (pool LP index); until then it reads "not checked". The rest of the screen is built (below). |
-| **Smart-LP watcher** | Spec only: [docs/smart-lp-spec.md](docs/smart-lp-spec.md). Starts with the S0 spike (no UI, no migration) to measure RPC cost; S1 onward waits until the risk screen's migration is merged. |
 | Rebalance simulator | Design only: [docs/rebalance-simulator.md](docs/rebalance-simulator.md). Its swap solver is meant to reuse `EntryPlanner`. |
-| Clickable mocks | `docs/borrow-*.html`, `docs/enter-pool-mock.html`. The risk and watcher mock was published as a private Claude artifact and is not in the repo. |
+| Clickable mocks | `docs/borrow-*.html`, `docs/enter-pool-mock.html`. The risk mock was published as a private Claude artifact and is not in the repo. |
 | New chains and protocols | Not started. The `Chain` and `Protocol` enums list Ethereum, Solana, Robinhood, Uniswap v4, Orca, Raydium and Meteora, but only Base with Uniswap v3 and Aerodrome Slipstream has a provider. |
 | Postgres | Wired but no migrations assembly (`LpDashboard.Infrastructure.Migrations.Postgres` does not exist). SQLite is the only supported database. |
-| Public hosting limits | Partly open. Login exists, but the background sync still covers **every wallet ever entered** (RPC quota) and all alerts go to one Telegram chat. Plan: per-wallet last-seen time (new migration), sync only wallets seen in the last N days, `Sync:PinnedAddresses` for the operator, a cap on active wallets, a manual-sync cooldown, and per-IP rate limits on `POST /api/addresses` and `POST /api/sync`. The Smart-LP watcher's log scans make this more pressing; its spec adds its own caps and cooldowns. |
+| Public hosting limits | Partly open. Login exists, but the background sync still covers **every wallet ever entered** (RPC quota) and all alerts go to one Telegram chat. Plan: per-wallet last-seen time (new migration), sync only wallets seen in the last N days, `Sync:PinnedAddresses` for the operator, a cap on active wallets, a manual-sync cooldown, and per-IP rate limits on `POST /api/addresses` and `POST /api/sync`. |
+
+## Dropped
+
+- **Smart-LP watcher and the risk screen's `LP_CONCENTRATION` check (dropped 2026-11-12).** The watcher's discovery was a pool-level `eth_getLogs` scan over a 30-day window. The S0 spike showed it cannot run on the user's RPC plan: Alchemy Free allows 10 blocks per `eth_getLogs`, and Base blocks are now about 0.2 s (1.296M blocks measured as 3 days), so 30 days is about 13M blocks, i.e. about 1.3M requests against the app's guard of 200. Nothing was measured beyond that, and the user chose to remove the feature as too RPC-hungry. Its spec was deleted (recoverable from git history: `docs/smart-lp-spec.md`); the check was removed from `Domain/Risk` with its tests. Do not assume 2 s blocks anywhere (`BlockLocator` uses timestamps). If this is ever revisited it needs an RPC plan with a large `eth_getLogs` range first, and a sync entry point that takes known token ids instead of calling `DiscoverAsync`.
 
 ## Open issues and decisions
 
-- **Orphaned data (decided: keep, by design).** Removing a watched address does NOT delete its positions, events, snapshots or cursors, so re-adding the wallet reuses them. Data is keyed by owner address and hidden from views while the address is not watched. The user's database has 46 such positions from a removed wallet. Do not add delete-on-remove. The Smart-LP spec relies on this behaviour for scored candidate wallets, and requires a test that pins it.
+- **Orphaned data (decided: keep, by design).** Removing a watched address does NOT delete its positions, events, snapshots or cursors, so re-adding the wallet reuses them. Data is keyed by owner address and hidden from views while the address is not watched. The user's database has 46 such positions from a removed wallet. Do not add delete-on-remove.
 - **Reward price fallback.** A reward claim with no price uses the next known price of the same reward token (estimated, flagged "est. reward price"). The user was asked, and did not object. Cause: DefiLlama has no history for the new AERO token (`0x3f5b…a4ee`) before about Oct 23, 2026.
 - **Time-in-range estimates** are as good as the prices: spot checks against deposit events were 0.6 to 1.3% (60 to 130 ticks) off, which can flip the call near a range edge. Possible refinement: use the event token mix (one-sided means out of range) as ground truth.
 - **DefiLlama chart endpoint** returns 400 above 500 points per request across all tokens, so `PriceService.GetSeriesAsync` fetches in windows of 480 divided by the number of tokens. A unit test enforces it.
@@ -79,4 +81,4 @@ Last refreshed: 2026-11-11, on `main` at `6b48ca0`. Read [README.md](README.md) 
 - Alerts: `Application/Abstractions/IAlertNotifier.cs`, `Infrastructure/TelegramAlertNotifier.cs`; range alerts are sent from `SyncService` after the new state is saved.
 - Query and DTO layer: `Application/Queries/`. API: `Api/Controllers/`. Wallet scoping: `Api/OwnerParam.cs` (every call names its owners).
 - Frontend: pages in `frontend/src/pages/`, components in `frontend/src/components/` (`pools/`, `borrow/`, `earnings/`), logic in `frontend/src/lib/`, API hooks in `frontend/src/api/client.ts`.
-- Specs: root `spec.md` (Borrow, built), `docs/enter-pool-spec.md` (built), `docs/risk-screen-spec.md` and `docs/smart-lp-spec.md` (not built), `docs/rebalance-simulator.md` (design only).
+- Specs: root `spec.md` (Borrow, built), `docs/enter-pool-spec.md` (built), `docs/risk-screen-spec.md` (built, minus the dropped `LP_CONCENTRATION` check), `docs/rebalance-simulator.md` (design only).

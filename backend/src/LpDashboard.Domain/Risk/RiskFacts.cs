@@ -74,14 +74,9 @@ public sealed record TokenRiskFacts(
     public bool Answered(string source) => Sources.Any(s => s.Name == source && s.Answered);
 }
 
-/// <summary>One wallet's share of a pool's active liquidity, from the pool LP index (docs/smart-lp-spec.md).</summary>
-/// <param name="Partial">The index does not reach the pool's first block, so the share may be understated.</param>
-public sealed record LpConcentrationFacts(string TopHolderAddress, decimal TopSharePct, bool Partial);
-
 /// <param name="FeeAprPct">Trailing fee APR.</param>
 /// <param name="RewardAprPct">Gauge emission APR; null or zero for pools without a gauge.</param>
 /// <param name="GaugeAlive">Null when the pool has no gauge or the check did not run.</param>
-/// <param name="LpConcentration">Null until the pool LP index exists: the finding then reads "not checked".</param>
 public sealed record PoolRiskFacts(
     string PoolAddress,
     DateTime CollectedAt,
@@ -89,8 +84,7 @@ public sealed record PoolRiskFacts(
     DateTime? PoolCreatedAt = null,
     decimal? FeeAprPct = null,
     decimal? RewardAprPct = null,
-    bool? GaugeAlive = null,
-    LpConcentrationFacts? LpConcentration = null)
+    bool? GaugeAlive = null)
 {
     public bool Answered(string source) => Sources.Any(s => s.Name == source && s.Answered);
 }

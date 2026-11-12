@@ -1,6 +1,6 @@
 # Risk screen: should I put money in this token or pool?
 
-Status: built 2026-11-11 except step 5 (`LP_CONCENTRATION`, which waits for the pool LP index); see "Built, and where it differs from this spec" at the end. Spec written 2026-11-11. Produced from an interview with the owner. Decisions are recorded as decisions; guesses are under **Assumptions** and were not individually confirmed. Companion spec: [smart-lp-spec.md](smart-lp-spec.md) (it supplies the pool LP index this spec uses for one check).
+Status: built 2026-11-11 (steps 1 to 4). The `LP_CONCENTRATION` check (step 5) was dropped on 2026-11-12 together with the Smart-LP watcher whose pool LP index it needed, because that index's log scan costs too much RPC; see "Built, and where it differs from this spec" at the end. Spec written 2026-11-11. Produced from an interview with the owner. Decisions are recorded as decisions; guesses are under **Assumptions** and were not individually confirmed.
 
 Implementation notes for whoever builds it:
 - Follow the repo conventions in `PLAN.md` / `README.md`: pure logic in the C# Domain layer with xUnit tests (no frontend test runner), HTTP and RPC behind interfaces in Application, adapters in Infrastructure, API in `Api/Controllers`, UI in `frontend/src/components/`.
@@ -29,7 +29,7 @@ Non-goals (v1):
 
 | Topic | Decision |
 | --- | --- |
-| Spec location | `docs/risk-screen-spec.md` and `docs/smart-lp-spec.md`; root `spec.md` untouched. |
+| Spec location | `docs/risk-screen-spec.md`; root `spec.md` untouched. |
 | Where the verdict shows | **All four**: Pools explorer rows and side panel; the owner's open positions (table and detail); a standalone token lookup; Telegram alerts on change. |
 | Data sources | **GoPlus Security API, Basescan/Etherscan API, DexScreener/GeckoTerminal**, plus the owner's RPC node (needed for on-chain facts) and honeypot.is (see "Sources checked"). |
 | Red findings | Honeypot or failing sell; owner can mint or blacklist; one wallet holds most of the supply; one wallet owns most of the pool. Everything else is yellow at most. |
@@ -77,7 +77,6 @@ A finding has a stable `Code`, a severity (`Red`, `Yellow`, `Info`), a title, an
 
 | Code | Severity | Rule (default) | Source |
 | --- | --- | --- | --- |
-| `LP_CONCENTRATION` | Red at ≥ 50%, Yellow at ≥ 30% | One wallet's share of the pool's liquidity active at the current tick. Computed from the pool LP index (see smart-lp-spec.md). Shows "partial history" when the index does not reach the pool's first block. | Pool LP index |
 | `POOL_YOUNG` | Yellow | Pool under 7 days old | DexScreener, factory logs |
 | `EMISSION_DEPENDENT` | Yellow | More than 80% of the pool's APR is gauge emissions (existing `FeeApr7d` vs `RewardApr`) | Pool explorer |
 | `GAUGE_KILLED` | Yellow | Aerodrome voter reports the pool's gauge not alive (`isAlive(gauge)`) | RPC |
@@ -121,7 +120,7 @@ A finding has a stable `Code`, a severity (`Red`, `Yellow`, `Info`), a title, an
 ## 9. Alerts (Telegram through `IAlertNotifier`)
 
 - **Risk got worse on a held token**: level increased, or any of `HONEYPOT`, `PRIVILEGED_MINT_OR_BLACKLIST`, `UPGRADEABLE_PROXY` appeared, or the controller or implementation address changed, or `TOP_HOLDER_CONCENTRATION` newly fired or the top holder's share rose by more than 10 points. Evidence in the message (before and after). The first check of a token never alerts (same rule as range alerts).
-- **Pool liquidity drop**: for a held pool, the pool's token balances valued at *current* prices are down more than 30% against the snapshot ~24 h earlier, or `LP_CONCENTRATION` newly reached Red. One alert per pool per 24 h; re-armed when it clears.
+- **Pool liquidity drop**: for a held pool, the pool's token balances valued at *current* prices are down more than 30% against the snapshot ~24 h earlier. One alert per pool per 24 h; re-armed when it clears.
 - De-duplication: one alert per (token or pool, code) until it clears (`RiskAlertState`). Sent only after the new check is persisted, so a failed run cannot repeat an alert (same pattern as `SyncService.SendAlertsAsync`). Delivery failures are logged, never fatal.
 
 ## 10. Frontend
@@ -135,13 +134,12 @@ A finding has a stable `Code`, a severity (`Red`, `Yellow`, `Info`), a title, an
 
 ## 11. Assumptions I made (not confirmed one by one)
 
-1. Thresholds in section 5 (30% / 20% top holder, 50% LP, 10% tax, $100k liquidity, 7 days) are starting points; they are config.
+1. Thresholds in section 5 (30% / 20% top holder, 10% tax, $100k liquidity, 7 days) are starting points; they are config.
 2. EOA-controlled mint/blacklist is Red and contract-controlled is Yellow, with a config trusted-token list. This rule is mine; the interview only said "owner can mint or blacklist".
 3. `TOP_HOLDER_CONCENTRATION` uses only GoPlus's top-10 list and excludes pools and locked holders; holders it fails to tag as pools can cause false reds on new tokens, which is why the evidence names the holder address.
 4. Nightly time 03:00 UTC, liquidity snapshot hourly, 24 h cache, 30-day snapshot retention.
-5. `LP_CONCENTRATION` comes from the pool LP index, whose depth is the scan window defined in smart-lp-spec.md. When the index is partial the finding says so rather than reading "all clear".
-6. Etherscan is optional because its Base coverage on a free key is unconfirmed.
-7. Followed wallets (other people) are excluded from the "tokens I hold" set.
+5. Etherscan is optional because its Base coverage on a free key is unconfirmed.
+6. Followed wallets (other people) are excluded from the "tokens I hold" set.
 
 ## 12. Tests (xUnit, no live network)
 
@@ -158,7 +156,7 @@ A finding has a stable `Code`, a severity (`Red`, `Yellow`, `Info`), a title, an
 2. **Sources and service**: GoPlus, honeypot.is, DexScreener, RPC facts, persistence and migration, `GET /api/risk/tokens/...`. Check against 3 to 5 tokens the owner knows (a blue chip, AERO, a long-tail token, a known bad one); report which checks ran.
 3. **UI**: badge, report, Pools column and panel section, star toggle, Positions column, Risk page with lookup.
 4. **Monitoring**: nightly job, hourly liquidity snapshots, change detection, Telegram alerts. Check with a forced re-check and a synthetic change in a scratch DB.
-5. **Pool LP concentration** (`LP_CONCENTRATION`): lands after the pool LP index from smart-lp-spec.md step S1 exists; until then the finding reads "not checked".
+5. ~~Pool LP concentration (`LP_CONCENTRATION`)~~: dropped, see section 15.
 
 ## 14. Open questions and risks
 
@@ -169,7 +167,7 @@ A finding has a stable `Code`, a severity (`Red`, `Yellow`, `Info`), a title, an
 
 ## 15. Built, and where it differs from this spec (2026-11-11)
 
-Steps 1 to 4 are built; step 5 (`LP_CONCENTRATION`) reads "not checked" until the pool LP index (smart-lp-spec.md, S1) exists. Differences and findings from building:
+Steps 1 to 4 are built. Step 5 (`LP_CONCENTRATION`, one wallet's share of a pool's active liquidity) was **dropped on 2026-11-12**: it needed a pool LP index built by a pool-level `eth_getLogs` scan. A spike on the owner's RPC showed the scan cannot run there (Alchemy Free allows 10 blocks per request and Base blocks are about 0.2 s, so 30 days is about 1.3M requests), and the owner judged the feature too RPC-hungry. The code (finding, thresholds, source name, tests) was removed from `Domain/Risk`. The `SOURCE_UNAVAILABLE` and change-detection logic are unaffected. Differences and findings from building:
 
 - **Where things live.** `RiskOptions` (thresholds, trusted tokens) is in `Domain/Risk/` so the evaluator stays pure; the operational settings (cache, cooldown, schedule, rate limits, Etherscan key) are `Application/Risk/RiskSettings.cs`. Both bind to the `Risk` section.
 - **One migration, four tables** (`AddRiskScreen`, new tables only): `RiskChecks` (one table for token and pool checks, with `Kind`, `IsLatest`, `ChangesJson` and, for pools, the explorer id), `StarredPools`, `PoolLiquiditySnapshots`, `RiskAlertStates`. Stars are keyed by the pool explorer's id, because that id has no contract address; the address is filled in the first time the pool is resolved on-chain.

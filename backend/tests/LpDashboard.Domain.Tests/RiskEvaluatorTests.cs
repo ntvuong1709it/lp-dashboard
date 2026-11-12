@@ -535,46 +535,14 @@ public class RiskEvaluatorTests
     // ---- pool findings
 
     private static PoolRiskFacts PoolFacts(
-        DateTime? created = null, decimal? fee = 10, decimal? reward = 0, bool? gauge = null, LpConcentrationFacts? lp = null) =>
+        DateTime? created = null, decimal? fee = 10, decimal? reward = 0, bool? gauge = null) =>
         new(RiskTestData.PoolAddr, RiskTestData.Now, [RiskTestData.Ok(RiskSources.DexScreener, true), RiskTestData.Ok(RiskSources.PoolStats)],
-            created ?? RiskTestData.Now.AddDays(-100), fee, reward, gauge, lp);
+            created ?? RiskTestData.Now.AddDays(-100), fee, reward, gauge);
 
     private static RiskFinding? PoolFinding(PoolRiskFacts f, string code)
     {
         var green = Eval(RiskTestData.Clean());
         return RiskEvaluator.EvaluatePool(f, green, green, Options).Findings.FirstOrDefault(x => x.Code == code);
-    }
-
-    [Theory]
-    [InlineData(29.9, null)]
-    [InlineData(30, RiskSeverity.Yellow)]
-    [InlineData(49.9, RiskSeverity.Yellow)]
-    [InlineData(50, RiskSeverity.Red)]
-    [InlineData(90, RiskSeverity.Red)]
-    public void Lp_concentration_is_yellow_at_thirty_and_red_at_fifty(double share, RiskSeverity? expected)
-    {
-        var f = PoolFinding(PoolFacts(lp: new LpConcentrationFacts(RiskTestData.Whale, (decimal)share, false)), RiskCodes.LpConcentration)!;
-        Assert.Equal(expected ?? RiskSeverity.Info, f.Severity);
-        if (expected is not null) Assert.Contains(RiskTestData.Whale, f.Evidence);
-    }
-
-    [Fact]
-    public void Lp_concentration_without_an_index_reads_not_checked_and_does_not_block_green()
-    {
-        var green = Eval(RiskTestData.Clean());
-        var a = RiskEvaluator.EvaluatePool(PoolFacts(), green, green, Options);
-        var f = a.Findings.Single(x => x.Code == RiskCodes.LpConcentration);
-        Assert.Equal(RiskSeverity.Info, f.Severity);
-        Assert.Contains("not checked", f.Title);
-        Assert.Equal(RiskLevel.Green, a.Verdict.Level);
-    }
-
-    [Fact]
-    public void Partial_index_history_is_stated_in_the_evidence()
-    {
-        var f = PoolFinding(PoolFacts(lp: new LpConcentrationFacts(RiskTestData.Whale, 60, true)), RiskCodes.LpConcentration)!;
-        Assert.Equal(RiskSeverity.Red, f.Severity);
-        Assert.Contains("partial history", f.Evidence);
     }
 
     [Theory]
