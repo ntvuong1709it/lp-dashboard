@@ -64,6 +64,27 @@ function tickLabel(grain: Grain, date: string) {
   return grain === "month" ? monthLabel(date) : shortDate(date);
 }
 
+/**
+ * How much of today has passed in the browser's zone (the zone the daily series is bucketed in).
+ * Measured from local midnight, so a DST day correctly counts 23 or 25 hours.
+ */
+function todayHours(now = new Date()) {
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const hours = (ms: number) => ms / 3_600_000;
+  const total = hours(end.getTime() - start.getTime());
+  const elapsed = Math.min(total, hours(now.getTime() - start.getTime()));
+  return { elapsed, left: total - elapsed, total };
+}
+
+const oneDecimal = (n: number) => (Math.round(n * 10) / 10).toString();
+
+/** "14.2/24 h, 9.8 h left" */
+function soFarText() {
+  const { elapsed, left, total } = todayHours();
+  return `${oneDecimal(elapsed)}/${oneDecimal(total)} h, ${oneDecimal(left)} h left`;
+}
+
 function tipLabel(grain: Grain, p: ChartPoint) {
   const text =
     grain === "day"
@@ -71,7 +92,8 @@ function tipLabel(grain: Grain, p: ChartPoint) {
       : grain === "week"
         ? `Week of ${shortDate(p.date)} – ${shortDate(p.end)}`
         : monthLabel(p.date, true);
-  return p.partial ? `${text} (so far)` : text;
+  if (!p.partial) return text;
+  return grain === "day" ? `${text} (${soFarText()})` : `${text} (so far)`;
 }
 
 function Key({ color, children }: { color: string; children: string }) {
@@ -169,6 +191,7 @@ export function EarningsChart({
           <Key color="var(--chart-d)">Rewards</Key>
           <span>- - {average.label}</span>
           {grain === "day" && <Key color="#fb7185">Unusually low day</Key>}
+          {grain === "day" && <span>Faded bar: today ({soFarText()})</span>}
           {grain !== "day" && <span>Faded bar: {grain} in progress</span>}
         </div>
         {projection != null && (
