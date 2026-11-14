@@ -182,7 +182,6 @@ function AccountMenu() {
         type="button"
         className="inline-flex h-9 items-center gap-1 rounded-md border border-line-strong px-2 text-fg-2 hover:bg-raised"
         aria-label="Account"
-        aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
       >
@@ -191,13 +190,10 @@ function AccountMenu() {
       </button>
       {open && (
         <div
-          role="menu"
-          aria-label="Account"
           className="absolute right-0 top-full z-20 mt-2 w-56 rounded-lg border border-line-strong bg-panel p-1.5 shadow-xl"
         >
           <div className="px-2.5 py-1.5 text-xs text-faint">Signed in on this device</div>
           <Link
-            role="menuitem"
             to="/addresses"
             className={item}
             onClick={() => setOpen(false)}
@@ -207,7 +203,6 @@ function AccountMenu() {
           <div className="my-1 border-t border-line" />
           <button
             type="button"
-            role="menuitem"
             className={item}
             onClick={() => void logout()}
           >

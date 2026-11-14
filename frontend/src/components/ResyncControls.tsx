@@ -47,7 +47,7 @@ export function ResyncControls({
             }}
           />
           <button
-            className="rounded-md bg-accent-solid px-2 py-1 text-xs font-medium hover:bg-accent-fill disabled:opacity-50"
+            className="rounded-md bg-accent-solid px-2 text-white py-1 text-xs font-medium hover:bg-accent-fill disabled:opacity-50"
             disabled={busy || blockNumber === null}
             onClick={() =>
               trigger.mutate(

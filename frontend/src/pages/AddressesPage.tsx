@@ -132,7 +132,7 @@ export function AddressesPage() {
             onChange={(e) => setLabel(e.target.value)}
           />
           <button
-            className="rounded-md bg-accent-solid px-4 py-2 text-sm font-medium hover:bg-accent-fill disabled:opacity-50"
+            className="rounded-md bg-accent-solid px-4 text-white py-2 text-sm font-medium hover:bg-accent-fill disabled:opacity-50"
             disabled={add.isPending}
           >
             Add

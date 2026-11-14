@@ -511,7 +511,7 @@ function PositionsTable({
                   )}
                   {!m.hasMissingPrices && m.hasEstimatedPrices && (
                     <div
-                      className="text-[11px] text-warn/80"
+                      className="text-[11px] text-warn"
                       title="Some reward claims had no historical price; the nearest later known price was used"
                     >
                       est. reward price
@@ -533,7 +533,7 @@ function PositionsTable({
                       </div>
                       {timeInRangeBand(p.timeInRange) && (
                         <div
-                          className="text-[11px] text-warn/80"
+                          className="text-[11px] text-warn"
                           title={timeInRangeSource(p.timeInRange)}
                         >
                           {timeInRangeBand(p.timeInRange)}

@@ -55,7 +55,21 @@ for (const theme of ["dark", "light"]) {
   for (const fg of TEXT) for (const bg of ["surface", "panel"]) need(fg, bg, 4.5);
   for (const fg of ["fg", "fg-2", "muted"]) need(fg, "raised", 4.5);
   need("control", "panel", 3);
+  need("control", "surface", 3);
   for (const fill of FILLS) need(fill, "panel", 3);
+  // Badges and pills put a hue's text on a translucent tint of its own fill (bg-up-fill/20 and the like).
+  for (const [text, fill] of [["accent", "accent-fill"], ["up", "up-fill"], ["down", "down-fill"], ["warn", "warn-fill"]]) {
+    for (const bg of ["panel", "surface"]) {
+      for (const alpha of [0.1, 0.15, 0.2]) {
+        checked++;
+        if (!t[text] || !t[fill] || !t[bg]) continue;
+        const mix = (c, k) => Math.round(parseInt(t[fill].slice(k, k + 2), 16) * alpha + parseInt(t[bg].slice(k, k + 2), 16) * (1 - alpha));
+        const tinted = "#" + [1, 3, 5].map((k) => mix(null, k).toString(16).padStart(2, "0")).join("");
+        const r = ratio(t[text], tinted);
+        if (r < 4.5) failures.push(`${theme}  ${text} on ${fill}/${Math.round(alpha * 100)} over ${bg}  ${r.toFixed(2)}  needs 4.5`);
+      }
+    }
+  }
   if (t["accent-solid"]) {
     checked++;
     const r = ratio("#ffffff", t["accent-solid"]);

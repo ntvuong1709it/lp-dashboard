@@ -52,28 +52,27 @@ export function SyncStatus() {
           className="flex h-6 min-w-0 items-center gap-2 rounded-full px-2 hover:bg-raised"
           aria-expanded={open}
           aria-haspopup="dialog"
-          aria-label={running ? describeSync(status) : "Sync details"}
           title={running ? describeSync(status) : "Show sync details"}
           onClick={() => setOpen((o) => !o)}
         >
           <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${dot} ${busy ? "animate-pulse" : ""}`} />
           {running ? (
             <span className="flex items-center gap-2 text-accent">
-              <span className="hidden sm:inline">Syncing</span>
+              <span className="sr-only sm:not-sr-only">Syncing</span>
               <span className="num font-medium">{Math.round(status?.percent ?? 0)}%</span>
               <ProgressBar percent={status?.percent ?? 0} hasErrors={errors.length > 0} className="hidden w-16 md:block" />
             </span>
           ) : starting ? (
-            <span className="hidden text-accent sm:inline">Starting sync…</span>
+            <span className="sr-only text-accent sm:not-sr-only">Starting sync…</span>
           ) : (
-            <span className="hidden sm:inline">
+            <span className="sr-only sm:not-sr-only">
               <UpdatedAgo prefix="Synced" />
             </span>
           )}
           {errors.length > 0 && (
             <span className="rounded-full bg-warn-fill/15 px-1.5 font-medium text-warn ring-1 ring-warn-fill/40">
               {errors.length}
-              <span className="hidden sm:inline">{errors.length === 1 ? " error" : " errors"}</span>
+              <span className="sr-only sm:not-sr-only">{errors.length === 1 ? " error" : " errors"}</span>
             </span>
           )}
         </button>

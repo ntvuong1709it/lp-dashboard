@@ -623,7 +623,7 @@ function BoundCard({
             onBlur={commit}
             onKeyDown={(e) => e.key === "Enter" && commit()}
             aria-label={ariaLabel}
-            className={`num ${suffix ? "w-16" : "w-28"} rounded-md border border-line-strong bg-panel px-1 py-0.5 text-center text-base text-accent`}
+            className={`num ${suffix ? "w-16" : "w-28"} rounded-md border border-control bg-panel px-1 py-0.5 text-center text-base text-accent`}
           />
           {suffix}
         </span>

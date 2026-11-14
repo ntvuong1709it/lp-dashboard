@@ -73,21 +73,21 @@
 
   --line: #e2e7ec;
   --line-strong: #cfd6de;
-  --control: #8a95a3;
+  --control: #848e9c;
 
   --fg: #0f1720;
   --fg-2: #465363;
   --muted: #5b6675;
   --faint: #657080;
 
-  --accent: #2870c8;
+  --accent: #2260ab;
   --accent-fill: #2a78d6;
   --accent-solid: #1d5fb0;
-  --up: #0f7d57;
+  --up: #0d704e;
   --up-fill: #1aa675;
-  --down: #c23b36;
+  --down: #a8332f;
   --down-fill: #c23b36;
-  --warn: #a16000;
+  --warn: #8f5500;
   --warn-fill: #cf8300;
 
   --chart-a: #2a78d6;

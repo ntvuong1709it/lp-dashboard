@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import type { Alert, AlertKind } from "../../lib/attention";
 import type { PositionDto } from "../../api/types";
 import { usePositionDrawer } from "../../lib/positionDrawer";
@@ -39,6 +40,7 @@ export function NeedsYouCard({
   useHideBalances(); // re-render when the toggle changes; formatters read the flag
   const drawer = usePositionDrawer();
   const count = alerts.length;
+  const noPositions = !loading && !error && open.length === 0;
 
   return (
     <section aria-labelledby="needs-you-title" className="min-w-0 rounded-lg border border-line bg-panel">
@@ -46,7 +48,7 @@ export function NeedsYouCard({
         <h2 id="needs-you-title" className="text-sm font-medium text-fg-2">
           Needs you
         </h2>
-        {!loading && !error && (
+        {!loading && !error && !noPositions && (
           <span
             className={`rounded-full px-2 text-[11px] font-bold ring-1 ${count > 0 ? "bg-warn-fill/15 text-warn ring-warn-fill/40" : "bg-up-fill/15 text-up ring-up-fill/40"}`}
           >
@@ -55,19 +57,26 @@ export function NeedsYouCard({
           </span>
         )}
       </div>
-      <div className="divide-y divide-line px-4">
+      <div className="min-h-44 divide-y divide-line px-4">
         {error ? (
           <div className="py-3">
             <ErrorText error={error} />
           </div>
         ) : loading ? (
           <div className="py-3">
-            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-36 w-full" />
           </div>
         ) : (
           <>
             <div className="py-3">
-              {count === 0 ? (
+              {noPositions ? (
+                <p className="text-sm text-fg-2">
+                  No open positions to watch yet.{" "}
+                  <Link className="font-medium text-accent hover:underline" to="/addresses">
+                    Add a wallet
+                  </Link>
+                </p>
+              ) : count === 0 ? (
                 <p className="flex items-start gap-2.5 text-sm text-fg-2">
                   <span
                     aria-hidden="true"

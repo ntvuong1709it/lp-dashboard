@@ -134,7 +134,7 @@ export function OverviewPage() {
         </div>
       </div>
 
-      <div id={READY_TO_CLAIM_ID} className="scroll-mt-32">
+      <div id={READY_TO_CLAIM_ID} className="scroll-mt-40">
         <ReadyToClaimPanel open={open.data ?? []} loading={open.isLoading} />
       </div>
 
