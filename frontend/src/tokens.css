@@ -1,0 +1,136 @@
+/*
+ * The palette. Every colour the app uses is a token here, defined once per theme: :root is dark (the default,
+ * also used when no data-theme is set), :root[data-theme="light"] is light. Components use the Tailwind utilities
+ * these tokens expose (bg-panel, text-muted, border-line, text-accent, bg-up-fill/15, ...), never raw palette colours.
+ * scripts/check-contrast.mjs enforces the contrast rules on the hex values below.
+ */
+:root {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --surface: #020617; /* page */
+  --panel: #0f172a; /* cards, header, popovers */
+  --raised: #1e293b; /* hover and bar tracks */
+
+  /* Lines */
+  --line: #1e293b; /* hairlines, card borders */
+  --line-strong: #334155; /* decorative stronger borders */
+  --control: #64748b; /* borders of input, select, textarea */
+
+  /* Text */
+  --fg: #f8fafc;
+  --fg-2: #cbd5e1;
+  --muted: #94a3b8;
+  --faint: #748399;
+
+  /* Accents: <hue> is text-grade, <hue>-fill is for bars, dots and badges */
+  --accent: #38bdf8;
+  --accent-fill: #0ea5e9;
+  --accent-solid: #0369a1; /* background of solid buttons that carry white text */
+  --up: #34d399;
+  --up-fill: #10b981;
+  --down: #fb7185;
+  --down-fill: #f43f5e;
+  --warn: #fbbf24;
+  --warn-fill: #f59e0b;
+
+  /* Charts read these (recharts accepts var() in colour props). */
+  --chart-grid: var(--line);
+  --chart-axis: var(--faint);
+  --chart-tip-bg: var(--panel);
+  --chart-tip-border: var(--line-strong);
+  --chart-cursor: var(--line);
+  --chart-a: #38bdf8;
+  --chart-b: #34d399;
+  --chart-c: #f59e0b;
+  --chart-d: #a78bfa;
+  /* One hue per followed wallet, in the order the wallets were added. */
+  --wallet-1: #818cf8;
+  --wallet-2: #2dd4bf;
+  --wallet-3: #f472b6;
+  --wallet-4: #a3e635;
+  --wallet-5: #fb923c;
+  --wallet-6: #22d3ee;
+  --marker: #fff;
+  /* Section bands in the "What changed" table: collateral sky, debt amber, ratio violet. */
+  --band-col-bg: #0e2a40;
+  --band-col: #7dd3fc;
+  --band-col-bar: #0ea5e9;
+  --band-debt-bg: #34260d;
+  --band-debt: #fbbf24;
+  --band-debt-bar: #f59e0b;
+  --band-ratio-bg: #261c4a;
+  --band-ratio: #c4b5fd;
+  --band-ratio-bar: #8b5cf6;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --surface: #f4f6f8;
+  --panel: #ffffff;
+  --raised: #e2e7ec;
+
+  --line: #e2e7ec;
+  --line-strong: #cfd6de;
+  --control: #8a95a3;
+
+  --fg: #0f1720;
+  --fg-2: #465363;
+  --muted: #5b6675;
+  --faint: #657080;
+
+  --accent: #2870c8;
+  --accent-fill: #2a78d6;
+  --accent-solid: #1d5fb0;
+  --up: #0f7d57;
+  --up-fill: #1aa675;
+  --down: #c23b36;
+  --down-fill: #c23b36;
+  --warn: #a16000;
+  --warn-fill: #cf8300;
+
+  --chart-a: #2a78d6;
+  --chart-b: #1baf7a;
+  --chart-c: #d98a00;
+  --chart-d: #7c4fd6;
+  --wallet-1: #4f46e5;
+  --wallet-2: #0f766e;
+  --wallet-3: #be185d;
+  --wallet-4: #4d7c0f;
+  --wallet-5: #c2410c;
+  --wallet-6: #0e7490;
+  --marker: #0f1720;
+  --band-col-bg: #e0f0fa;
+  --band-col: #0369a1;
+  --band-col-bar: #0369a1;
+  --band-debt-bg: #fdf0dc;
+  --band-debt: #b45309;
+  --band-debt-bar: #b45309;
+  --band-ratio-bg: #ede7fb;
+  --band-ratio: #6d28d9;
+  --band-ratio-bar: #6d28d9;
+}
+
+/* Expose the tokens as Tailwind colours: bg-panel, text-muted, border-line, divide-line, ring-accent, ... */
+@theme inline {
+  --color-surface: var(--surface);
+  --color-panel: var(--panel);
+  --color-raised: var(--raised);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-control: var(--control);
+  --color-fg: var(--fg);
+  --color-fg-2: var(--fg-2);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-fill: var(--accent-fill);
+  --color-accent-solid: var(--accent-solid);
+  --color-up: var(--up);
+  --color-up-fill: var(--up-fill);
+  --color-down: var(--down);
+  --color-down-fill: var(--down-fill);
+  --color-warn: var(--warn);
+  --color-warn-fill: var(--warn-fill);
+}
