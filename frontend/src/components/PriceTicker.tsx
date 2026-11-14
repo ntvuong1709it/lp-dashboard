@@ -29,7 +29,7 @@ export function PriceTicker() {
   // Keep showing the last prices if a refresh fails; only say so when there is nothing to show.
   if (!data) {
     return (
-      <div className="py-1.5 text-xs text-muted" role="status">
+      <div className="py-1 text-xs text-muted" role="status">
         {isError ? "Prices unavailable" : "Loading prices…"}
       </div>
     );
@@ -38,10 +38,10 @@ export function PriceTicker() {
   return (
     <ul
       aria-label="Market prices"
-      className="grid grid-cols-2 gap-x-3 gap-y-2 sm:flex sm:flex-wrap sm:items-center sm:gap-x-6"
+      className="flex w-max items-center gap-x-5 sm:gap-x-6"
     >
       {data.prices.map((p) => (
-        <li key={p.symbol} className="flex flex-wrap items-center gap-x-2.5 gap-y-1 sm:flex-nowrap sm:whitespace-nowrap">
+        <li key={p.symbol} className="flex items-center gap-2.5 whitespace-nowrap">
           <span
             aria-hidden="true"
             className={`grid h-[26px] w-[26px] shrink-0 place-items-center rounded-full text-[9px] font-bold tracking-tighter text-white ${badgeColor[p.symbol] ?? "bg-muted"}`}
