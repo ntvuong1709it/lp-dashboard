@@ -45,13 +45,13 @@ export function EntryPanel({
   pool: PoolDto;
   lowerPercent: number;
   upperPercent: number;
-  /** Deposit size from the panel's Capital field; used in "Capital above" mode. */
+  /** Deposit size from the "Your position" block's Capital field; used in "Capital" mode. */
   capital: number;
   mode: EntryMode;
   onModeChange: (mode: EntryMode) => void;
   /** Reports the USD value of the tokens entered in "Tokens I hold" mode, which the panel's Capital field shows read-only. */
   onHeldUsd: (usd: number) => void;
-  /** Swap-fee APR from the estimate above, percent. */
+  /** Swap-fee APR from the Estimate tab, percent. */
   feeApr: number | null;
   emissions: Emissions | null;
   publishedEmissionsApr: number | null;
@@ -150,7 +150,7 @@ export function EntryPanel({
           value={mode}
           onChange={onModeChange}
           options={[
-            { label: "Capital above", value: "budget" },
+            { label: "Capital", value: "budget" },
             { label: "Tokens I hold", value: "wallet" },
           ]}
         />
@@ -182,7 +182,7 @@ export function EntryPanel({
         </div>
       ) : !plan ? (
         <p className="mt-3 text-sm text-faint">
-          {body == null ? (mode === "wallet" ? "Enter the amounts you hold." : "Enter a capital above.") : "Working out the swap…"}
+          {body == null ? (mode === "wallet" ? "Enter the amounts you hold." : "Enter a capital.") : "Working out the swap…"}
         </p>
       ) : (
         <PlanReadout plan={plan} t0={t0} t1={t1} />

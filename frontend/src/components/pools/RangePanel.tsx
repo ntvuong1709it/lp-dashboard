@@ -31,6 +31,7 @@ import { usePersistentState } from "../../lib/usePersistentState";
 import { ErrorText, Segmented } from "../ui";
 import { type EntryMode, EntryPanel } from "./EntryPanel";
 import { PoolRiskSection, PoolRiskBadge, RiskTabs, type PoolTab } from "./PoolRiskSection";
+import { PositionBlock, type PositionFact } from "./PositionBlock";
 import { StarButton } from "./StarButton";
 import { TokenPair } from "./TokenPair";
 
@@ -83,6 +84,7 @@ export function RangePanel({
   const [heldUsd, setHeldUsd] = useState(0);
   const [days, setDays] = useState(30);
   const [tab, setTab] = useState<PoolTab>("estimate");
+  const [positionOpen, setPositionOpen] = usePersistentState<boolean>("lpdash.range.positionOpen", true);
   const [viewKind, setViewKind] = usePersistentState<PriceViewKind>("lpdash.range.priceView", "usd");
   const [inputBy, setInputBy] = usePersistentState<"percent" | "price">("lpdash.range.inputBy", "percent");
   // The APR estimate is for a symmetric range; a skewed one is asked for as the symmetric range with the same price ratio.
@@ -145,6 +147,14 @@ export function RangePanel({
   // Snapped bounds, as the view sees them.
   const snappedSeen = rangePlan ? toViewPercents(rangePlan.range.lowerPercent, rangePlan.range.upperPercent, flip) : null;
   const snappedPrices = rangePlan && view ? [view.fromPool(rangePlan.range.priceLower), view.fromPool(rangePlan.range.priceUpper)].sort((a, b) => a - b) : null;
+  // A stored value that is not a boolean (an old or hand-edited one) counts as "open".
+  const isPositionOpen = typeof positionOpen === "boolean" ? positionOpen : true;
+  // What the collapsed "Your position" block shows.
+  const positionFacts: PositionFact[] = [
+    { label: "Range", value: `−${fmtPct(seen.lower)}% / +${fmtPct(seen.upper)}%` },
+    { label: "Price", value: snappedPrices && view ? `${view.fmt(snappedPrices[0])} – ${view.fmt(snappedPrices[1])}` : "—" },
+    { label: "Capital", value: fullUsd(mode === "wallet" ? Math.round(heldUsd) : capital) },
+  ];
   // Re-render now and then so "read 2 min ago" stays true.
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -195,12 +205,15 @@ export function RangePanel({
           onView={changeView}
         />
 
-        <RiskTabs tab={tab} onTab={setTab} pool={pool} />
-
-        <div role="tabpanel" id="pool-tab-estimate" aria-labelledby="pool-tab-estimate-tab" hidden={tab !== "estimate"} className="space-y-4">
+        <PositionBlock
+          open={isPositionOpen}
+          onToggle={() => setPositionOpen(!isPositionOpen)}
+          facts={positionFacts}
+          hidden={tab === "risk"}
+        >
           <div>
             <div className="mb-2 flex items-baseline justify-between">
-              <h3 className="text-sm font-medium text-fg-2">Position range</h3>
+              <h4 className="text-sm font-medium text-fg-2">Position range</h4>
               <span className="text-xs text-faint">around today's price</span>
             </div>
             <div role="group" aria-label="Range presets" className="grid grid-cols-4 gap-1.5">
@@ -221,21 +234,6 @@ export function RangePanel({
               />
             </div>
           </div>
-
-          <dl className="grid grid-cols-3 gap-2 text-xs text-muted">
-            <div>
-              <dt>Width</dt>
-              <dd className="num text-sm text-fg">{(seen.lower + seen.upper).toFixed(1)}%</dd>
-            </div>
-            <div>
-              <dt>APR</dt>
-              <dd className="num text-sm text-fg">{fresh ? apr(fresh.apr) : "…"}</dd>
-            </div>
-            <div>
-              <dt>Fees / day</dt>
-              <dd className="num text-sm text-fg">{fresh ? usdCents(fresh.feesUsd / days) : "…"}</dd>
-            </div>
-          </dl>
 
           <label className="flex flex-col gap-1 text-xs text-muted" htmlFor="est-width">
             <span>
@@ -270,7 +268,7 @@ export function RangePanel({
           </div>
           <div className="grid grid-cols-2 gap-2">
             <BoundCard
-              id="est-width"
+              id="est-lower"
               label="Lower bound"
               other={
                 priceMode
@@ -342,20 +340,40 @@ export function RangePanel({
                 className="num w-28 rounded-md border border-control bg-surface px-2.5 py-1.5 text-sm text-fg disabled:opacity-60"
               />
             </label>
-            {mode === "wallet" && <span className="pb-2 text-xs text-faint">Taken from the tokens you hold, below.</span>}
-            <div className="flex flex-col gap-1 text-xs text-muted">
-              Hold for
-              <Segmented<number>
-                label="Holding period"
-                value={days}
-                onChange={setDays}
-                options={[
-                  { label: "7d", value: 7 },
-                  { label: "30d", value: 30 },
-                  { label: "90d", value: 90 },
-                ]}
-              />
+            {mode === "wallet" && <span className="pb-2 text-xs text-faint">Taken from the tokens you hold.</span>}
+          </div>
+        </PositionBlock>
+
+        <RiskTabs tab={tab} onTab={setTab} pool={pool} />
+
+        <div role="tabpanel" id="pool-tab-estimate" aria-labelledby="pool-tab-estimate-tab" hidden={tab !== "estimate"} className="space-y-4">
+          <dl className="grid grid-cols-3 gap-2 text-xs text-muted">
+            <div>
+              <dt>Width</dt>
+              <dd className="num text-sm text-fg">{(seen.lower + seen.upper).toFixed(1)}%</dd>
             </div>
+            <div>
+              <dt>APR</dt>
+              <dd className="num text-sm text-fg">{fresh ? apr(fresh.apr) : "…"}</dd>
+            </div>
+            <div>
+              <dt>Fees / day</dt>
+              <dd className="num text-sm text-fg">{fresh ? usdCents(fresh.feesUsd / days) : "…"}</dd>
+            </div>
+          </dl>
+
+          <div className="flex flex-col gap-1 text-xs text-muted">
+            Hold for
+            <Segmented<number>
+              label="Holding period"
+              value={days}
+              onChange={setDays}
+              options={[
+                { label: "7d", value: 7 },
+                { label: "30d", value: 30 },
+                { label: "90d", value: 90 },
+              ]}
+            />
           </div>
 
           {hasUnreliableVolume(pool) && (
