@@ -7,89 +7,7 @@
   --font-display: "Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
 }
 
-/*
- * Theming: the app is written against Tailwind's slate scale (dark by default). The light theme mirrors that
- * scale, so every existing `bg-slate-900` / `text-slate-400` flips without touching the components, and
- * darkens the accent text colours so they stay readable on a light surface.
- * Charts read the --chart-* variables (recharts accepts var() in colour props).
- */
-:root {
-  --chart-grid: var(--color-slate-800);
-  --chart-axis: var(--color-slate-500);
-  --chart-tip-bg: var(--color-slate-900);
-  --chart-tip-border: var(--color-slate-700);
-  --chart-cursor: var(--color-slate-800);
-  --chart-a: #38bdf8;
-  --chart-b: #34d399;
-  --chart-c: #f59e0b;
-  --chart-d: #a78bfa;
-  /* One hue per followed wallet, in the order the wallets were added. */
-  --wallet-1: #818cf8;
-  --wallet-2: #2dd4bf;
-  --wallet-3: #f472b6;
-  --wallet-4: #a3e635;
-  --wallet-5: #fb923c;
-  --wallet-6: #22d3ee;
-  --marker: #fff;
-  /* Section bands in the "What changed" table: collateral sky, debt amber, ratio violet (green/red stay for up/down). */
-  --band-col-bg: #0e2a40;
-  --band-col: #7dd3fc;
-  --band-col-bar: #0ea5e9;
-  --band-debt-bg: #34260d;
-  --band-debt: #fbbf24;
-  --band-debt-bar: #f59e0b;
-  --band-ratio-bg: #261c4a;
-  --band-ratio: #c4b5fd;
-  --band-ratio-bar: #8b5cf6;
-  color-scheme: dark;
-}
-
-:root[data-theme="light"] {
-  color-scheme: light;
-  --color-slate-50: #0f1720;
-  --color-slate-100: #1b2430;
-  --color-slate-200: #2c3745;
-  --color-slate-300: #465363;
-  --color-slate-400: #5b6675;
-  --color-slate-500: #6b7686;
-  --color-slate-600: #a3adb9;
-  --color-slate-700: #cfd6de;
-  --color-slate-800: #e2e7ec;
-  --color-slate-900: #ffffff;
-  --color-slate-950: #f4f6f8;
-
-  --color-emerald-400: #0f7d57;
-  --color-rose-400: #c23b36;
-  --color-sky-300: #1d5fb0;
-  --color-sky-400: #2a78d6;
-  --color-sky-700: #8fb8ea;
-  --color-sky-900: #c5dcf6;
-  --color-sky-950: #d6e7fb;
-  --color-amber-200: #7a4a00;
-  --color-amber-300: #8a5300;
-  --color-amber-400: #b36b00;
-
-  --chart-a: #2a78d6;
-  --chart-b: #1baf7a;
-  --chart-c: #d98a00;
-  --chart-d: #7c4fd6;
-  --wallet-1: #4f46e5;
-  --wallet-2: #0f766e;
-  --wallet-3: #be185d;
-  --wallet-4: #4d7c0f;
-  --wallet-5: #c2410c;
-  --wallet-6: #0e7490;
-  --marker: #0f1720;
-  --band-col-bg: #e0f0fa;
-  --band-col: #0369a1;
-  --band-col-bar: #0369a1;
-  --band-debt-bg: #fdf0dc;
-  --band-debt: #b45309;
-  --band-debt-bar: #b45309;
-  --band-ratio-bg: #ede7fb;
-  --band-ratio: #6d28d9;
-  --band-ratio-bar: #6d28d9;
-}
+/* Colours live in tokens.css (dark by default, light under data-theme="light"). */
 
 h1,
 h2,
@@ -109,6 +27,6 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-sky-400);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
