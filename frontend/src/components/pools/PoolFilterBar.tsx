@@ -17,9 +17,9 @@ const CHAINS: Chain[] = ["Base", "Ethereum"];
 const PROTOCOLS: Protocol[] = ["UniswapV3", "AerodromeSlipstream"];
 
 const chip =
-  "rounded-md border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-sky-400";
-const chipIdle = "border-slate-700 bg-slate-950 text-slate-300 hover:bg-slate-800";
-const chipOn = "border-sky-400 bg-sky-400/10 text-sky-400";
+  "rounded-md border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-accent";
+const chipIdle = "border-line-strong bg-surface text-fg-2 hover:bg-raised";
+const chipOn = "border-accent-fill bg-accent/10 text-accent";
 
 function Toggle({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) {
   return (
@@ -88,12 +88,12 @@ export function PoolFilterBar({
   const count = activeFilterCount(filters) + Number(chain !== "Base");
 
   return (
-    <div className="space-y-2 border-b border-slate-800 p-3">
+    <div className="space-y-2 border-b border-line p-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className={`${chip} flex items-center gap-2 border-slate-700 bg-slate-950 text-slate-300`}>
+        <span className={`${chip} flex items-center gap-2 border-line-strong bg-surface text-fg-2`}>
           Filters
           {count > 0 && (
-            <span className="rounded-full bg-sky-400 px-1.5 text-[11px] font-semibold text-slate-950">{count}</span>
+            <span className="rounded-full bg-accent-fill px-1.5 text-[11px] font-semibold text-surface">{count}</span>
           )}
         </span>
         <Select label="Chain" value={chain} onChange={(v) => onChain(v as Chain)} active={chain !== "Base"}>
@@ -182,19 +182,19 @@ export function PoolFilterBar({
             value={filters.query}
             onChange={(e) => onFilters({ query: e.target.value })}
             placeholder="Search WETH, cbBTC, 0x…"
-            className="w-48 rounded-md border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-sm text-slate-50"
+            className="w-48 rounded-md border border-control bg-surface px-2.5 py-1.5 text-sm text-fg"
           />
-          <span className="text-slate-400" aria-live="polite">
-            <span className="num text-slate-50">{shown}</span> of <span className="num">{total}</span> pools
+          <span className="text-muted" aria-live="polite">
+            <span className="num text-fg">{shown}</span> of <span className="num">{total}</span> pools
           </span>
-          <button type="button" onClick={onReset} className="text-sky-400 hover:underline">
+          <button type="button" onClick={onReset} className="text-accent hover:underline">
             Reset
           </button>
-          <button type="button" onClick={onShowAll} className="text-sky-400 hover:underline">
+          <button type="button" onClick={onShowAll} className="text-accent hover:underline">
             Show all
           </button>
         </div>
-        <div className="flex items-center gap-2 text-slate-400">
+        <div className="flex items-center gap-2 text-muted">
           <label htmlFor="pool-sort">Sort:</label>
           <select
             id="pool-sort"
@@ -212,7 +212,7 @@ export function PoolFilterBar({
             ))}
           </select>
           {(sort.key !== DEFAULT_SORT.key || sort.dir !== DEFAULT_SORT.dir) && (
-            <button type="button" onClick={() => onSort(DEFAULT_SORT)} className="text-xs text-slate-500 hover:text-slate-300">
+            <button type="button" onClick={() => onSort(DEFAULT_SORT)} className="text-xs text-faint hover:text-fg-2">
               default
             </button>
           )}

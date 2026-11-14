@@ -21,7 +21,7 @@ import { ErrorText, Panel, Segmented, Skeleton } from "../ui";
 import { Delta } from "./bits";
 
 const tip = { background: theme.tooltip.background, border: theme.tooltip.border };
-const ROSE = "var(--color-rose-400)";
+const ROSE = "var(--down)";
 
 const kUsd = (v: number) => `$${(v / 1000).toFixed(1)}k`;
 
@@ -84,7 +84,7 @@ export function CollateralSection({
       {history.error ? (
         <ErrorText error={history.error} />
       ) : !data || !view ? (
-        history.isLoading ? <Skeleton className="h-64 w-full" /> : <p className="text-sm text-slate-500">No collateral data yet. Add collateral amounts to a manual loan to chart it.</p>
+        history.isLoading ? <Skeleton className="h-64 w-full" /> : <p className="text-sm text-faint">No collateral data yet. Add collateral amounts to a manual loan to chart it.</p>
       ) : (
         <>
           <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -99,14 +99,14 @@ export function CollateralSection({
                 <Delta value={view.last.ratio - view.first.ratio} goodUp text={Math.abs(view.last.ratio - view.first.ratio).toFixed(2)} />
               )}
               {view.last.ltvPercent != null && (
-                <span className="text-slate-500">
+                <span className="text-faint">
                   {" "}· LTV {view.last.ltvPercent.toFixed(0)}%{view.first.ltvPercent != null && ` (was ${view.first.ltvPercent.toFixed(0)}%)`}
                 </span>
               )}
             </Tile>
           </div>
 
-          <div className="mb-1 flex flex-wrap gap-x-4 text-xs text-slate-400">
+          <div className="mb-1 flex flex-wrap gap-x-4 text-xs text-muted">
             <Key color="var(--chart-a)">Collateral</Key>
             <Key color={ROSE}>Debt</Key>
             <span>○ Deposit, withdrawal, borrow or repay (hover)</span>
@@ -140,8 +140,8 @@ export function CollateralSection({
             </ResponsiveContainer>
           </div>
           <div className="mb-1 mt-4 flex flex-wrap items-baseline justify-between gap-2 text-xs">
-            <span className="uppercase tracking-[.05em] text-slate-400">Collateral ÷ debt</span>
-            <span className="text-slate-500">
+            <span className="uppercase tracking-[.05em] text-muted">Collateral ÷ debt</span>
+            <span className="text-faint">
               {data.liquidationRatio != null ? "Higher is safer. Dashed lines are your warn and liquidation levels." : "Pick one loan to see its warn and liquidation lines."}
             </span>
           </div>
@@ -152,14 +152,14 @@ export function CollateralSection({
                 <XAxis dataKey="date" stroke={theme.axis} fontSize={11} tickFormatter={shortDay} minTickGap={28} />
                 <YAxis stroke={theme.axis} fontSize={11} tickFormatter={(v) => `${Number(v).toFixed(1)}×`} width={44} domain={["auto", "auto"]} />
                 <Tooltip contentStyle={tip} labelFormatter={(d) => weekdayDate(String(d))} formatter={(v) => [`${Number(v).toFixed(2)}×`, "Collateral ÷ debt"]} />
-                {data.warnRatio != null && <ReferenceLine y={data.warnRatio} stroke="var(--color-amber-400)" strokeDasharray="4 3" label={{ value: `warn ${data.warnRatio.toFixed(2)}×`, fill: "var(--color-amber-400)", fontSize: 10, position: "insideTopRight" }} />}
+                {data.warnRatio != null && <ReferenceLine y={data.warnRatio} stroke="var(--warn)" strokeDasharray="4 3" label={{ value: `warn ${data.warnRatio.toFixed(2)}×`, fill: "var(--warn)", fontSize: 10, position: "insideTopRight" }} />}
                 {data.liquidationRatio != null && <ReferenceLine y={data.liquidationRatio} stroke={ROSE} strokeDasharray="4 3" label={{ value: `liquidation ${data.liquidationRatio.toFixed(2)}×`, fill: ROSE, fontSize: 10, position: "insideBottomRight" }} />}
-                <Line dataKey="ratio" name="Collateral ÷ debt" stroke="var(--color-slate-100)" strokeWidth={2} dot={false} />
+                <Line dataKey="ratio" name="Collateral ÷ debt" stroke="var(--fg)" strokeWidth={2} dot={false} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
           {data.excludedLoans.length > 0 && (
-            <p className="mt-2 text-xs text-slate-500">Left out for lack of collateral data: {data.excludedLoans.join(", ")}.</p>
+            <p className="mt-2 text-xs text-faint">Left out for lack of collateral data: {data.excludedLoans.join(", ")}.</p>
           )}
         </>
       )}
@@ -183,7 +183,7 @@ function TrendTooltip({
   const events = eventsByDate.get(String(label)) ?? [];
   return (
     <div className="rounded-md px-3 py-2 text-xs shadow-lg" style={tip}>
-      <div className="mb-1 text-slate-300">{weekdayDate(String(label))}</div>
+      <div className="mb-1 text-fg-2">{weekdayDate(String(label))}</div>
       {payload.map((p) => (
         <div key={p.name} className="flex items-center justify-between gap-4" style={{ color: p.color }}>
           <span>{p.name}</span>
@@ -191,10 +191,10 @@ function TrendTooltip({
         </div>
       ))}
       {events.length > 0 && (
-        <div className="mt-1.5 space-y-0.5 border-t border-slate-700 pt-1.5 text-slate-400">
+        <div className="mt-1.5 space-y-0.5 border-t border-line-strong pt-1.5 text-muted">
           {events.map((e, i) => (
             <div key={i}>
-              {EVENT_TEXT[e.kind]} on {e.label}: <span className="num text-slate-200">{formatUsd(e.usd, true)}</span>
+              {EVENT_TEXT[e.kind]} on {e.label}: <span className="num text-fg-2">{formatUsd(e.usd, true)}</span>
             </div>
           ))}
         </div>
@@ -205,8 +205,8 @@ function TrendTooltip({
 
 function Tile({ label, value, children }: { label: string; value: string; children?: React.ReactNode }) {
   return (
-    <div className="rounded-md border border-slate-800 bg-slate-800/40 px-3 py-2.5">
-      <div className="text-xs uppercase tracking-[.05em] text-slate-400">{label}</div>
+    <div className="rounded-md border border-line bg-raised/40 px-3 py-2.5">
+      <div className="text-xs uppercase tracking-[.05em] text-muted">{label}</div>
       <div className="mt-0.5 text-xl font-medium num">{value}</div>
       <div className="text-xs">{children}</div>
     </div>

@@ -6,11 +6,11 @@ import { useHideBalances } from "../lib/privacy";
 /** Green when ahead, amber while the gap is closing, red when it is not closing at all. */
 function tone(b: HodlBreakEvenDto) {
   if (b.gapUsd >= 0) {
-    return "border-emerald-500/60 bg-emerald-500/10 text-emerald-300";
+    return "border-up-fill/60 bg-up-fill/10 text-up";
   }
   return b.daysToBreakEven == null
-    ? "border-rose-500/60 bg-rose-500/10 text-rose-300"
-    : "border-amber-500/60 bg-amber-500/10 text-amber-300";
+    ? "border-down-fill/60 bg-down-fill/10 text-down"
+    : "border-warn-fill/60 bg-warn-fill/10 text-warn";
 }
 
 /** Where a position or the whole portfolio stands against simply holding the same tokens, and how long catching up would take. */
@@ -34,9 +34,9 @@ export function BreakEvenCallout({
       <div className="mt-0.5 text-lg font-semibold num">
         {breakEvenHeadline(breakEven)}
       </div>
-      <div className="mt-1 text-xs text-slate-300">
+      <div className="mt-1 text-xs text-fg-2">
         {breakEvenText(breakEven)}
-        {note && <span className="text-slate-400"> {note}</span>}
+        {note && <span className="text-muted"> {note}</span>}
       </div>
     </div>
   );

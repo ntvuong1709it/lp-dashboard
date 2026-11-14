@@ -50,7 +50,7 @@ const round1 = (v: number) => Math.round(v * 10) / 10;
 const clampWidth = (w: number) => Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, Math.round(w * 10) / 10));
 const sliderValue = (lower: number, upper: number) => clampWidth(lower === upper ? lower : Math.round(equivalentHalfWidth(lower, upper) * 2) / 2);
 
-const pill = "rounded-md border border-slate-700 bg-slate-950 px-2 py-0.5 text-xs text-slate-300";
+const pill = "rounded-md border border-line-strong bg-surface px-2 py-0.5 text-xs text-fg-2";
 
 /**
  * The range side of the explorer: pick a range around today's price (preset, slider, or each bound on its own) and see what a
@@ -153,8 +153,8 @@ export function RangePanel({
   }, []);
 
   return (
-    <section className="rounded-lg border border-slate-800 bg-slate-900" aria-label={`Range for ${pool.symbol}`}>
-      <div className="space-y-2 border-b border-slate-800 px-4 py-3">
+    <section className="rounded-lg border border-line bg-panel" aria-label={`Range for ${pool.symbol}`}>
+      <div className="space-y-2 border-b border-line px-4 py-3">
         <div className="flex items-center justify-between gap-2">
           <h2 className="flex items-center gap-2 text-lg font-semibold">
             <TokenPair symbol={pool.symbol} size={26} />
@@ -162,11 +162,11 @@ export function RangePanel({
             <StarButton pool={pool} />
           </h2>
           <span className="flex items-center gap-3">
-            {isFetching && <span className="text-xs text-slate-500">Updating…</span>}
+            {isFetching && <span className="text-xs text-faint">Updating…</span>}
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md border border-slate-700 px-2 py-0.5 text-xs text-slate-400 hover:bg-slate-800 lg:hidden"
+              className="rounded-md border border-line-strong px-2 py-0.5 text-xs text-muted hover:bg-raised lg:hidden"
             >
               Close
             </button>
@@ -177,7 +177,7 @@ export function RangePanel({
           <span className={pill}>{pool.chain}</span>
           <span className={pill}>{feeLabel(pool.feePercent)}</span>
           {pool.tickSpacing != null && <span className={pill}>{pool.tickSpacing} ticks</span>}
-          {pool.held && <span className="rounded-md border border-emerald-400/60 px-2 py-0.5 text-xs text-emerald-400">You hold</span>}
+          {pool.held && <span className="rounded-md border border-up/60 px-2 py-0.5 text-xs text-up">You hold</span>}
           <PoolRiskBadge pool={pool} onClick={() => setTab("risk")} />
         </div>
       </div>
@@ -200,8 +200,8 @@ export function RangePanel({
         <div role="tabpanel" id="pool-tab-estimate" aria-labelledby="pool-tab-estimate-tab" hidden={tab !== "estimate"} className="space-y-4">
           <div>
             <div className="mb-2 flex items-baseline justify-between">
-              <h3 className="text-sm font-medium text-slate-300">Position range</h3>
-              <span className="text-xs text-slate-500">around today's price</span>
+              <h3 className="text-sm font-medium text-fg-2">Position range</h3>
+              <span className="text-xs text-faint">around today's price</span>
             </div>
             <div role="group" aria-label="Range presets" className="grid grid-cols-4 gap-1.5">
               {PRESETS.map((p) => (
@@ -222,25 +222,25 @@ export function RangePanel({
             </div>
           </div>
 
-          <dl className="grid grid-cols-3 gap-2 text-xs text-slate-400">
+          <dl className="grid grid-cols-3 gap-2 text-xs text-muted">
             <div>
               <dt>Width</dt>
-              <dd className="num text-sm text-slate-50">{(seen.lower + seen.upper).toFixed(1)}%</dd>
+              <dd className="num text-sm text-fg">{(seen.lower + seen.upper).toFixed(1)}%</dd>
             </div>
             <div>
               <dt>APR</dt>
-              <dd className="num text-sm text-slate-50">{fresh ? apr(fresh.apr) : "…"}</dd>
+              <dd className="num text-sm text-fg">{fresh ? apr(fresh.apr) : "…"}</dd>
             </div>
             <div>
               <dt>Fees / day</dt>
-              <dd className="num text-sm text-slate-50">{fresh ? usdCents(fresh.feesUsd / days) : "…"}</dd>
+              <dd className="num text-sm text-fg">{fresh ? usdCents(fresh.feesUsd / days) : "…"}</dd>
             </div>
           </dl>
 
-          <label className="flex flex-col gap-1 text-xs text-slate-400" htmlFor="est-width">
+          <label className="flex flex-col gap-1 text-xs text-muted" htmlFor="est-width">
             <span>
               Range around the current price:{" "}
-              <span className="num text-sm text-slate-50">
+              <span className="num text-sm text-fg">
                 {seenSymmetric ? `±${fmtPct(seen.lower)}%` : `custom, -${fmtPct(seen.lower)}% / +${fmtPct(seen.upper)}%`}
               </span>
             </span>
@@ -252,11 +252,11 @@ export function RangePanel({
               step={STEP}
               value={sliderValue(seen.lower, seen.upper)}
               onChange={(e) => setBoth(Number(e.target.value))}
-              className="accent-sky-400"
+              className="accent-accent"
             />
           </label>
 
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
             <span>Enter the bounds as</span>
             <Segmented<"percent" | "price">
               label="Enter the bounds as"
@@ -318,7 +318,7 @@ export function RangePanel({
             />
           </div>
           {view && snappedPrices && <RangeBar view={view} low={snappedPrices[0]} high={snappedPrices[1]} />}
-          <p className="-mt-2 text-xs text-slate-500">
+          <p className="-mt-2 text-xs text-faint">
             {view ? view.label : `${sym1} per ${sym0}`}. Each bound moves on its own; the presets and the slider move both. Percentages are from today's price.
             {rangePlan && snappedSeen && (
               <>
@@ -329,7 +329,7 @@ export function RangePanel({
           </p>
 
           <div className="flex flex-wrap items-end gap-4">
-            <label className="flex flex-col gap-1 text-xs text-slate-400" htmlFor="est-capital">
+            <label className="flex flex-col gap-1 text-xs text-muted" htmlFor="est-capital">
               Capital (USD)
               <input
                 id="est-capital"
@@ -339,11 +339,11 @@ export function RangePanel({
                 value={mode === "wallet" ? Math.round(heldUsd) : capital}
                 disabled={mode === "wallet"}
                 onChange={(e) => setCapital(Number(e.target.value))}
-                className="num w-28 rounded-md border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-sm text-slate-50 disabled:opacity-60"
+                className="num w-28 rounded-md border border-control bg-surface px-2.5 py-1.5 text-sm text-fg disabled:opacity-60"
               />
             </label>
-            {mode === "wallet" && <span className="pb-2 text-xs text-slate-500">Taken from the tokens you hold, below.</span>}
-            <div className="flex flex-col gap-1 text-xs text-slate-400">
+            {mode === "wallet" && <span className="pb-2 text-xs text-faint">Taken from the tokens you hold, below.</span>}
+            <div className="flex flex-col gap-1 text-xs text-muted">
               Hold for
               <Segmented<number>
                 label="Holding period"
@@ -359,37 +359,37 @@ export function RangePanel({
           </div>
 
           {hasUnreliableVolume(pool) && (
-            <p className="rounded-md border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs text-amber-400">
+            <p className="rounded-md border border-warn/40 bg-warn/10 px-3 py-2 text-xs text-warn">
               {UNRELIABLE_VOLUME_NOTE}
             </p>
           )}
 
-          <div className="space-y-3 rounded-lg border border-slate-800 bg-slate-950 p-4">
+          <div className="space-y-3 rounded-lg border border-line bg-surface p-4">
             {error ? (
               <ErrorText error={error} />
             ) : !fresh ? (
-              <p className="text-sm text-slate-500">Estimating…</p>
+              <p className="text-sm text-faint">Estimating…</p>
             ) : (
               <>
                 <div>
                   <div className="flex items-baseline justify-between gap-3">
-                    <div className="text-xs text-slate-400">Estimated fee APR ({fresh.basis} volume)</div>
-                    <div className="text-xs text-slate-500">Fees only, from recent volume; not a forecast</div>
+                    <div className="text-xs text-muted">Estimated fee APR ({fresh.basis} volume)</div>
+                    <div className="text-xs text-faint">Fees only, from recent volume; not a forecast</div>
                   </div>
-                  <div className="num text-3xl font-medium text-sky-400" aria-live="polite">
+                  <div className="num text-3xl font-medium text-accent" aria-live="polite">
                     {apr(fresh.apr)}
                   </div>
-                  <div className="relative my-1.5 h-1.5 rounded bg-slate-800" aria-hidden="true">
+                  <div className="relative my-1.5 h-1.5 rounded bg-raised" aria-hidden="true">
                     <i
-                      className="absolute inset-y-0 rounded bg-sky-400/40"
+                      className="absolute inset-y-0 rounded bg-accent/40"
                       style={{ left: `${(fresh.aprLow / scaleMax) * 100}%`, width: `${((fresh.aprHigh - fresh.aprLow) / scaleMax) * 100}%` }}
                     />
                     <b
-                      className="absolute -top-[3px] h-3.5 w-[3px] rounded bg-sky-400"
+                      className="absolute -top-[3px] h-3.5 w-[3px] rounded bg-accent-fill"
                       style={{ left: `calc(${(fresh.apr / scaleMax) * 100}% - 1px)` }}
                     />
                   </div>
-                  <div className="num text-xs text-slate-500">
+                  <div className="num text-xs text-faint">
                     Range across 24h, 7d and 30d rates: {apr(fresh.aprLow)} to {apr(fresh.aprHigh)}
                   </div>
                 </div>
@@ -403,7 +403,7 @@ export function RangePanel({
                 />
 
                 {fresh.depositSharePercent > 5 && (
-                  <p className="text-xs text-amber-400">
+                  <p className="text-xs text-warn">
                     About {fresh.depositSharePercent.toFixed(0)}% of the liquidity at this range: it would dilute its own fees. Treat the
                     estimate as high.
                   </p>
@@ -413,7 +413,7 @@ export function RangePanel({
           </div>
 
           {fresh && (
-            <div className="divide-y divide-slate-800 rounded-lg border border-slate-800 bg-slate-950 px-4">
+            <div className="divide-y divide-line rounded-lg border border-line bg-surface px-4">
               <Disclosure title="What fees cover" summary={`${days}d fees ≈ ${fresh.feesPercentOfCapital.toFixed(1)}% of capital`}>
                 <p className="text-sm">
                   {days} days of fees is about {fresh.feesPercentOfCapital.toFixed(1)}% of your capital. They cover a price{" "}
@@ -436,7 +436,7 @@ export function RangePanel({
                   </b>
                   {fresh.history.firstExitDay == null ? " and never left it." : ` and first left it on day ${fresh.history.firstExitDay}.`}
                 </p>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-faint">
                   Price moved between {fresh.history.lowPercent.toFixed(1)}% and +{fresh.history.highPercent.toFixed(1)}% (daily closes,
                   so brief moves are missed).
                 </p>
@@ -447,8 +447,8 @@ export function RangePanel({
                   title={`${base}/${quote} in other pools`}
                   summary={`${fresh.alternatives.length - 1} other, best ${apr(Math.max(...fresh.alternatives.map((a) => a.apr)))}`}
                 >
-                  <p className="text-xs text-slate-500">Same range in each pool.</p>
-                  <ul className="divide-y divide-slate-800 text-sm">
+                  <p className="text-xs text-faint">Same range in each pool.</p>
+                  <ul className="divide-y divide-line text-sm">
                     {fresh.alternatives.map((a) => (
                       <li key={a.id}>
                         <button
@@ -473,11 +473,11 @@ export function RangePanel({
                               myHalfWidthPercent: null,
                             })
                           }
-                          className={`flex w-full items-center justify-between gap-3 py-1.5 text-left ${a.isSelected ? "font-semibold text-slate-50" : "text-slate-300 hover:text-sky-400"}`}
+                          className={`flex w-full items-center justify-between gap-3 py-1.5 text-left ${a.isSelected ? "font-semibold text-fg" : "text-fg-2 hover:text-accent"}`}
                         >
                           <span>
                             {protocolLabels[a.protocol]} {feeLabel(a.feePercent)}
-                            <span className="ml-2 text-xs font-normal text-slate-500">{usd(a.tvlUsd)} TVL</span>
+                            <span className="ml-2 text-xs font-normal text-faint">{usd(a.tvlUsd)} TVL</span>
                           </span>
                           <span className="num">{apr(a.apr)}</span>
                         </button>
@@ -488,7 +488,7 @@ export function RangePanel({
               )}
 
               <Disclosure title="How this is estimated">
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-faint">
                   The pool's {fresh.basis} fee APR is scaled by how much more liquidity per dollar your range gives than a typical LP's
                   (concentration ×{fresh.concentration.toFixed(1)} versus full range), and by how long the price is expected to stay
                   inside it ({(fresh.timeInRange * 100).toFixed(0)}% of the {days} days). A typical LP range is assumed to be ±
@@ -545,12 +545,12 @@ function PresetButton({
       onClick={onClick}
       className={`flex flex-col items-center rounded-md border px-1 py-2 text-center ${
         active
-          ? "border-sky-400 bg-sky-400/10 text-sky-400"
-          : `${dashed ? "border-dashed" : ""} border-slate-700 text-slate-300 hover:bg-slate-800`
+          ? "border-accent-fill bg-accent/10 text-accent"
+          : `${dashed ? "border-dashed" : ""} border-line-strong text-fg-2 hover:bg-raised`
       }`}
     >
       <span className="text-sm font-medium">{title}</span>
-      <span className="num text-[11px] text-slate-500">{hint}</span>
+      <span className="num text-[11px] text-faint">{hint}</span>
     </button>
   );
 }
@@ -591,7 +591,7 @@ function BoundCard({
   lessLabel: string;
   moreLabel: string;
 }) {
-  const btn = "flex h-9 w-9 items-center justify-center rounded-md text-lg text-slate-300 hover:bg-slate-800";
+  const btn = "flex h-9 w-9 items-center justify-center rounded-md text-lg text-fg-2 hover:bg-raised";
   // The text is the user's draft; it is applied (and clamped) when they leave the field or press Enter.
   const [draft, setDraft] = useState<string | null>(null);
   const commit = () => {
@@ -600,16 +600,16 @@ function BoundCard({
     setDraft(null);
   };
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-950 p-2">
-      <div className="flex items-baseline justify-between gap-2 px-1 text-xs text-slate-400">
+    <div className="rounded-lg border border-line bg-surface p-2">
+      <div className="flex items-baseline justify-between gap-2 px-1 text-xs text-muted">
         <span>{label}</span>
-        <span className="num text-slate-50">{other}</span>
+        <span className="num text-fg">{other}</span>
       </div>
       <div className="mt-1 flex items-center justify-between">
         <button type="button" onClick={onLess} aria-label={lessLabel} className={btn}>
           −
         </button>
-        <span className="flex items-center gap-0.5 text-base font-medium text-sky-400">
+        <span className="flex items-center gap-0.5 text-base font-medium text-accent">
           {prefix}
           <input
             id={id}
@@ -623,7 +623,7 @@ function BoundCard({
             onBlur={commit}
             onKeyDown={(e) => e.key === "Enter" && commit()}
             aria-label={ariaLabel}
-            className={`num ${suffix ? "w-16" : "w-28"} rounded-md border border-slate-700 bg-slate-900 px-1 py-0.5 text-center text-base text-sky-400`}
+            className={`num ${suffix ? "w-16" : "w-28"} rounded-md border border-line-strong bg-panel px-1 py-0.5 text-center text-base text-accent`}
           />
           {suffix}
         </span>
@@ -631,7 +631,7 @@ function BoundCard({
           +
         </button>
       </div>
-      {snapped && <div className="mt-1 text-center text-xs text-slate-400">{snapped}</div>}
+      {snapped && <div className="mt-1 text-center text-xs text-muted">{snapped}</div>}
     </div>
   );
 }
@@ -660,9 +660,9 @@ function CurrentPrice({
 }) {
   const money = (v: number) => `$${v.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-950 px-3 py-2" aria-live="polite">
+    <div className="rounded-lg border border-line bg-surface px-3 py-2" aria-live="polite">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="text-xs text-slate-400">Current price</div>
+        <div className="text-xs text-muted">Current price</div>
         {views.length > 1 && (
           <Segmented<PriceViewKind>
             label="Price shown as"
@@ -677,18 +677,18 @@ function CurrentPrice({
           <div className="num text-2xl font-medium">
             {view.fmt(view.now)}
             {view.unit && ` ${view.unit}`}
-            {view.kind === "usd" && <span className="ml-2 text-base font-normal text-slate-400">{view.label.replace("$ ", "")}</span>}
+            {view.kind === "usd" && <span className="ml-2 text-base font-normal text-muted">{view.label.replace("$ ", "")}</span>}
           </div>
           {view.kind === "usd" ? (
-            <div className="num text-xs text-slate-400">
+            <div className="num text-xs text-muted">
               Pool ratio {qp(plan.pool.poolPrice)} {sym1} per {sym0}, or {qp(1 / plan.pool.poolPrice)} {sym0} per {sym1}
             </div>
           ) : (
-            <div className="num text-xs text-slate-400">
+            <div className="num text-xs text-muted">
               or {qp(view.flip ? plan.pool.poolPrice : 1 / plan.pool.poolPrice)} {view.flip ? `${sym1} per ${sym0}` : `${sym0} per ${sym1}`}
             </div>
           )}
-          <div className="text-xs text-slate-500">
+          <div className="text-xs text-faint">
             Read from the pool {formatAgo(plan.pool.readAt, now)}. USD reference {money(plan.pool.usd0)} for {sym0}
             {plan.pool.usd1 !== 1 && `, ${money(plan.pool.usd1)} for ${sym1}`} (DefiLlama, {formatAgo(plan.pool.pricesAsOf, now)}). The plan uses the pool price for the ratio and the USD reference for dollar values.
           </div>
@@ -696,7 +696,7 @@ function CurrentPrice({
       ) : error ? (
         <ErrorText error={error} />
       ) : (
-        <div className="text-sm text-slate-500">{loading ? "Reading the pool…" : "—"}</div>
+        <div className="text-sm text-faint">{loading ? "Reading the pool…" : "—"}</div>
       )}
     </div>
   );
@@ -711,13 +711,13 @@ function RangeBar({ view, low, high }: { view: PriceView; low: number; high: num
   const left = at(low);
   return (
     <div className="-mt-2" aria-hidden="true">
-      <div className="relative my-3 h-2.5 rounded bg-slate-800">
-        <i className="absolute inset-y-0 rounded bg-sky-400/60" style={{ left: `${left}%`, width: `${at(high) - left}%` }} />
-        <u className="absolute -top-1 h-[18px] w-[3px] rounded bg-slate-50 no-underline" style={{ left: `${at(p)}%` }} />
+      <div className="relative my-3 h-2.5 rounded bg-raised">
+        <i className="absolute inset-y-0 rounded bg-accent/60" style={{ left: `${left}%`, width: `${at(high) - left}%` }} />
+        <u className="absolute -top-1 h-[18px] w-[3px] rounded bg-fg no-underline" style={{ left: `${at(p)}%` }} />
       </div>
-      <div className="num flex justify-between text-xs text-slate-400">
+      <div className="num flex justify-between text-xs text-muted">
         <span>{view.fmt(low)}</span>
-        <span className="text-slate-50">
+        <span className="text-fg">
           now {view.fmt(p)}
           {view.unit && ` ${view.unit}`}
         </span>
@@ -748,32 +748,32 @@ function Earnings({
   return (
     <>
       <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-sm">
-        <dt className="text-slate-400">
+        <dt className="text-muted">
           {emissionsApr ? "Not staked: swap fees" : "Swap fees"} on {fullUsd(capital)} over {days} days
         </dt>
         <dd className="num text-right">
           {fullUsd(feesUsd)}
-          <span className="block text-xs text-slate-500">{usdCents(feesUsd / days)} / day</span>
+          <span className="block text-xs text-faint">{usdCents(feesUsd / days)} / day</span>
         </dd>
         {emissionsApr && emissionsUsd != null ? (
           <>
-            <dt className="text-slate-400">
+            <dt className="text-muted">
               Staked: {own?.symbol ?? "AERO"} emissions, {apr(emissionsApr)} over {days} days
               {own && tokensTotal != null && (
-                <span className="block text-xs text-slate-500">
+                <span className="block text-xs text-faint">
                   about {tokensTotal.toFixed(1)} {own.symbol} at today's ${own.priceUsd.toFixed(3)}
                 </span>
               )}
             </dt>
             <dd className="num text-right">
               {fullUsd(emissionsUsd)}
-              <span className="block text-xs text-slate-500">{usdCents(emissionsUsd / days)} / day</span>
+              <span className="block text-xs text-faint">{usdCents(emissionsUsd / days)} / day</span>
             </dd>
           </>
         ) : null}
       </dl>
       {emissionsApr ? (
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-faint">
           Pick one: a staked position earns AERO and its swap fees go to the gauge, while an unstaked one keeps the swap fees and earns no AERO.
           {publishedEmissionsApr
             ? " The emission rate is the pool's published one."
@@ -790,12 +790,12 @@ function Disclosure({ title, summary, children }: { title: string; summary?: str
     <details className="group py-2">
       <summary className="flex cursor-pointer list-none items-baseline justify-between gap-3 text-sm [&::-webkit-details-marker]:hidden">
         <span className="flex items-baseline gap-2">
-          <span className="text-xs text-slate-500 transition-transform group-open:rotate-90" aria-hidden="true">
+          <span className="text-xs text-faint transition-transform group-open:rotate-90" aria-hidden="true">
             ▸
           </span>
-          <span className="text-slate-300">{title}</span>
+          <span className="text-fg-2">{title}</span>
         </span>
-        {summary && <span className="num text-xs text-slate-500">{summary}</span>}
+        {summary && <span className="num text-xs text-faint">{summary}</span>}
       </summary>
       <div className="space-y-1 pb-1 pl-5 pt-2">{children}</div>
     </details>

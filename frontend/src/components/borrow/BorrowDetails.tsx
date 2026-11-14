@@ -66,7 +66,7 @@ export function BorrowDetails(p: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line">
         {p.layout === "tabs" ? (
           <div role="tablist" aria-label="Borrow details" className="-mb-px flex overflow-x-auto">
             {TABS.map((t) => (
@@ -79,7 +79,7 @@ export function BorrowDetails(p: Props) {
                 aria-controls={`borrow-panel-${t.value}`}
                 onClick={() => p.onTab(t.value)}
                 className={`whitespace-nowrap border-b-2 px-3.5 py-2 text-sm ${
-                  p.tab === t.value ? "border-sky-400 font-semibold text-slate-50" : "border-transparent text-slate-400 hover:text-slate-200"
+                  p.tab === t.value ? "border-accent-fill font-semibold text-fg" : "border-transparent text-muted hover:text-fg-2"
                 }`}
               >
                 {t.label}
@@ -87,7 +87,7 @@ export function BorrowDetails(p: Props) {
             ))}
           </div>
         ) : (
-          <h2 className="py-2 text-sm font-medium text-slate-300">Details</h2>
+          <h2 className="py-2 text-sm font-medium text-fg-2">Details</h2>
         )}
         <div className="pb-1.5">
           <Segmented

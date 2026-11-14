@@ -21,7 +21,7 @@ export function WhatIf({ summary, loans }: { summary: BorrowSummaryDto; loans: L
     <Panel
       title="What if"
       actions={
-        <button className="text-xs text-sky-400 hover:underline" onClick={() => setV(DEFAULTS)}>
+        <button className="text-xs text-accent hover:underline" onClick={() => setV(DEFAULTS)}>
           Reset
         </button>
       }
@@ -56,7 +56,7 @@ export function WhatIf({ summary, loans }: { summary: BorrowSummaryDto; loans: L
             })}
         </div>
       </div>
-      <p className="mt-3 text-xs text-slate-500">Scenario only. A price move changes health factor and LTV, not LP income.</p>
+      <p className="mt-3 text-xs text-faint">Scenario only. A price move changes health factor and LTV, not LP income.</p>
     </Panel>
   );
 }
@@ -86,17 +86,17 @@ function Slider({
         <span>{label}</span>
         <b className="num">{value}</b>
       </label>
-      <input id={id} type="range" className="w-full accent-sky-400" min={min} max={max} step={step} value={current} onChange={(e) => onChange(Number(e.target.value))} />
+      <input id={id} type="range" className="w-full accent-accent" min={min} max={max} step={step} value={current} onChange={(e) => onChange(Number(e.target.value))} />
     </div>
   );
 }
 
 function Out({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-md border border-slate-800 bg-slate-800/40 px-3 py-2.5">
-      <div className="text-xs uppercase tracking-[.05em] text-slate-400">{label}</div>
+    <div className="rounded-md border border-line bg-raised/40 px-3 py-2.5">
+      <div className="text-xs uppercase tracking-[.05em] text-muted">{label}</div>
       <div className="mt-0.5 text-lg font-medium">{children}</div>
-      {hint && <div className="text-xs text-slate-500">{hint}</div>}
+      {hint && <div className="text-xs text-faint">{hint}</div>}
     </div>
   );
 }

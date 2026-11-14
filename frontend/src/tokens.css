@@ -8,31 +8,31 @@
   color-scheme: dark;
 
   /* Surfaces */
-  --surface: #020617; /* page */
-  --panel: #0f172a; /* cards, header, popovers */
-  --raised: #1e293b; /* hover and bar tracks */
+  --surface: #020618; /* page */
+  --panel: #0f172b; /* cards, header, popovers */
+  --raised: #1d293d; /* hover and bar tracks */
 
   /* Lines */
-  --line: #1e293b; /* hairlines, card borders */
-  --line-strong: #334155; /* decorative stronger borders */
-  --control: #64748b; /* borders of input, select, textarea */
+  --line: #1d293d; /* hairlines, card borders */
+  --line-strong: #314158; /* decorative stronger borders */
+  --control: #62748e; /* borders of input, select, textarea */
 
   /* Text */
-  --fg: #f8fafc;
-  --fg-2: #cbd5e1;
-  --muted: #94a3b8;
-  --faint: #748399;
+  --fg: #f1f5f9;
+  --fg-2: #cad5e2;
+  --muted: #90a1b9;
+  --faint: #728299;
 
   /* Accents: <hue> is text-grade, <hue>-fill is for bars, dots and badges */
-  --accent: #38bdf8;
-  --accent-fill: #0ea5e9;
-  --accent-solid: #0369a1; /* background of solid buttons that carry white text */
-  --up: #34d399;
-  --up-fill: #10b981;
-  --down: #fb7185;
-  --down-fill: #f43f5e;
-  --warn: #fbbf24;
-  --warn-fill: #f59e0b;
+  --accent: #00bcff;
+  --accent-fill: #00a6f4;
+  --accent-solid: #007bc2; /* background of solid buttons that carry white text */
+  --up: #00d492;
+  --up-fill: #00bc7d;
+  --down: #ff637e;
+  --down-fill: #ff2056;
+  --warn: #ffb900;
+  --warn-fill: #fe9a00;
 
   /* Charts read these (recharts accepts var() in colour props). */
   --chart-grid: var(--line);

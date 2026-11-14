@@ -10,16 +10,16 @@ import { WalletChip } from "../WalletChip";
 
 function Row({ label, children, strong, top }: { label: string; children: ReactNode; strong?: boolean; top?: boolean }) {
   return (
-    <div className={`flex justify-between gap-3 py-1 text-sm ${strong ? "font-semibold" : ""} ${top ? "mt-1 border-t border-slate-800 pt-2" : ""}`}>
-      <span className={strong ? "" : "text-slate-400"}>{label}</span>
+    <div className={`flex justify-between gap-3 py-1 text-sm ${strong ? "font-semibold" : ""} ${top ? "mt-1 border-t border-line pt-2" : ""}`}>
+      <span className={strong ? "" : "text-muted"}>{label}</span>
       <span className="num">{children}</span>
     </div>
   );
 }
 
-const good = (v: number) => <span className={v >= 0 ? "text-emerald-400" : "text-rose-400"}>{formatUsd(v, true)}</span>;
+const good = (v: number) => <span className={v >= 0 ? "text-up" : "text-down"}>{formatUsd(v, true)}</span>;
 /** Debt rising is bad, falling is good; sub-dollar moves are noise. */
-const bad = (v: number) => <span className={v > 0.5 ? "text-rose-400" : v < -0.5 ? "text-emerald-400" : ""}>{formatUsd(v, true)}</span>;
+const bad = (v: number) => <span className={v > 0.5 ? "text-down" : v < -0.5 ? "text-up" : ""}>{formatUsd(v, true)}</span>;
 
 /** End value with its % change against the start. For debt, rising is bad, so the colours flip. */
 function nowWithPct(start: number, end: number, debt?: boolean) {
@@ -27,7 +27,7 @@ function nowWithPct(start: number, end: number, debt?: boolean) {
   const pct = ((end - start) / start) * 100;
   const flat = Math.abs(pct) < 0.05;
   const goodMove = debt ? pct < 0 : pct > 0;
-  const color = flat ? "text-slate-400" : goodMove ? "text-emerald-400" : "text-rose-400";
+  const color = flat ? "text-muted" : goodMove ? "text-up" : "text-down";
   return (
     <>
       {formatUsd(end)}{" "}
@@ -101,11 +101,11 @@ function Summary({ c }: { c: ChangesDto }) {
         {driver && (
           <>
             {" "}Biggest driver: <b>{driver.name}</b> (
-            <span className={`num ${driver.usd >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{formatUsd(driver.usd, true)}</span>).
+            <span className={`num ${driver.usd >= 0 ? "text-up" : "text-down"}`}>{formatUsd(driver.usd, true)}</span>).
           </>
         )}
       </p>
-      <p className="mt-1 text-xs text-slate-500">
+      <p className="mt-1 text-xs text-faint">
         Worked out day by day, so each deposit counts at the price of its day and the parts add up to the total. A price move in the debt asset shows only when it is over 50 cents.
       </p>
     </>
@@ -153,12 +153,12 @@ function ByWallet({ days, loan, wallets }: { days: number; loan: string; wallets
           <div className="overflow-x-auto">
             <table className="w-full min-w-[34rem] border-collapse text-sm">
               <thead>
-                <tr className="border-b border-slate-700 align-bottom">
+                <tr className="border-b border-line-strong align-bottom">
                   <th />
                   {columns.map((c) => (
-                    <th key={c.key} className={`px-2.5 pb-2 text-right font-normal ${c.combined ? "bg-slate-800/60" : ""}`}>
+                    <th key={c.key} className={`px-2.5 pb-2 text-right font-normal ${c.combined ? "bg-raised/60" : ""}`}>
                       <span className="block whitespace-nowrap font-semibold">{c.head}</span>
-                      <span className="num text-[11px] text-slate-500">{c.sub}</span>
+                      <span className="num text-[11px] text-faint">{c.sub}</span>
                     </th>
                   ))}
                 </tr>
@@ -185,7 +185,7 @@ function ByWallet({ days, loan, wallets }: { days: number; loan: string; wallets
             </table>
           </div>
 
-          <p className="mt-3 text-xs text-slate-500">
+          <p className="mt-3 text-xs text-faint">
             Each column is worked out day by day, so each deposit counts at the price of its day and the parts add up to its total.
             Only wallets with a loan are listed. A price move in the debt asset shows only when it is over 50 cents.
           </p>
@@ -218,7 +218,7 @@ function Section({ title, tone, columns }: { title: string; tone: Tone; columns:
       <tr aria-hidden>
         <td className="h-3" />
         {columns.map((c) => (
-          <td key={c.key} className={c.combined ? "bg-slate-800/60" : ""} />
+          <td key={c.key} className={c.combined ? "bg-raised/60" : ""} />
         ))}
       </tr>
       <tr>
@@ -247,10 +247,10 @@ function Line({
   wrap?: boolean;
 }) {
   const t = tone ? TONES[tone] : null;
-  const bg = (c?: Column) => (t ? t.tint : c?.combined ? "bg-slate-800/60" : "");
+  const bg = (c?: Column) => (t ? t.tint : c?.combined ? "bg-raised/60" : "");
   return (
-    <tr className={total ? `font-semibold ${t ? "text-[15px]" : "border-t border-slate-700"}` : ""}>
-      <td className={`whitespace-nowrap px-2.5 py-1.5 ${total ? "" : "text-slate-400"} ${bg()} ${t?.bar ?? ""}`}>{label}</td>
+    <tr className={total ? `font-semibold ${t ? "text-[15px]" : "border-t border-line-strong"}` : ""}>
+      <td className={`whitespace-nowrap px-2.5 py-1.5 ${total ? "" : "text-muted"} ${bg()} ${t?.bar ?? ""}`}>{label}</td>
       {columns.map((c) => (
         <td
           key={c.key}
@@ -264,10 +264,10 @@ function Line({
 }
 
 function ratioCell(c: ChangesDto) {
-  if (c.ratioStart == null || c.ratioEnd == null) return <span className="text-slate-500">–</span>;
+  if (c.ratioStart == null || c.ratioEnd == null) return <span className="text-faint">–</span>;
   const up = c.ratioEnd >= c.ratioStart;
   return (
-    <span className={up ? "text-emerald-400" : "text-rose-400"}>
+    <span className={up ? "text-up" : "text-down"}>
       {c.ratioStart.toFixed(2)}× → {c.ratioEnd.toFixed(2)}× {up ? "▲" : "▼"}
     </span>
   );
@@ -276,11 +276,11 @@ function ratioCell(c: ChangesDto) {
 /** What moved the ratio most, in the same column as the numbers above it. */
 function driverCell(c: ChangesDto) {
   const driver = c.ratioStart == null || c.ratioEnd == null ? null : biggestDriver(c);
-  if (!driver) return <span className="text-slate-500">–</span>;
+  if (!driver) return <span className="text-faint">–</span>;
   return (
     <>
-      <span className="block text-slate-300">{driver.name}</span>
-      <span className={`num ${driver.usd >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{formatUsd(driver.usd, true)}</span>
+      <span className="block text-fg-2">{driver.name}</span>
+      <span className={`num ${driver.usd >= 0 ? "text-up" : "text-down"}`}>{formatUsd(driver.usd, true)}</span>
     </>
   );
 }

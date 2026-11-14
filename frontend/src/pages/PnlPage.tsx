@@ -70,11 +70,11 @@ export function PnlPage() {
           <h1 className="text-2xl font-semibold tracking-tight">
             Profit &amp; loss
           </h1>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-muted">
             Where your return comes from, and which positions drive it.
           </p>
         </div>
-        <div className="flex items-center gap-3 text-sm text-slate-400">
+        <div className="flex items-center gap-3 text-sm text-muted">
           <UpdatedAgo />
         </div>
       </div>
@@ -137,7 +137,7 @@ export function PnlPage() {
                   total={t.pnl}
                 />
               )}
-              <p className="mt-4 text-xs text-slate-500">
+              <p className="mt-4 text-xs text-faint">
                 Token price change is what the deposited tokens gained or lost
                 if simply held. Impermanent loss is the gap between the pool
                 position and holding. Swap fees and reward tokens (such as
@@ -154,7 +154,7 @@ export function PnlPage() {
           <MonthlyFees />
 
           <Panel title="How P/L is calculated">
-            <p className="max-w-prose text-sm text-slate-400">
+            <p className="max-w-prose text-sm text-muted">
               Net P/L = current value + withdrawn + fees earned − deposits −
               gas. Deposits and withdrawals are valued in USD at the time of
               each transaction.
@@ -189,7 +189,7 @@ function PnlByPosition({
               key={p.id}
               label={`${pairLabel(p)} #${p.tokenId}`}
               fraction={Math.abs(p.metrics.pnlUsd) / max}
-              barClass={p.metrics.pnlUsd >= 0 ? "bg-emerald-500/80" : "bg-rose-500/80"}
+              barClass={p.metrics.pnlUsd >= 0 ? "bg-up-fill/80" : "bg-down-fill/80"}
               value={formatUsd(p.metrics.pnlUsd, true)}
               valueClass={pnlClass(p.metrics.pnlUsd)}
               onClick={() => drawer.open(p.id)}

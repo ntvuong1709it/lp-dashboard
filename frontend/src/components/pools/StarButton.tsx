@@ -20,7 +20,7 @@ export function StarButton({ pool, className = "" }: { pool: PoolDto; className?
         star.mutate({ poolId: pool.id, starred: !pool.starred });
       }}
       onKeyDown={(e) => e.stopPropagation()}
-      className={`rounded px-1 text-base leading-none hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-sky-400 ${starred ? "text-amber-400" : "text-slate-600 hover:text-slate-300"} ${className}`}
+      className={`rounded px-1 text-base leading-none hover:bg-raised focus-visible:outline-2 focus-visible:outline-accent ${starred ? "text-warn" : "text-faint hover:text-fg-2"} ${className}`}
     >
       <span aria-hidden="true">{starred ? "★" : "☆"}</span>
     </button>

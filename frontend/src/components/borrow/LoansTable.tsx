@@ -27,7 +27,7 @@ export function LoansTable({
     <Panel
       title="Loans"
       actions={
-        <button className="rounded-md border border-slate-700 px-2.5 py-1 text-sm hover:bg-slate-800" onClick={onAdd}>
+        <button className="rounded-md border border-line-strong px-2.5 py-1 text-sm hover:bg-raised" onClick={onAdd}>
           Add manual loan
         </button>
       }
@@ -35,7 +35,7 @@ export function LoansTable({
       <div className="overflow-x-auto">
         <table className="w-full min-w-[46rem] text-sm">
           <thead>
-            <tr className="text-left text-xs uppercase tracking-[.04em] text-slate-400">
+            <tr className="text-left text-xs uppercase tracking-[.04em] text-muted">
               <th className="px-2.5 py-1.5 font-medium">Source</th>
               <th className="px-2.5 py-1.5 font-medium">Loan</th>
               <th className="px-2.5 py-1.5 text-right font-medium">Debt</th>
@@ -50,9 +50,9 @@ export function LoansTable({
             {loans.map((l) => {
               const edit = l.manualId == null ? undefined : manual.find((m) => m.id === l.manualId);
               return (
-                <tr key={l.key} className="border-t border-slate-800">
+                <tr key={l.key} className="border-t border-line">
                   <td className="px-2.5 py-2.5">
-                    <span className={`rounded border px-1.5 text-[11px] ${l.kind === "manual" ? "border-amber-500/60 text-amber-300" : "border-slate-700 text-slate-400"}`}>
+                    <span className={`rounded border px-1.5 text-[11px] ${l.kind === "manual" ? "border-warn-fill/60 text-warn" : "border-line-strong text-muted"}`}>
                       {l.source}
                     </span>
                   </td>
@@ -62,7 +62,7 @@ export function LoansTable({
                   <td className="px-2.5 py-2.5 text-right num">{formatUsd(l.interestInWindowUsd)}</td>
                   <td className="px-2.5 py-2.5 text-right num">
                     {l.collateralRatio == null ? (
-                      <span className="text-slate-500">no collateral data</span>
+                      <span className="text-faint">no collateral data</span>
                     ) : (
                       <>
                         {l.collateralRatio.toFixed(2)}×{" "}
@@ -73,24 +73,24 @@ export function LoansTable({
                     )}
                   </td>
                   <td className="px-2.5 py-2.5">
-                    {riskText(l) ? <LevelChip level={l.risk.level}>{riskText(l)}</LevelChip> : <span className="text-slate-500">—</span>}
+                    {riskText(l) ? <LevelChip level={l.risk.level}>{riskText(l)}</LevelChip> : <span className="text-faint">—</span>}
                   </td>
                   <td className="px-2.5 py-2.5">
                     {edit && (
                       <div className="flex justify-end gap-1.5">
-                        <button className="rounded px-2 py-0.5 text-xs text-slate-300 hover:bg-slate-800" onClick={() => onEdit(edit)}>
+                        <button className="rounded px-2 py-0.5 text-xs text-fg-2 hover:bg-raised" onClick={() => onEdit(edit)}>
                           Edit
                         </button>
                         {confirming === edit.id ? (
                           <button
-                            className="rounded bg-rose-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-rose-500 disabled:opacity-50"
+                            className="rounded bg-down-fill px-2 py-0.5 text-xs font-medium text-white hover:bg-down-fill disabled:opacity-50"
                             disabled={remove.isPending}
                             onClick={() => remove.mutate({ id: edit.id, owner: edit.owner }, { onSettled: () => setConfirming(null) })}
                           >
                             Delete for good
                           </button>
                         ) : (
-                          <button className="rounded px-2 py-0.5 text-xs text-slate-300 hover:bg-slate-800" onClick={() => setConfirming(edit.id)}>
+                          <button className="rounded px-2 py-0.5 text-xs text-fg-2 hover:bg-raised" onClick={() => setConfirming(edit.id)}>
                             Delete
                           </button>
                         )}

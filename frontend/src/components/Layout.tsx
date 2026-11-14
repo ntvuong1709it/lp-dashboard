@@ -18,7 +18,7 @@ import { setTheme, useTheme } from "../lib/theme";
 import { setBalancesHidden, useHideBalances } from "../lib/privacy";
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
-  `whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ${isActive ? "bg-slate-800 text-slate-50 shadow-[inset_0_-2px_0_var(--color-sky-400)]" : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-50"}`;
+  `whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ${isActive ? "bg-raised text-fg shadow-[inset_0_-2px_0_var(--accent)]" : "text-muted hover:bg-raised/60 hover:text-fg"}`;
 
 export function Layout() {
   // The pool explorer is a table next to a side panel, so it gets more of a wide screen than the other pages.
@@ -27,10 +27,10 @@ export function Layout() {
   const width = wide ? "max-w-[110rem]" : "max-w-7xl";
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b border-slate-800 bg-slate-900">
+      <header className="sticky top-0 z-20 border-b border-line bg-panel">
         <div className={`mx-auto flex ${width} flex-wrap items-center gap-4 px-4 py-3`}>
           <span className="flex items-center gap-2 text-lg font-bold tracking-tight">
-            <i className="inline-block h-5 w-5 rounded-[50%_50%_50%_4px] bg-sky-400" />
+            <i className="inline-block h-5 w-5 rounded-[50%_50%_50%_4px] bg-accent-fill" />
             LP Dashboard
           </span>
           <nav
@@ -75,7 +75,7 @@ export function Layout() {
             <LogoutButton />
           </div>
         </div>
-        <div className="border-t border-slate-800">
+        <div className="border-t border-line">
           <div className={`mx-auto ${width} px-4 py-2`}>
             <PriceTicker />
           </div>
@@ -107,7 +107,7 @@ function LogoutButton() {
   const { logout } = useAuth();
   return (
     <button
-      className="rounded-md border border-slate-700 px-2 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
+      className="rounded-md border border-line-strong px-2 py-1.5 text-sm text-fg-2 hover:bg-raised"
       title="Sign out of this device"
       onClick={() => void logout()}
     >
@@ -121,7 +121,7 @@ function ThemeToggle() {
   const next = theme === "dark" ? "light" : "dark";
   return (
     <button
-      className="rounded-md border border-slate-700 px-2 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
+      className="rounded-md border border-line-strong px-2 py-1.5 text-sm text-fg-2 hover:bg-raised"
       title={`Switch to ${next} theme`}
       aria-label={`Switch to ${next} theme`}
       onClick={() => setTheme(next)}
@@ -135,7 +135,7 @@ function HideBalancesToggle() {
   const hidden = useHideBalances();
   return (
     <button
-      className={`rounded-md border px-2 py-1.5 text-sm hover:bg-slate-800 ${hidden ? "border-sky-500 text-sky-300" : "border-slate-700 text-slate-300"}`}
+      className={`rounded-md border px-2 py-1.5 text-sm hover:bg-raised ${hidden ? "border-accent-fill text-accent" : "border-line-strong text-fg-2"}`}
       aria-pressed={hidden}
       title={hidden ? "Show balances" : "Hide balances"}
       onClick={() => setBalancesHidden(!hidden)}
@@ -150,7 +150,7 @@ function OwnerSelect() {
 
   return (
     <select
-      className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm"
+      className="rounded-md border border-control bg-panel px-2 py-1.5 text-sm"
       value={selected ?? ""}
       onChange={(e) => setOwner(e.target.value || null)}
     >
@@ -202,18 +202,18 @@ function SyncIndicator() {
   return (
     <div
       ref={ref}
-      className="relative flex items-center gap-2 text-xs text-slate-400"
+      className="relative flex items-center gap-2 text-xs text-muted"
     >
       <button
-        className="flex min-w-0 flex-col items-start gap-1 rounded-md px-2 py-1 text-left hover:bg-slate-800"
+        className="flex min-w-0 flex-col items-start gap-1 rounded-md px-2 py-1 text-left hover:bg-raised"
         aria-expanded={open}
         title={running ? describeSync(status) : "Show sync details"}
         onClick={() => setOpen((o) => !o)}
       >
         {running ? (
           <>
-            <span className="flex items-center gap-1.5 text-sky-300">
-              <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-sky-400 border-t-transparent" />
+            <span className="flex items-center gap-1.5 text-accent">
+              <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-accent-fill border-t-transparent" />
               Syncing{" "}
               <span className="num font-medium">
                 {Math.round(status?.percent ?? 0)}%
@@ -224,13 +224,13 @@ function SyncIndicator() {
                 className="w-24"
               />
             </span>
-            <span className="max-w-72 truncate text-[11px] text-slate-400">
+            <span className="max-w-72 truncate text-[11px] text-muted">
               {describeSync(status)}
             </span>
           </>
         ) : status?.isQueued || trigger.isPending ? (
-          <span className="flex items-center gap-1.5 text-sky-300">
-            <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-sky-400 border-t-transparent" />
+          <span className="flex items-center gap-1.5 text-accent">
+            <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-accent-fill border-t-transparent" />
             Starting sync…
           </span>
         ) : (
@@ -239,7 +239,7 @@ function SyncIndicator() {
       </button>
       {errors.length > 0 && (
         <button
-          className="rounded-full bg-amber-500/15 px-2 py-0.5 font-medium text-amber-300 ring-1 ring-amber-500/40 hover:bg-amber-500/25"
+          className="rounded-full bg-warn-fill/15 px-2 py-0.5 font-medium text-warn ring-1 ring-warn-fill/40 hover:bg-warn-fill/25"
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
         >
@@ -247,7 +247,7 @@ function SyncIndicator() {
         </button>
       )}
       <button
-        className="rounded-md border border-slate-700 px-2 py-1 text-slate-200 hover:bg-slate-800 disabled:opacity-50"
+        className="rounded-md border border-line-strong px-2 py-1 text-fg-2 hover:bg-raised disabled:opacity-50"
         disabled={busy || !allOwners}
         onClick={() => trigger.mutate()}
       >
@@ -258,11 +258,11 @@ function SyncIndicator() {
         <div
           role="dialog"
           aria-label="Sync details"
-          className="absolute right-0 top-full z-20 mt-2 w-lg max-w-[90vw] rounded-lg border border-slate-700 bg-slate-900 shadow-xl"
+          className="absolute right-0 top-full z-20 mt-2 w-lg max-w-[90vw] rounded-lg border border-line-strong bg-panel shadow-xl"
         >
-          <div className="flex items-center justify-between border-b border-slate-800 px-3 py-2">
+          <div className="flex items-center justify-between border-b border-line px-3 py-2">
             <span
-              className={`text-sm font-medium ${errors.length > 0 ? "text-amber-300" : "text-slate-200"}`}
+              className={`text-sm font-medium ${errors.length > 0 ? "text-warn" : "text-fg-2"}`}
             >
               {running
                 ? "Sync in progress"
@@ -271,7 +271,7 @@ function SyncIndicator() {
                   : "Sync"}
             </span>
             <button
-              className="px-1 text-base leading-none text-slate-400 hover:text-slate-50"
+              className="px-1 text-base leading-none text-muted hover:text-fg"
               aria-label="Close"
               onClick={() => setOpen(false)}
             >
@@ -282,7 +282,7 @@ function SyncIndicator() {
             {status && <SyncProgressDetails status={status} />}
             {errors.length > 0 && (
               <div>
-                <div className="mb-2 text-xs font-medium text-amber-300">
+                <div className="mb-2 text-xs font-medium text-warn">
                   {errors.length} {errors.length === 1 ? "error" : "errors"}
                   {running ? " so far" : ""}
                 </div>
@@ -290,16 +290,16 @@ function SyncIndicator() {
               </div>
             )}
           </div>
-          <div className="flex items-center justify-end gap-3 border-t border-slate-800 px-3 py-2">
+          <div className="flex items-center justify-end gap-3 border-t border-line px-3 py-2">
             <Link
               to="/addresses"
-              className="text-sky-400 hover:underline"
+              className="text-accent hover:underline"
               onClick={() => setOpen(false)}
             >
               View sync status
             </Link>
             <button
-              className="rounded-md bg-sky-600 px-2 py-1 font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+              className="rounded-md bg-accent-solid px-2 py-1 font-medium text-white hover:bg-accent-fill disabled:opacity-50"
               disabled={busy || !allOwners}
               onClick={() => trigger.mutate()}
             >

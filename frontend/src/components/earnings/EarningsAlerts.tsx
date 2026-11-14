@@ -2,8 +2,8 @@ import type { EarningsAlert } from "../../lib/earnings";
 import { usePositionDrawer } from "../../lib/positionDrawer";
 
 const chip: Record<EarningsAlert["severity"], string> = {
-  warn: "bg-amber-500/15 text-amber-300",
-  info: "bg-sky-500/15 text-sky-300",
+  warn: "bg-warn-fill/15 text-warn",
+  info: "bg-accent-fill/15 text-accent",
 };
 
 /** Things that look off, shown only when there are any. Nothing renders on a quiet day. */
@@ -16,7 +16,7 @@ export function EarningsAlerts({ alerts }: { alerts: EarningsAlert[] }) {
       {alerts.map((a) => (
         <li
           key={a.id}
-          className="flex items-start gap-2.5 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm"
+          className="flex items-start gap-2.5 rounded-lg border border-line bg-panel px-3 py-2 text-sm"
         >
           <span
             className={`mt-0.5 shrink-0 rounded-full px-2 text-[11px] font-semibold uppercase tracking-wide ${chip[a.severity]}`}
@@ -27,7 +27,7 @@ export function EarningsAlerts({ alerts }: { alerts: EarningsAlert[] }) {
           {a.positionId != null && (
             <button
               type="button"
-              className="shrink-0 text-xs text-sky-400 hover:underline"
+              className="shrink-0 text-xs text-accent hover:underline"
               onClick={() => drawer.open(a.positionId!)}
             >
               Open position →

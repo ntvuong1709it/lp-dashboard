@@ -30,7 +30,7 @@ export function SteadyCard({ summary, loans }: { summary: BorrowSummaryDto; loan
           {left >= 0 ? (
             <>
               Income (LP plus Aave supply) runs at <b className="num">{formatUsd(income)}</b> {info.text}, so it covers that with{" "}
-              <b className="num text-emerald-400">{formatUsd(left)}</b> to spare.
+              <b className="num text-up">{formatUsd(left)}</b> to spare.
             </>
           ) : (
             <>
@@ -46,8 +46,8 @@ export function SteadyCard({ summary, loans }: { summary: BorrowSummaryDto; loan
         )}
       </div>
 
-      <div className="mt-4 text-xs uppercase tracking-[.05em] text-slate-400">Target calculator</div>
-      <div className="divide-y divide-slate-800">
+      <div className="mt-4 text-xs uppercase tracking-[.05em] text-muted">Target calculator</div>
+      <div className="divide-y divide-line">
         {loans
           .filter((l) => l.risk.kind !== "None" && l.risk.value != null && l.collateralUsd != null)
           .map((l) => (
@@ -73,12 +73,12 @@ function Target({ loan, leftPerMonth }: { loan: LoanDto; leftPerMonth: number })
     <div className="grid grid-cols-[1fr_6rem] items-end gap-x-3 gap-y-1.5 py-3">
       <div>
         <b>{loan.label}</b>
-        <div className="text-xs text-slate-400">
+        <div className="text-xs text-muted">
           {hf ? `health factor now ${value.toFixed(2)}` : `LTV now ${value.toFixed(0)}%`}
         </div>
       </div>
       <div>
-        <label className="mb-0.5 block text-xs text-slate-400" htmlFor={`target-${loan.key}`}>
+        <label className="mb-0.5 block text-xs text-muted" htmlFor={`target-${loan.key}`}>
           Target {hf ? "" : "LTV %"}
         </label>
         <input
@@ -88,7 +88,7 @@ function Target({ loan, leftPerMonth }: { loan: LoanDto; leftPerMonth: number })
           min={hf ? 1.1 : 20}
           max={hf ? 5 : 79}
           value={text}
-          className="w-full rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-sm"
+          className="w-full rounded-md border border-control bg-raised px-2 py-1 text-sm"
           onChange={(e) => {
             setText(e.target.value);
             const n = Number(e.target.value);

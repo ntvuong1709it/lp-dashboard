@@ -3,9 +3,9 @@ import { ApiError } from "../api/http";
 import { MIN_PASSWORD_LENGTH, useAuth } from "../lib/auth";
 
 const inputClass =
-  "w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm";
+  "w-full rounded-md border border-control bg-surface px-3 py-2 text-sm";
 const buttonClass =
-  "rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50";
+  "rounded-md bg-accent-solid px-4 py-2 text-sm font-medium text-white hover:bg-accent-fill disabled:opacity-50";
 
 /**
  * Shows the app only for a logged-in browser. Otherwise: the "set your password" screen on a brand-new server (or after
@@ -24,7 +24,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
     case "error":
       return (
         <Card title="Cannot reach the server">
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-muted">
             {error?.message ?? "The server did not answer."}
           </p>
           <button className={buttonClass} onClick={reload}>
@@ -33,7 +33,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
         </Card>
       );
     default:
-      return <div className="p-10 text-center text-sm text-slate-500">Loading…</div>;
+      return <div className="p-10 text-center text-sm text-faint">Loading…</div>;
   }
 }
 
@@ -46,9 +46,9 @@ function Card({
 }) {
   return (
     <div className="flex min-h-screen items-start justify-center px-4 pt-[12vh]">
-      <div className="w-full max-w-sm space-y-4 rounded-lg border border-slate-700 bg-slate-900 p-5">
+      <div className="w-full max-w-sm space-y-4 rounded-lg border border-line-strong bg-panel p-5">
         <span className="flex items-center gap-2 text-lg font-bold tracking-tight">
-          <i className="inline-block h-5 w-5 rounded-[50%_50%_50%_4px] bg-sky-400" />
+          <i className="inline-block h-5 w-5 rounded-[50%_50%_50%_4px] bg-accent-fill" />
           LP Dashboard
         </span>
         <h1 className="text-lg font-semibold">{title}</h1>
@@ -67,8 +67,8 @@ function Alert({
 }) {
   const colors =
     tone === "error"
-      ? "border-rose-500/35 bg-rose-500/10 text-rose-400"
-      : "border-amber-500/35 bg-amber-500/10 text-amber-300";
+      ? "border-down-fill/35 bg-down-fill/10 text-down"
+      : "border-warn-fill/35 bg-warn-fill/10 text-warn";
   return (
     <div role="alert" className={`rounded-md border px-3 py-2 text-sm ${colors}`}>
       {children}
@@ -125,14 +125,14 @@ function LoginScreen() {
     <Card title="Sign in">
       <form onSubmit={submit} className="space-y-4">
         <UsernameForPasswordManagers />
-        <label className="block space-y-1 text-xs font-medium text-slate-300">
+        <label className="block space-y-1 text-xs font-medium text-fg-2">
           Password
           <input
             id="login-password"
             type="password"
             autoFocus
             autoComplete="current-password"
-            className={`${inputClass} ${problem?.tone === "error" ? "border-rose-500" : ""}`}
+            className={`${inputClass} ${problem?.tone === "error" ? "border-down-fill" : ""}`}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -142,7 +142,7 @@ function LoginScreen() {
         <button className={`${buttonClass} w-full`} disabled={busy || !password}>
           {busy ? "Signing in…" : "Sign in"}
         </button>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-faint">
           This device stays signed in until you log out.
         </p>
       </form>
@@ -183,11 +183,11 @@ function CreatePasswordScreen() {
     <Card title="Set your password">
       <form onSubmit={submit} className="space-y-4">
         <UsernameForPasswordManagers />
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-muted">
           This is the only password protecting the site. Wallets and loans
           already on this server become yours.
         </p>
-        <label className="block space-y-1 text-xs font-medium text-slate-300">
+        <label className="block space-y-1 text-xs font-medium text-fg-2">
           New password
           <input
             id="setup-password"
@@ -199,11 +199,11 @@ function CreatePasswordScreen() {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-          <span className="block text-xs font-normal text-slate-500">
+          <span className="block text-xs font-normal text-faint">
             At least {MIN_PASSWORD_LENGTH} characters.
           </span>
         </label>
-        <label className="block space-y-1 text-xs font-medium text-slate-300">
+        <label className="block space-y-1 text-xs font-medium text-fg-2">
           Repeat password
           <input
             id="setup-password-repeat"

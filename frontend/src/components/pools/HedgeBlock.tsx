@@ -16,8 +16,8 @@ export interface HedgeInputs {
   openFeePct: number;
 }
 
-const NO_HEDGE = "var(--color-rose-400)";
-const HEDGED = "var(--color-emerald-400)";
+const NO_HEDGE = "var(--down)";
+const HEDGED = "var(--up)";
 const TABLE_MOVES = [-20, -10, 0, 10, 20];
 
 /**
@@ -55,23 +55,23 @@ export function HedgeBlock({
   const symbols = [t0.symbol, t1.symbol];
 
   return (
-    <div className="mt-3 border-t border-slate-800 pt-3">
+    <div className="mt-3 border-t border-line pt-3">
       <div className="flex items-center justify-between gap-2">
-        <h4 className="text-xs font-medium uppercase tracking-[.05em] text-slate-400">Hedge: with or without</h4>
-        <span className="text-xs text-slate-500">Set the ratio to 0% for no hedge</span>
+        <h4 className="text-xs font-medium uppercase tracking-[.05em] text-muted">Hedge: with or without</h4>
+        <span className="text-xs text-faint">Set the ratio to 0% for no hedge</span>
       </div>
 
       <div className="mt-2 flex flex-wrap items-end gap-4">
-        <label className="flex flex-col gap-1 text-xs text-slate-400">
+        <label className="flex flex-col gap-1 text-xs text-muted">
           Hedge with
           <select value={inputs.instrument} onChange={(e) => set({ instrument: e.target.value as HedgeInputs["instrument"] })} className={`${input} py-1`}>
             <option value="perp">Perp short</option>
             <option value="borrow">Borrow and sell</option>
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-xs text-slate-400">
+        <label className="flex flex-col gap-1 text-xs text-muted">
           <span>
-            Hedge ratio <span className="num text-slate-50">{inputs.ratioPct}%</span>
+            Hedge ratio <span className="num text-fg">{inputs.ratioPct}%</span>
           </span>
           <input
             type="range"
@@ -80,7 +80,7 @@ export function HedgeBlock({
             step={5}
             value={inputs.ratioPct}
             onChange={(e) => set({ ratioPct: Number(e.target.value) })}
-            className="w-32 accent-sky-400"
+            className="w-32 accent-accent"
             aria-label="Hedge ratio"
           />
         </label>
@@ -96,19 +96,19 @@ export function HedgeBlock({
         <NumberField label="Open / close fee %" value={inputs.openFeePct} onChange={(v) => set({ openFeePct: v })} step={0.01} width="w-20" />
       </div>
       <div className="mt-2 flex flex-wrap items-end gap-4">
-        <label className="flex flex-col gap-1 text-xs text-slate-400">
+        <label className="flex flex-col gap-1 text-xs text-muted">
           Income counted
           <select value={basis} onChange={(e) => onBasis(e.target.value as "fees" | "emissions")} className={`${input} py-1`}>
             <option value="fees">Swap fees (not staked)</option>
             <option value="emissions">Emissions (staked)</option>
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-xs text-slate-400">
+        <label className="flex flex-col gap-1 text-xs text-muted">
           Income APR %
           <input type="number" step={1} min={0} value={incomeText} onChange={(e) => onIncome(e.target.value)} className={`${input} w-20`} />
         </label>
       </div>
-      <p className="mt-1 text-xs text-slate-500">
+      <p className="mt-1 text-xs text-faint">
         {perp
           ? "Positive funding: longs pay shorts, so your short earns it. Negative funding is a cost."
           : "Positive borrow rate: you pay interest on the borrowed token. Check the health factor on the Borrow page."}{" "}
@@ -116,7 +116,7 @@ export function HedgeBlock({
       </p>
 
       {!h || h.legs === "None" ? (
-        <p className="mt-2 text-xs text-slate-500">Both tokens in this pool are stable, so there is no price risk to hedge.</p>
+        <p className="mt-2 text-xs text-faint">Both tokens in this pool are stable, so there is no price risk to hedge.</p>
       ) : (
         <HedgeDetail plan={plan} h={h} symbols={symbols} perp={perp} leverage={inputs.leverage} move={move} onMove={setMove} />
       )}
@@ -148,8 +148,8 @@ function HedgeDetail({
   return (
     <>
       <div className="mt-2 grid grid-cols-3 gap-2">
-        <div className="rounded-lg bg-slate-800/60 px-2.5 py-2">
-          <span className="block text-xs text-slate-400">Short now</span>
+        <div className="rounded-lg bg-raised/60 px-2.5 py-2">
+          <span className="block text-xs text-muted">Short now</span>
           {h.shorts.length === 0 ? (
             <b className="num block text-sm font-medium">none</b>
           ) : (
@@ -159,7 +159,7 @@ function HedgeDetail({
               </b>
             ))
           )}
-          <span className="num block text-xs text-slate-500">notional {usd0(h.notionalUsd)}</span>
+          <span className="num block text-xs text-faint">notional {usd0(h.notionalUsd)}</span>
         </div>
         <Tile
           label={perp ? "Funding per day" : "Borrow cost per day"}
@@ -170,7 +170,7 @@ function HedgeDetail({
       </div>
 
       {perp && h.marginUsd > 0 && (
-        <div className="mt-2 text-xs text-slate-400">
+        <div className="mt-2 text-xs text-muted">
           Margin needed {usd0(h.marginUsd)} at {leverage}x.
           {h.liquidationPoolPrice != null && (
             <>
@@ -180,13 +180,13 @@ function HedgeDetail({
             </>
           )}
           {h.liquidatesBeforeRangeTop && h.ratio > 0 && (
-            <p className="mt-1 text-amber-400">Liquidated before the {h.legs === "Token1" ? "bottom" : "top"} of your range. Lower the leverage or add margin.</p>
+            <p className="mt-1 text-warn">Liquidated before the {h.legs === "Token1" ? "bottom" : "top"} of your range. Lower the leverage or add margin.</p>
           )}
         </div>
       )}
 
       {h.legs === "Both" && (
-        <p className="mt-2 text-xs text-amber-400">
+        <p className="mt-2 text-xs text-warn">
           This pool has no stable leg. The short for each token is listed above; the price-scenario comparison for volatile pairs comes later.
         </p>
       )}
@@ -195,7 +195,7 @@ function HedgeDetail({
 
       {h.scenarios.length > 0 && <Scenarios plan={plan} h={h} symbols={symbols} move={move} onMove={onMove} volatileName={volatileName} />}
 
-      <p className="mt-2 text-xs text-slate-500">
+      <p className="mt-2 text-xs text-faint">
         Fees are earned only while the price is in range (a straight-line path to the scenario price). A hedge sized today drifts as the price moves.
       </p>
     </>
@@ -207,7 +207,7 @@ function EdgeTable({ h, symbols }: { h: HedgePlanDto; symbols: string[] }) {
     <>
       <table className="mt-3 w-full text-xs">
         <thead>
-          <tr className="text-slate-400">
+          <tr className="text-muted">
             <th className="py-1 text-left font-normal">Short size</th>
             <th className="py-1 text-right font-normal">Now</th>
             <th className="py-1 text-right font-normal">At lower bound</th>
@@ -220,7 +220,7 @@ function EdgeTable({ h, symbols }: { h: HedgePlanDto; symbols: string[] }) {
           ))}
         </tbody>
       </table>
-      <p className="mt-1 text-xs text-slate-500">
+      <p className="mt-1 text-xs text-faint">
         Re-hedge when the price moves about 5%:{" "}
         {h.shorts.map((s, i) => (
           <span key={s.token}>
@@ -237,14 +237,14 @@ function EdgeTable({ h, symbols }: { h: HedgePlanDto; symbols: string[] }) {
 function FragmentRows({ s, name }: { s: HedgePlanDto["shorts"][number]; name: string }) {
   return (
     <>
-      <tr className="border-t border-slate-800">
+      <tr className="border-t border-line">
         <td className="py-1 text-left">{name}</td>
         <td className="py-1 text-right">{amt(s.amount)}</td>
         <td className="py-1 text-right">{amt(s.atLowerBound)}</td>
         <td className="py-1 text-right">{amt(s.atUpperBound)}</td>
       </tr>
       <tr>
-        <td className="pb-1 text-left text-slate-400">Notional</td>
+        <td className="pb-1 text-left text-muted">Notional</td>
         <td className="pb-1 text-right">{usd0(s.notionalUsd)}</td>
         <td className="pb-1 text-right">{usd0(s.notionalAtLowerBoundUsd)}</td>
         <td className="pb-1 text-right">{usd0(s.notionalAtUpperBoundUsd)}</td>
@@ -279,20 +279,20 @@ function Scenarios({
   const diff = q.hedgedNetUsd - q.noHedgeNetUsd;
   const sign = (m: number) => (m > 0 ? "+" : "");
   const row = (label: ReactNode, none: ReactNode, hedged: ReactNode, total = false) => (
-    <tr className={total ? "border-t border-slate-700 font-semibold" : ""}>
-      <td className="py-0.5 text-left text-slate-400">{label}</td>
+    <tr className={total ? "border-t border-line-strong font-semibold" : ""}>
+      <td className="py-0.5 text-left text-muted">{label}</td>
       <td className="num py-0.5 text-right">{none}</td>
       <td className="num py-0.5 text-right">{hedged}</td>
     </tr>
   );
   const money = (v: number) => <span className={gainClass(v)}>{signedUsd0(v)}</span>;
-  const dash = <span className="text-slate-500">-</span>;
+  const dash = <span className="text-faint">-</span>;
 
   return (
     <>
-      <div className="mt-3 rounded-lg bg-slate-800/60 p-2.5">
-        <div className="text-xs text-slate-400">
-          Compare after {days} days if {volatileName} moves <span className="num text-slate-50">{sign(q.movePct)}{q.movePct}%</span> (pool price {qp(q.poolPrice)} {symbols[1]} per {symbols[0]})
+      <div className="mt-3 rounded-lg bg-raised/60 p-2.5">
+        <div className="text-xs text-muted">
+          Compare after {days} days if {volatileName} moves <span className="num text-fg">{sign(q.movePct)}{q.movePct}%</span> (pool price {qp(q.poolPrice)} {symbols[1]} per {symbols[0]})
         </div>
         <input
           type="range"
@@ -301,12 +301,12 @@ function Scenarios({
           step={step}
           value={move}
           onChange={(e) => onMove(Number(e.target.value))}
-          className="w-full accent-sky-400"
+          className="w-full accent-accent"
           aria-label="Price move"
         />
         <table className="mt-1 w-full text-xs">
           <thead>
-            <tr className="text-slate-400">
+            <tr className="text-muted">
               <th />
               <th className="py-1 text-right font-normal">No hedge</th>
               <th className="py-1 text-right font-normal">With hedge</th>
@@ -329,16 +329,16 @@ function Scenarios({
         <p className="mt-2 text-sm">
           At {sign(q.movePct)}
           {q.movePct}% the hedge leaves you{" "}
-          <b className={`font-medium ${diff >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+          <b className={`font-medium ${diff >= 0 ? "text-up" : "text-down"}`}>
             {usd0(Math.abs(diff))} {diff >= 0 ? "better off" : "worse off"}
           </b>
           . Across {first}% to +{last}%: no hedge ranges from {usd0(h.noHedgeMinUsd)} to {usd0(h.noHedgeMaxUsd)}, with hedge from {usd0(h.hedgedMinUsd)} to {usd0(h.hedgedMaxUsd)}.
         </p>
       </div>
 
-      <div className="mt-3 text-xs text-slate-400">30-day result by price move: fees while in range, hedge and entry costs included</div>
+      <div className="mt-3 text-xs text-muted">30-day result by price move: fees while in range, hedge and entry costs included</div>
       <HedgeChart h={h} />
-      <div className="flex flex-wrap gap-3 text-xs text-slate-400">
+      <div className="flex flex-wrap gap-3 text-xs text-muted">
         <span>
           <i className="mr-1 inline-block h-[3px] w-3 align-middle" style={{ background: NO_HEDGE }} />
           No hedge
@@ -352,7 +352,7 @@ function Scenarios({
 
       <table className="mt-2 w-full text-xs">
         <thead>
-          <tr className="text-slate-400">
+          <tr className="text-muted">
             <th className="py-1 text-left font-normal">Move</th>
             <th className="py-1 text-right font-normal">No hedge</th>
             <th className="py-1 text-right font-normal">With hedge</th>
@@ -362,7 +362,7 @@ function Scenarios({
           {TABLE_MOVES.map((m) => {
             const s = at(m);
             return (
-              <tr key={m} className="border-t border-slate-800">
+              <tr key={m} className="border-t border-line">
                 <td className="num py-1 text-left">
                   {sign(m)}
                   {m}%

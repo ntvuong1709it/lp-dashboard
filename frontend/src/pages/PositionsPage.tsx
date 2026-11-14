@@ -153,20 +153,20 @@ export function PositionsPage() {
             />
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
+        <div className="flex flex-wrap items-center gap-3 text-sm text-muted">
           <UpdatedAgo />
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search token, pool, #id…"
-            className="w-52 rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-slate-200 placeholder:text-slate-500"
+            className="w-52 rounded-md border border-control bg-panel px-2 py-1.5 text-fg-2 placeholder:text-faint"
           />
           {(protocols.length > 1 || protocol !== "") && (
             <select
               value={protocol}
               onChange={(e) => setProtocol(e.target.value as Protocol | "")}
-              className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-slate-200"
+              className="rounded-md border border-control bg-panel px-2 py-1.5 text-fg-2"
             >
               <option value="">All protocols</option>
               {protocols.map((p) => (
@@ -199,7 +199,7 @@ export function PositionsPage() {
         ) : (
           <Empty>
             No positions yet.{" "}
-            <Link className="text-sky-400 underline" to="/addresses">
+            <Link className="text-accent underline" to="/addresses">
               Add a wallet
             </Link>{" "}
             and wait for the first sync.
@@ -232,11 +232,11 @@ function TotalsCells({ items }: { items: PositionDto[] }) {
       <td className="px-3 py-2 text-right num">
         {formatUsd(sum((m) => m.feesEarnedUsd))}
       </td>
-      <td className="border-x border-sky-900 bg-sky-950/30 px-3 py-2 text-right num">
-        <div className="font-semibold text-sky-400">
+      <td className="border-x border-accent-fill/30 bg-accent-fill/5 px-3 py-2 text-right num">
+        <div className="font-semibold text-accent">
           {formatUsd(sum((m) => m.uncollectedFeesUsd + m.pendingRewardsUsd))}
         </div>
-        <div className="text-[11px] font-normal text-slate-400">
+        <div className="text-[11px] font-normal text-muted">
           {formatUsd(sum((m) => m.uncollectedFeesUsd))} fees ·{" "}
           {formatUsd(sum((m) => m.pendingRewardsUsd))} rewards
         </div>
@@ -278,7 +278,7 @@ function SortHeader({
       <button
         type="button"
         onClick={() => onSort(k)}
-        className={`uppercase hover:text-slate-50 ${active ? "text-slate-50" : ""}`}
+        className={`uppercase hover:text-fg ${active ? "text-fg" : ""}`}
       >
         {label}
         <span className="ml-1 inline-block w-2">
@@ -323,9 +323,9 @@ function PositionsTable({
   );
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-800">
+    <div className="overflow-x-auto rounded-lg border border-line">
       <table className="w-full text-sm">
-        <thead className="bg-slate-900 text-left text-xs uppercase text-slate-400">
+        <thead className="bg-panel text-left text-xs uppercase text-muted">
           <tr>
             <th className="px-3 py-2 w-10 text-right">#</th>
             <SortHeader label="Position" k="position" sort={sort} onSort={onSort} />
@@ -343,7 +343,7 @@ function PositionsTable({
             <SortHeader label="Risk" k="risk" sort={sort} onSort={onSort} />
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800">
+        <tbody className="divide-y divide-line">
           {ordered.map((p, index) => {
             const m = p.metrics;
             const range =
@@ -355,7 +355,7 @@ function PositionsTable({
             return (
               <Fragment key={p.id}>
                 {group && (
-                  <tr className="bg-slate-900 font-medium">
+                  <tr className="bg-panel font-medium">
                     <td colSpan={4} className="px-3 py-2">
                       <WalletGroupLabel wallet={group.wallet} count={group.items.length} noun="position" />
                     </td>
@@ -364,16 +364,16 @@ function PositionsTable({
                   </tr>
                 )}
               <tr
-                className="cursor-pointer hover:bg-slate-900/70"
+                className="cursor-pointer hover:bg-panel/70"
                 onClick={() => drawer.open(p.id)}
               >
-                <td className="px-3 py-2 text-right num text-slate-500">
+                <td className="px-3 py-2 text-right num text-faint">
                   {index + 1}
                 </td>
                 <td className="px-3 py-2">
                   <div className="font-medium">
                     {p.token0?.symbol ?? "?"}/{p.token1?.symbol ?? "?"}{" "}
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-faint">
                       {formatFee(p.fee)}
                     </span>
                     {showWallet && (
@@ -382,11 +382,11 @@ function PositionsTable({
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <div className="flex items-center gap-2 text-xs text-faint">
                     <span>{protocolLabels[p.protocol]}</span>
                     <span>#{p.tokenId}</span>
                     <CopyButton text={p.tokenId} title="Copy token ID" />
-                    {p.isStaked && <span className="text-sky-400">staked</span>}
+                    {p.isStaked && <span className="text-accent">staked</span>}
                     {p.poolAddress &&
                       poolLinks(p.chain, p.protocol, p.poolAddress).map((l) => (
                         <ExternalLink
@@ -403,7 +403,7 @@ function PositionsTable({
                   {range ? (
                     <div className="space-y-1">
                       <RangeBar range={range} showLabels />
-                      <div className="flex items-center justify-between text-[11px] text-slate-500">
+                      <div className="flex items-center justify-between text-[11px] text-faint">
                         <span>
                           {quote?.symbol} per {base?.symbol}
                         </span>
@@ -433,10 +433,10 @@ function PositionsTable({
                 <td className="px-3 py-2 text-right num">
                   {formatUsd(m.feesEarnedUsd)}
                 </td>
-                <td className="border-x border-sky-900 bg-sky-950/30 px-3 py-2 text-right num">
+                <td className="border-x border-accent-fill/30 bg-accent-fill/5 px-3 py-2 text-right num">
                   {m.uncollectedFeesUsd + m.pendingRewardsUsd > 0 ? (
                     <>
-                      <div className="font-semibold text-sky-400">
+                      <div className="font-semibold text-accent">
                         {formatUsd(m.uncollectedFeesUsd + m.pendingRewardsUsd)}
                       </div>
                       <div className="ml-auto mt-1 w-24">
@@ -452,13 +452,13 @@ function PositionsTable({
                           className="h-1.5"
                         />
                       </div>
-                      <div className="mt-0.5 text-[11px] text-slate-400">
+                      <div className="mt-0.5 text-[11px] text-muted">
                         {formatUsd(m.uncollectedFeesUsd)} fees ·{" "}
                         {formatUsd(m.pendingRewardsUsd)} rewards
                       </div>
                     </>
                   ) : (
-                    <span className="text-slate-500">—</span>
+                    <span className="text-faint">—</span>
                   )}
                 </td>
                 <td
@@ -494,7 +494,7 @@ function PositionsTable({
                   {formatPercent(m.feeAprPercent)}
                   {m.hasMissingPrices && (
                     <div
-                      className="text-[11px] text-amber-400"
+                      className="text-[11px] text-warn"
                       title="Some historical prices are unavailable and counted as $0, so these figures may be understated"
                     >
                       prices missing
@@ -502,7 +502,7 @@ function PositionsTable({
                   )}
                   {!m.hasMissingPrices && m.hasEstimatedPrices && (
                     <div
-                      className="text-[11px] text-amber-400/80"
+                      className="text-[11px] text-warn/80"
                       title="Some reward claims had no historical price; the nearest later known price was used"
                     >
                       est. reward price
@@ -517,14 +517,14 @@ function PositionsTable({
                         {formatShare(p.timeInRange.percent)}
                       </div>
                       <div
-                        className="text-xs text-slate-500"
+                        className="text-xs text-faint"
                         title={timeInRangeSource(p.timeInRange)}
                       >
                         of {formatHours(p.timeInRange.trackedHours)}
                       </div>
                       {timeInRangeBand(p.timeInRange) && (
                         <div
-                          className="text-[11px] text-amber-400/80"
+                          className="text-[11px] text-warn/80"
                           title={timeInRangeSource(p.timeInRange)}
                         >
                           {timeInRangeBand(p.timeInRange)}
@@ -533,7 +533,7 @@ function PositionsTable({
                     </>
                   ) : (
                     <span
-                      className="text-slate-500"
+                      className="text-faint"
                       title="No snapshots and no price history available for this position"
                     >
                       n/a
@@ -548,9 +548,9 @@ function PositionsTable({
             );
           })}
         </tbody>
-        <tfoot className="border-t border-slate-700 bg-slate-900 font-medium">
+        <tfoot className="border-t border-line-strong bg-panel font-medium">
           <tr>
-            <td colSpan={4} className="px-3 py-2 text-slate-400">
+            <td colSpan={4} className="px-3 py-2 text-muted">
               Total · {positions.length}{" "}
               {positions.length === 1 ? "position" : "positions"}
             </td>

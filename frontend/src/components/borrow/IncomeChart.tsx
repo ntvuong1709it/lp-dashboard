@@ -34,11 +34,11 @@ export function IncomeChart({ days }: { days: DailyCoverageDto[] }) {
     <Panel
       title="Income against interest, per day"
       actions={
-        <div className="flex flex-wrap gap-x-3 text-xs text-slate-400">
+        <div className="flex flex-wrap gap-x-3 text-xs text-muted">
           <Key color="var(--chart-a)">Fees</Key>
           <Key color="var(--chart-d)">Rewards</Key>
           <Key color="var(--chart-b)">Aave supply yield</Key>
-          <Key color="var(--color-rose-400)">Interest</Key>
+          <Key color="var(--down)">Interest</Key>
         </div>
       }
     >
@@ -57,13 +57,13 @@ export function IncomeChart({ days }: { days: DailyCoverageDto[] }) {
             <Bar dataKey="feesUsd" name="Swap fees" stackId="a" fill={theme.a} />
             <Bar dataKey="rewardsUsd" name="Rewards" stackId="a" fill={theme.d} />
             <Bar dataKey="supplyYieldUsd" name="Supply yield" stackId="a" fill={theme.b} />
-            <Line dataKey="interestUsd" name="Interest" stroke="var(--color-rose-400)" strokeWidth={2} dot={false} />
+            <Line dataKey="interestUsd" name="Interest" stroke="var(--down)" strokeWidth={2} dot={false} />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
       <div className="mb-1 mt-3 flex items-baseline justify-between text-xs">
-        <span className="uppercase tracking-[.05em] text-slate-400">Cumulative net carry</span>
-        <span className="text-slate-500">after interest and gas</span>
+        <span className="uppercase tracking-[.05em] text-muted">Cumulative net carry</span>
+        <span className="text-faint">after interest and gas</span>
       </div>
       <div className="h-28">
         <ResponsiveContainer>

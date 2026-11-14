@@ -1,10 +1,10 @@
 import { tokenSymbols } from "../../lib/pools";
 
 const TONES = [
-  "bg-sky-400/20 text-sky-400",
-  "bg-emerald-400/20 text-emerald-400",
-  "bg-amber-400/20 text-amber-400",
-  "bg-rose-400/20 text-rose-400",
+  "bg-accent/20 text-accent",
+  "bg-up/20 text-up",
+  "bg-warn/20 text-warn",
+  "bg-down/20 text-down",
 ];
 
 function tone(symbol: string) {
@@ -18,7 +18,7 @@ function Avatar({ symbol, size }: { symbol: string; size: number }) {
     <span
       aria-hidden="true"
       style={{ width: size, height: size, fontSize: size * 0.38 }}
-      className={`inline-flex shrink-0 items-center justify-center rounded-full border border-slate-900 font-semibold ${tone(symbol)}`}
+      className={`inline-flex shrink-0 items-center justify-center rounded-full border border-panel font-semibold ${tone(symbol)}`}
     >
       {symbol.replace(/^[wW](?=[A-Z])/, "").slice(0, 2).toUpperCase()}
     </span>

@@ -46,7 +46,7 @@ export function PoolTable({
     <div className="overflow-x-auto">
       <table className="w-full min-w-[560px] text-sm">
         <thead>
-          <tr className="border-b border-slate-800 text-xs text-slate-400">
+          <tr className="border-b border-line text-xs text-muted">
             {columns.map((c) => {
               const active = sort.key === c.key;
               return (
@@ -65,7 +65,7 @@ export function PoolTable({
                           : { key: c.key, dir: c.key === "symbol" ? 1 : -1 },
                       )
                     }
-                    className={active ? "font-semibold text-sky-400" : "hover:text-slate-200"}
+                    className={active ? "font-semibold text-accent" : "hover:text-fg-2"}
                   >
                     {c.label}
                     {active && (sort.dir < 0 ? " ↓" : " ↑")}
@@ -121,30 +121,30 @@ function PoolRows({
             focusSibling(e.currentTarget, e.key === "ArrowDown" ? 1 : -1);
           }
         }}
-        className={`cursor-pointer border-b border-slate-800 hover:bg-slate-800/50 ${selected ? "bg-sky-400/10 shadow-[inset_3px_0_0_var(--color-sky-400)]" : ""}`}
+        className={`cursor-pointer border-b border-line hover:bg-raised/50 ${selected ? "bg-accent/10 shadow-[inset_3px_0_0_var(--accent)]" : ""}`}
       >
         <td className="py-2.5 pl-3 pr-3">
           <div className="flex items-center gap-2.5">
-            <span aria-hidden="true" className={`w-4 text-slate-500 transition-transform ${expanded ? "rotate-90" : ""}`}>
+            <span aria-hidden="true" className={`w-4 text-faint transition-transform ${expanded ? "rotate-90" : ""}`}>
               ›
             </span>
             <TokenPair symbol={p.symbol} />
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span className="font-semibold">{p.symbol}</span>
-                <span className="rounded-full border border-slate-700 px-1.5 text-[11px] text-slate-400">{feeLabel(p.feePercent)}</span>
+                <span className="rounded-full border border-line-strong px-1.5 text-[11px] text-muted">{feeLabel(p.feePercent)}</span>
                 {p.held && (
-                  <span className="rounded-full border border-emerald-400/60 px-1.5 text-[11px] text-emerald-400">You hold</span>
+                  <span className="rounded-full border border-up/60 px-1.5 text-[11px] text-up">You hold</span>
                 )}
                 <StarButton pool={p} />
               </div>
-              <div className="text-xs text-slate-500">
+              <div className="text-xs text-faint">
                 {protocolLabels[p.protocol]}
                 {p.tickSpacing != null && ` · spacing ${p.tickSpacing}`}
                 {hasUnreliableVolume(p) && (
                   <span
                     title={UNRELIABLE_VOLUME_NOTE}
-                    className="ml-2 rounded-full border border-amber-400/50 px-1.5 text-[11px] text-amber-400"
+                    className="ml-2 rounded-full border border-warn/50 px-1.5 text-[11px] text-warn"
                   >
                     ⚠ volume likely low
                   </span>
@@ -157,14 +157,14 @@ function PoolRows({
         <td className="num px-3 py-2.5 text-right">{usd(p.fees7dUsd)}</td>
         <td className="num px-3 py-2.5 text-right">
           {apr(fee)}
-          {p.rewardApr ? <div className="text-xs text-emerald-400">+ {apr(p.rewardApr)} emissions</div> : null}
+          {p.rewardApr ? <div className="text-xs text-up">+ {apr(p.rewardApr)} emissions</div> : null}
         </td>
         <td className="px-3 py-2.5">
           <RiskBadge summary={p.risk} />
         </td>
       </tr>
       {expanded && (
-        <tr className="border-b border-slate-800 bg-slate-950/40">
+        <tr className="border-b border-line bg-surface/40">
           <td colSpan={columns.length} className="p-0">
             {children}
           </td>

@@ -91,14 +91,14 @@ export function PositionDetailPage({
           <>
             <button
               type="button"
-              className="text-sm text-slate-400 hover:text-slate-50"
+              className="text-sm text-muted hover:text-fg"
               onClick={onClose}
             >
               ✕ Close
             </button>
             <Link
               to={`/positions/${id}`}
-              className="text-sm text-sky-400 hover:underline"
+              className="text-sm text-accent hover:underline"
               onClick={onClose}
             >
               Open full page
@@ -107,16 +107,16 @@ export function PositionDetailPage({
         ) : (
           <Link
             to="/positions"
-            className="text-sm text-slate-400 hover:text-slate-50"
+            className="text-sm text-muted hover:text-fg"
           >
             ← Positions
           </Link>
         )}
         <h1 className="text-xl font-semibold">
           {p.token0?.symbol}/{p.token1?.symbol}{" "}
-          <span className="text-sm text-slate-500">{formatFee(p.fee)}</span>
+          <span className="text-sm text-faint">{formatFee(p.fee)}</span>
         </h1>
-        <span className="text-sm text-slate-400">
+        <span className="text-sm text-muted">
           {protocolLabels[p.protocol]} · {p.chain} · #{p.tokenId}
         </span>
         <CopyButton text={p.tokenId} title="Copy token ID" />
@@ -125,7 +125,7 @@ export function PositionDetailPage({
           closed={p.status === "Closed"}
           nearEdge={isNearEdge(p.range)}
         />
-        {p.isStaked && <span className="text-sm text-sky-400">staked</span>}
+        {p.isStaked && <span className="text-sm text-accent">staked</span>}
         {p.poolAddress && (
           <span className="flex items-center gap-2 text-sm">
             <ExternalLink href={addressUrl(p.chain, p.poolAddress)}>
@@ -139,7 +139,7 @@ export function PositionDetailPage({
             ))}
           </span>
         )}
-        <span className="flex items-center gap-2 text-sm text-slate-400">
+        <span className="flex items-center gap-2 text-sm text-muted">
           wallet
           <span className="font-mono text-xs" title={p.owner}>
             {shortAddress(p.owner)}
@@ -181,18 +181,18 @@ export function PositionDetailPage({
             <MiniStat label="If held instead" value={formatUsd(m.hodlValueUsd)} />
           </div>
           {(rewardTotals([p]).length > 0 || claimInsight(p, data.events).length > 0) && (
-            <div className="space-y-1 rounded-lg border border-sky-700 bg-sky-950/40 p-3 text-xs">
-              <div className="font-semibold uppercase tracking-[.05em] text-sky-300">
+            <div className="space-y-1 rounded-lg border border-accent-fill/50 bg-accent-fill/5 p-3 text-xs">
+              <div className="font-semibold uppercase tracking-[.05em] text-accent">
                 Unclaimed
               </div>
               {rewardTotals([p]).map((r) => (
-                <div key={r.symbol} className="text-slate-400 num">
+                <div key={r.symbol} className="text-muted num">
                   Rewards: {formatAmount(r.amount)} {r.symbol}
                   {r.priceUsd == null ? " (price unknown)" : ` @ ${formatPrice(r.priceUsd)} USD`}
                 </div>
               ))}
               {claimInsight(p, data.events).map((line) => (
-                <div key={line} className="text-slate-300">
+                <div key={line} className="text-fg-2">
                   {line}
                 </div>
               ))}
@@ -319,7 +319,7 @@ function RangePanel({
       title="Price range"
       actions={
         <button
-          className="text-xs text-sky-400 hover:underline"
+          className="text-xs text-accent hover:underline"
           onClick={() => setInverted(!inverted)}
         >
           Show {quote?.symbol} price
@@ -327,7 +327,7 @@ function RangePanel({
       }
     >
       <div className="mb-3 flex items-center justify-between text-sm">
-        <span className="text-slate-400">
+        <span className="text-muted">
           {quote?.symbol} per {base?.symbol}
         </span>
         <RangeBadge
@@ -339,35 +339,35 @@ function RangePanel({
       <RangeBar range={range} entry={entry} />
       <dl className="mt-4 grid grid-cols-3 gap-2 text-sm num">
         <div>
-          <dt className="text-xs text-slate-500">Min</dt>
+          <dt className="text-xs text-faint">Min</dt>
           <dd>{formatPrice(range.priceLower)}</dd>
         </div>
         <div>
-          <dt className="text-xs text-slate-500">Current</dt>
+          <dt className="text-xs text-faint">Current</dt>
           <dd>{formatPrice(range.priceCurrent)}</dd>
         </div>
         {entry != null && (
           <div>
-            <dt className="text-xs text-slate-500">Entry (dot)</dt>
+            <dt className="text-xs text-faint">Entry (dot)</dt>
             <dd>{formatPrice(entry)}</dd>
           </div>
         )}
         <div>
-          <dt className="text-xs text-slate-500">Max</dt>
+          <dt className="text-xs text-faint">Max</dt>
           <dd>{formatPrice(range.priceUpper)}</dd>
         </div>
         <div>
-          <dt className="text-xs text-slate-500">To min</dt>
+          <dt className="text-xs text-faint">To min</dt>
           <dd>{formatPercent(range.distanceToLowerPercent)}</dd>
         </div>
         <div>
-          <dt className="text-xs text-slate-500">Ticks</dt>
+          <dt className="text-xs text-faint">Ticks</dt>
           <dd>
             {p.tickLower} → {p.tickUpper}
           </dd>
         </div>
         <div>
-          <dt className="text-xs text-slate-500">To max</dt>
+          <dt className="text-xs text-faint">To max</dt>
           <dd>{formatPercent(range.distanceToUpperPercent)}</dd>
         </div>
       </dl>
@@ -415,9 +415,9 @@ function PriceNote({
   if (!at) return null;
   const change = baseline ? ((at.price - baseline) / baseline) * 100 : null;
   return (
-    <div className="text-[11px] text-slate-500">
+    <div className="text-[11px] text-faint">
       {symbol} {at.count > 1 ? "avg " : "@ "}
-      <span className="num text-slate-300">{formatUsd(at.price)}</span>
+      <span className="num text-fg-2">{formatUsd(at.price)}</span>
       {change != null && (
         <span className={`num ${pnlClass(change)}`}>
           {" "}
@@ -497,18 +497,18 @@ function BreakdownPanel({
   return (
     <Panel title="P/L breakdown">
       <table className="w-full text-sm">
-        <tbody className="divide-y divide-slate-800">
+        <tbody className="divide-y divide-line">
           {rows.map(([label, usd, detail]) => (
             <tr key={label}>
-              <td className="py-1.5 text-slate-400">{label}</td>
-              <td className="py-1.5 text-xs text-slate-500">{detail}</td>
+              <td className="py-1.5 text-muted">{label}</td>
+              <td className="py-1.5 text-xs text-faint">{detail}</td>
               <td className="py-1.5 text-right num">{usd}</td>
             </tr>
           ))}
         </tbody>
       </table>
       {m.hasMissingPrices && (
-        <p className="mt-2 text-xs text-amber-400">
+        <p className="mt-2 text-xs text-warn">
           Some historical prices are missing; USD figures may be understated.
         </p>
       )}
@@ -600,8 +600,8 @@ function EarningsPerDayPanel({ id }: { id: number }) {
       title="Earnings per day (incl. unclaimed)"
       actions={
         days.length > 0 && (
-          <span className="text-xs text-slate-400">
-            avg <span className="num text-slate-200">{formatUsd(avg)}</span>
+          <span className="text-xs text-muted">
+            avg <span className="num text-fg-2">{formatUsd(avg)}</span>
             /day over {days.length} days
           </span>
         )
@@ -674,7 +674,7 @@ function EventsPanel({
         <Empty>No events.</Empty>
       ) : (
         <table className="w-full text-sm">
-          <thead className="text-left text-xs uppercase text-slate-500">
+          <thead className="text-left text-xs uppercase text-faint">
             <tr>
               <th className="py-1">Time</th>
               <th className="py-1">Type</th>
@@ -684,14 +684,14 @@ function EventsPanel({
               <th className="py-1 text-right">Tx</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800">
+          <tbody className="divide-y divide-line">
             {events.map((e) => (
               <tr key={e.id}>
-                <td className="py-1.5 text-slate-400">
+                <td className="py-1.5 text-muted">
                   {formatDate(e.timestamp)}
                 </td>
                 <td className="py-1.5">{eventLabels[e.type]}</td>
-                <td className="py-1.5 num text-slate-300">
+                <td className="py-1.5 num text-fg-2">
                   {e.type === "RewardClaim" ? (
                     `${formatAmount(e.rewardAmount)} ${e.rewardTokenSymbol ?? ""}`
                   ) : e.type === "Collect" ? (
@@ -699,7 +699,7 @@ function EventsPanel({
                       fees {formatAmount(e.fee0)} {s0} + {formatAmount(e.fee1)}{" "}
                       {s1}
                       {(e.principal0 > 0 || e.principal1 > 0) && (
-                        <span className="text-slate-500">
+                        <span className="text-faint">
                           {" "}
                           · principal {formatAmount(e.principal0)} {s0} +{" "}
                           {formatAmount(e.principal1)} {s1}
@@ -713,7 +713,7 @@ function EventsPanel({
                 <td className="py-1.5 text-right num">
                   {formatUsd(e.valueUsd)}
                 </td>
-                <td className="py-1.5 text-right num text-slate-400">
+                <td className="py-1.5 text-right num text-muted">
                   {e.gasUsd ? formatUsd(e.gasUsd) : "—"}
                 </td>
                 <td className="py-1.5 text-right">

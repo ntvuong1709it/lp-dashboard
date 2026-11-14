@@ -188,7 +188,7 @@ export function OwnerProvider({ children }: { children: ReactNode }) {
 
   if (list.isPending) {
     return (
-      <div className="p-10 text-center text-sm text-slate-500">
+      <div className="p-10 text-center text-sm text-faint">
         Loading your wallets…
       </div>
     );
@@ -197,11 +197,11 @@ export function OwnerProvider({ children }: { children: ReactNode }) {
   if (list.isError) {
     return (
       <div className="mx-auto max-w-md space-y-3 p-10 text-center text-sm">
-        <div className="text-rose-400">
+        <div className="text-down">
           Could not load your wallets: {list.error.message}
         </div>
         <button
-          className="rounded-md border border-slate-700 px-3 py-1.5 text-slate-200 hover:bg-slate-800"
+          className="rounded-md border border-line-strong px-3 py-1.5 text-fg-2 hover:bg-raised"
           onClick={() => void list.refetch()}
         >
           Try again
@@ -216,7 +216,7 @@ export function OwnerProvider({ children }: { children: ReactNode }) {
       {moved > 0 && (
         <div
           role="status"
-          className="fixed bottom-4 right-4 z-30 flex max-w-sm items-start gap-3 rounded-lg border border-emerald-500/40 bg-slate-900 px-4 py-3 text-sm text-emerald-400 shadow-xl"
+          className="fixed bottom-4 right-4 z-30 flex max-w-sm items-start gap-3 rounded-lg border border-up-fill/40 bg-panel px-4 py-3 text-sm text-up shadow-xl"
         >
           <span>
             Moved {moved} {moved === 1 ? "wallet" : "wallets"} and{" "}
@@ -224,7 +224,7 @@ export function OwnerProvider({ children }: { children: ReactNode }) {
             your account.
           </span>
           <button
-            className="text-slate-400 hover:text-slate-50"
+            className="text-muted hover:text-fg"
             aria-label="Dismiss"
             onClick={() => setMoved(0)}
           >

@@ -18,9 +18,9 @@ export function PoolRiskSection({ pool }: { pool: PoolDto }) {
   const report: PoolRiskDto | undefined = recheck.data ?? query.data;
 
   return (
-    <section className="rounded-lg border border-slate-800 bg-slate-950" aria-label="Risk check" aria-busy={query.isFetching && !report}>
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 px-4 py-2.5">
-        <h3 className="text-sm font-medium text-slate-300">Risk check</h3>
+    <section className="rounded-lg border border-line bg-surface" aria-label="Risk check" aria-busy={query.isFetching && !report}>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-2.5">
+        <h3 className="text-sm font-medium text-fg-2">Risk check</h3>
         {report ? (
           <span className={`inline-flex items-center gap-1.5 text-sm font-semibold ${verdictText[report.level]}`}>
             <span aria-hidden="true" className={`inline-block h-2.5 w-2.5 rounded-full ${verdictDot[report.level]}`} />
@@ -35,14 +35,14 @@ export function PoolRiskSection({ pool }: { pool: PoolDto }) {
             <Skeleton className="h-4 w-2/3" />
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
-            <p className="text-xs text-slate-500">Checking the pool and both tokens. A first check takes a few seconds.</p>
+            <p className="text-xs text-faint">Checking the pool and both tokens. A first check takes a few seconds.</p>
           </div>
         )}
 
         {!report && query.error && (
           <div className="space-y-1">
             <ErrorText error={query.error} />
-            <button type="button" onClick={() => void query.refetch()} className="text-xs text-sky-400 hover:underline">
+            <button type="button" onClick={() => void query.refetch()} className="text-xs text-accent hover:underline">
               Try again
             </button>
           </div>
@@ -50,7 +50,7 @@ export function PoolRiskSection({ pool }: { pool: PoolDto }) {
 
         {report && (
           <>
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-faint">
               <span title={formatDate(report.checkedAt)}>
                 {report.token0.symbol ?? "token0"} + {report.token1.symbol ?? "token1"}, checked {formatAgo(report.checkedAt, now)}
               </span>
@@ -63,13 +63,13 @@ export function PoolRiskSection({ pool }: { pool: PoolDto }) {
             </div>
 
             {report.level === "Partial" && (
-              <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+              <p className="rounded-md border border-warn-fill/30 bg-warn-fill/10 px-3 py-2 text-xs text-warn">
                 {report.checksRun} of {report.checksTotal} checks ran, so this cannot be called green.
               </p>
             )}
 
             <div>
-              <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">The pool</h4>
+              <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">The pool</h4>
               <FindingList findings={report.findings.filter((f) => f.code !== "SOURCE_UNAVAILABLE")} />
               <div className="mt-2">
                 <SourceList sources={report.sources} />
@@ -77,24 +77,24 @@ export function PoolRiskSection({ pool }: { pool: PoolDto }) {
             </div>
 
             {[report.token0, report.token1].map((t) => (
-              <details key={t.address} className="group rounded-md border border-slate-800">
+              <details key={t.address} className="group rounded-md border border-line">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-sm">
                   <span className="font-medium">{t.symbol ?? "Token"}</span>
                   <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${verdictText[t.level]}`}>
                     <span aria-hidden="true" className={`inline-block h-2 w-2 rounded-full ${verdictDot[t.level]}`} />
                     {verdictLabel(t.level, t.checksRun, t.checksTotal)}
-                    <span aria-hidden="true" className="text-slate-500 transition-transform group-open:rotate-90">
+                    <span aria-hidden="true" className="text-faint transition-transform group-open:rotate-90">
                       ›
                     </span>
                   </span>
                 </summary>
-                <div className="border-t border-slate-800 p-3">
+                <div className="border-t border-line p-3">
                   <RiskReport report={t} compact />
                 </div>
               </details>
             ))}
 
-            <p className="text-xs text-slate-500">No flags is not a guarantee of safety. The check informs; it never blocks the planner below.</p>
+            <p className="text-xs text-faint">No flags is not a guarantee of safety. The check informs; it never blocks the planner below.</p>
           </>
         )}
       </div>
@@ -107,7 +107,7 @@ export function RedRiskBanner({ poolId }: { poolId: string }) {
   const { data } = usePoolRisk(poolId);
   if (data?.level !== "Red") return null;
   return (
-    <div role="alert" className="rounded-md border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+    <div role="alert" className="rounded-md border border-down-fill/40 bg-down-fill/10 px-3 py-2 text-sm text-down">
       This pool's risk check is <b>Red</b>. Read it above before putting money in. The planner still works: the app never blocks it.
     </div>
   );
@@ -131,14 +131,14 @@ export function PoolRiskBadge({ pool, onClick }: { pool: PoolDto; onClick: () =>
       type="button"
       onClick={onClick}
       title="Open the risk check"
-      className="rounded-md border border-slate-700 bg-slate-950 px-2 py-0.5 hover:bg-slate-800"
+      className="rounded-md border border-line-strong bg-surface px-2 py-0.5 hover:bg-raised"
     >
       {report ? (
         <RiskBadge level={report.level} summary={{ level: report.level, checksRun: report.checksRun, checksTotal: report.checksTotal, checkedAt: report.checkedAt, top: [] }} />
       ) : error ? (
-        <span className="text-xs text-slate-500">Risk unavailable</span>
+        <span className="text-xs text-faint">Risk unavailable</span>
       ) : (
-        <span className="text-xs text-slate-500">{isFetching ? "Checking risk…" : "Risk"}</span>
+        <span className="text-xs text-faint">{isFetching ? "Checking risk…" : "Risk"}</span>
       )}
     </button>
   );
@@ -158,7 +158,7 @@ export function RiskTabs({ tab, onTab, pool }: { tab: PoolTab; onTab: (tab: Pool
     document.getElementById(`pool-tab-${target}-tab`)?.focus();
   };
   return (
-    <div role="tablist" aria-label="Pool panel sections" className="flex gap-1 border-b border-slate-800">
+    <div role="tablist" aria-label="Pool panel sections" className="flex gap-1 border-b border-line">
       {TABS.map((t, i) => {
         const active = t.id === tab;
         return (
@@ -172,7 +172,7 @@ export function RiskTabs({ tab, onTab, pool }: { tab: PoolTab; onTab: (tab: Pool
             tabIndex={active ? 0 : -1}
             onClick={() => onTab(t.id)}
             onKeyDown={(e) => move(e, i)}
-            className={`-mb-px flex items-center gap-2 border-b-2 px-3 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-sky-400 ${active ? "border-sky-400 text-slate-50" : "border-transparent text-slate-400 hover:text-slate-200"}`}
+            className={`-mb-px flex items-center gap-2 border-b-2 px-3 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-accent ${active ? "border-accent-fill text-fg" : "border-transparent text-muted hover:text-fg-2"}`}
           >
             {t.label}
             {t.id === "risk" && report && (

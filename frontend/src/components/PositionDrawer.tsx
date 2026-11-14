@@ -29,7 +29,7 @@ export function PositionDrawer() {
         tabIndex={-1}
         role="dialog"
         aria-label="Position detail"
-        className="fixed inset-y-0 right-0 z-50 w-full max-w-3xl overflow-y-auto border-l border-slate-800 bg-slate-950 p-4 shadow-2xl outline-none"
+        className="fixed inset-y-0 right-0 z-50 w-full max-w-3xl overflow-y-auto border-l border-line bg-surface p-4 shadow-2xl outline-none"
       >
         <PositionDetailPage id={openId} onClose={close} />
       </aside>

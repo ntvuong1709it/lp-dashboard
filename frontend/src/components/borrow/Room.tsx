@@ -24,7 +24,7 @@ export function Room({ now, summary }: { now: Answer; summary: BorrowSummaryDto 
       title="How much room do you have?"
       actions={
         rate != null && (
-          <button className="text-xs text-sky-400 hover:underline" onClick={() => setRate(null)}>
+          <button className="text-xs text-accent hover:underline" onClick={() => setRate(null)}>
             Reset
           </button>
         )
@@ -38,7 +38,7 @@ export function Room({ now, summary }: { now: Answer; summary: BorrowSummaryDto 
             scale={Math.max(current, breakEven) * 1.15}
             fill={current}
             mark={breakEven}
-            color="bg-rose-400"
+            color="bg-down-fill"
             note={
               current > breakEven
                 ? `Today ${formatPercent(current)} is already above that, so the loans cost more than you earn.`
@@ -53,7 +53,7 @@ export function Room({ now, summary }: { now: Answer; summary: BorrowSummaryDto 
             scale={Math.max(run.requiredLpAprPercent, run.currentLpAprPercent ?? 0) * 1.15}
             fill={run.currentLpAprPercent ?? 0}
             mark={run.requiredLpAprPercent}
-            color="bg-sky-400"
+            color="bg-accent-fill"
             note={
               run.currentLpAprPercent == null
                 ? "You have no open positions."
@@ -66,15 +66,15 @@ export function Room({ now, summary }: { now: Answer; summary: BorrowSummaryDto 
       </div>
 
       {debt > 0 && (
-        <div className="mt-4 space-y-2 rounded-md border border-dashed border-slate-700 px-3.5 py-3">
-          <label htmlFor="room-rate" className="block text-xs text-slate-400">
+        <div className="mt-4 space-y-2 rounded-md border border-dashed border-line-strong px-3.5 py-3">
+          <label htmlFor="room-rate" className="block text-xs text-muted">
             What if your average borrow rate becomes
           </label>
           <div className="num text-2xl font-medium">{formatPercent(r)}</div>
           <input
             id="room-rate"
             type="range"
-            className="w-full accent-sky-400"
+            className="w-full accent-accent"
             min={min}
             max={max}
             step={0.05}
@@ -119,11 +119,11 @@ function Meter({
         <span>{label}</span>
         <b className="num font-medium">{value}</b>
       </div>
-      <div className="relative mt-2 h-2 rounded-full bg-slate-800">
+      <div className="relative mt-2 h-2 rounded-full bg-raised">
         <i className={`absolute inset-y-0 left-0 rounded-full ${color}`} style={{ width: at(fill) }} />
-        <i className="absolute -bottom-1 -top-1 w-0.5 -translate-x-px bg-slate-50" style={{ left: at(mark) }} />
+        <i className="absolute -bottom-1 -top-1 w-0.5 -translate-x-px bg-fg" style={{ left: at(mark) }} />
       </div>
-      <div className="mt-1.5 text-xs text-slate-500">{note}</div>
+      <div className="mt-1.5 text-xs text-faint">{note}</div>
     </div>
   );
 }

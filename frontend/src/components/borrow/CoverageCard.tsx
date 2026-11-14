@@ -19,11 +19,11 @@ export function CoverageCard() {
 
   if (!s.hasLoans) {
     return (
-      <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-slate-700 bg-slate-900 p-4">
-        <p className="text-sm text-slate-400">
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-line-strong bg-panel p-4">
+        <p className="text-sm text-muted">
           Borrowing against your LP tokens? Add a loan to see whether LP income covers the interest.
         </p>
-        <Link to="/borrow" className="rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500">
+        <Link to="/borrow" className="rounded-md bg-accent-solid px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-fill">
           Set up loans
         </Link>
       </section>
@@ -45,52 +45,52 @@ export function CoverageCard() {
         : null;
 
   return (
-    <section className="rounded-lg border border-slate-800 bg-slate-900 p-4" aria-label="Interest coverage">
+    <section className="rounded-lg border border-line bg-panel p-4" aria-label="Interest coverage">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-medium text-slate-300">Interest coverage</h2>
+        <h2 className="text-sm font-medium text-fg-2">Interest coverage</h2>
         <Segmented label="Window" options={DAY_OPTIONS} value={days} onChange={setDays} />
       </div>
       <div className="grid gap-5 md:grid-cols-[1.1fr_1.4fr_1fr] md:items-center">
         <div>
-          <div className="text-xs uppercase tracking-[.05em] text-slate-400">Last {days} days</div>
+          <div className="text-xs uppercase tracking-[.05em] text-muted">Last {days} days</div>
           <div className="mt-1 flex flex-wrap items-center gap-3">
             <span className="text-4xl font-medium tracking-tight num">
               {c.ratio == null ? "—" : `${c.ratio.toFixed(2)}×`}
             </span>
             <StatusChip status={c.status} />
           </div>
-          <div className="mt-1.5 text-xs text-slate-400">
-            <span className={`num ${c.netCarryUsd >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+          <div className="mt-1.5 text-xs text-muted">
+            <span className={`num ${c.netCarryUsd >= 0 ? "text-up" : "text-down"}`}>
               {formatUsd(c.netCarryUsd, true)}
             </span>{" "}
             net carry after gas
           </div>
-          <div className="mt-0.5 text-xs text-slate-400">
+          <div className="mt-0.5 text-xs text-muted">
             Interest costs <span className="num">{formatUsd(perDay)}</span> a day,{" "}
             <span className="num">{formatUsd((perDay * 365) / 12)}</span> a month
           </div>
         </div>
 
-        <div className="space-y-2.5 text-xs text-slate-400">
+        <div className="space-y-2.5 text-xs text-muted">
           <div className="grid grid-cols-[4.5rem_1fr_5rem] items-center gap-2">
             <span>LP income</span>
-            <span className="flex h-3 overflow-hidden rounded bg-slate-800">
+            <span className="flex h-3 overflow-hidden rounded bg-raised">
               <i style={{ width: w(c.lpFeesUsd), background: "var(--chart-a)" }} />
               <i style={{ width: w(c.lpRewardsUsd), background: "var(--chart-d)" }} />
               <i style={{ width: w(c.supplyYieldUsd), background: "var(--chart-b)" }} />
             </span>
-            <span className="text-right text-slate-100 num">{formatUsd(c.lpIncomeUsd)}</span>
+            <span className="text-right text-fg num">{formatUsd(c.lpIncomeUsd)}</span>
           </div>
           <div className="grid grid-cols-[4.5rem_1fr_5rem] items-center gap-2">
             <span>Interest</span>
-            <span className="flex h-3 overflow-hidden rounded bg-slate-800">
-              <i className="bg-rose-400" style={{ width: w(c.interestUsd) }} />
+            <span className="flex h-3 overflow-hidden rounded bg-raised">
+              <i className="bg-down-fill" style={{ width: w(c.interestUsd) }} />
             </span>
-            <span className="text-right text-slate-100 num">{formatUsd(c.interestUsd)}</span>
+            <span className="text-right text-fg num">{formatUsd(c.interestUsd)}</span>
           </div>
         </div>
 
-        <div className="flex flex-col items-start gap-1.5 text-xs text-slate-400">
+        <div className="flex flex-col items-start gap-1.5 text-xs text-muted">
           {risk && risk.kind !== "None" && (
             <>
               <LevelChip level={risk.level} />
@@ -102,13 +102,13 @@ export function CoverageCard() {
           )}
           {s.trend.ratioNow != null && (
             <span>
-              Collateral ÷ debt <span className="num text-slate-100">{s.trend.ratioNow.toFixed(2)}×</span>{" "}
+              Collateral ÷ debt <span className="num text-fg">{s.trend.ratioNow.toFixed(2)}×</span>{" "}
               {ratioChange != null && (
                 <Delta value={ratioChange} text={`${Math.abs(ratioChange).toFixed(2)} in ${days}d`} goodUp />
               )}
             </span>
           )}
-          <Link to="/borrow" className="text-sky-400 hover:underline">
+          <Link to="/borrow" className="text-accent hover:underline">
             Open Borrow
           </Link>
         </div>

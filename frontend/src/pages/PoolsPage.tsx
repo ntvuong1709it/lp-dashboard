@@ -92,7 +92,7 @@ export function PoolsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Pools</h1>
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-muted">
           Browse {chain} pools by earnings, APR and TVL, open one for its 30-day trends, then test a price range to see what a
           deposit could roughly earn. Data from DefiLlama, refreshed every 15 minutes
           {data?.fetchedAt && <> (last fetched {new Date(data.fetchedAt).toLocaleTimeString()})</>}.
@@ -101,9 +101,9 @@ export function PoolsPage() {
 
       {yours.length > 0 && (
         <section aria-labelledby="your-pools">
-          <h2 id="your-pools" className="mb-2 text-sm font-medium text-slate-300">
+          <h2 id="your-pools" className="mb-2 text-sm font-medium text-fg-2">
             Your pools{" "}
-            <span className="font-normal text-slate-500">
+            <span className="font-normal text-faint">
               · what the pool paid, what the model says your range should earn, and what your position has earned
             </span>
           </h2>
@@ -122,7 +122,7 @@ export function PoolsPage() {
       )}
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(340px,1fr)] xl:grid-cols-[minmax(0,1fr)_minmax(420px,500px)]">
-        <section aria-label="Pools" className="min-w-0 rounded-lg border border-slate-800 bg-slate-900">
+        <section aria-label="Pools" className="min-w-0 rounded-lg border border-line bg-panel">
           <PoolFilterBar
             filters={filters}
             onFilters={patchFilters}
@@ -163,12 +163,12 @@ export function PoolsPage() {
                 onToggle={toggle}
                 detail={(p) => <PoolDetail pool={p} />}
               />
-              <div className="flex justify-center py-2.5 text-xs text-slate-500">
+              <div className="flex justify-center py-2.5 text-xs text-faint">
                 {rows.length > shown.length ? (
                   <button
                     type="button"
                     onClick={() => setShow(shown.length + PAGE_SIZE)}
-                    className="rounded-full border border-slate-700 px-3 py-1 text-slate-300 hover:bg-slate-800"
+                    className="rounded-full border border-line-strong px-3 py-1 text-fg-2 hover:bg-raised"
                   >
                     Show {Math.min(PAGE_SIZE, rows.length - shown.length)} more ({rows.length - shown.length} left)
                   </button>

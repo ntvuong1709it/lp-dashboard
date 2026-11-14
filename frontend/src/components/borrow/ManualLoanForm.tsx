@@ -17,8 +17,8 @@ interface CollateralRow {
 }
 
 const input =
-  "w-full rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-sm text-slate-100 focus:border-sky-500";
-const label = "mb-1 block text-xs text-slate-400";
+  "w-full rounded-md border border-control bg-raised px-2 py-1.5 text-sm text-fg focus:border-accent-fill";
+const label = "mb-1 block text-xs text-muted";
 
 /** Adds or edits a manual loan: its terms over time, its collateral over time and its liquidation limits. */
 export function ManualLoanForm({ loan, onClose }: { loan: ManualLoanDto | null; onClose: () => void }) {
@@ -77,7 +77,7 @@ export function ManualLoanForm({ loan, onClose }: { loan: ManualLoanDto | null; 
   };
 
   return (
-    <Panel title={loan ? "Edit manual loan" : "Add manual loan"} actions={<span className="text-xs text-slate-500">For debt the app cannot read from chain</span>}>
+    <Panel title={loan ? "Edit manual loan" : "Add manual loan"} actions={<span className="text-xs text-faint">For debt the app cannot read from chain</span>}>
       <form className="space-y-4" onSubmit={submit}>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div>
@@ -126,7 +126,7 @@ export function ManualLoanForm({ loan, onClose }: { loan: ManualLoanDto | null; 
         </div>
 
         <div>
-          <div className="mb-1.5 text-xs uppercase tracking-[.05em] text-slate-400">Terms history</div>
+          <div className="mb-1.5 text-xs uppercase tracking-[.05em] text-muted">Terms history</div>
           <div className="space-y-2">
             {terms.map((t, i) => (
               <div key={i} className="grid grid-cols-[1.2fr_1fr_.8fr_auto] items-end gap-2">
@@ -142,7 +142,7 @@ export function ManualLoanForm({ loan, onClose }: { loan: ManualLoanDto | null; 
                   <label className={label} htmlFor={`term-apr-${i}`}>APR %</label>
                   <input id={`term-apr-${i}`} type="number" step="any" min="0" className={input} value={t.apr} onChange={(e) => setTerm(i, { apr: e.target.value })} required />
                 </div>
-                <button type="button" className="rounded px-2 py-1.5 text-xs text-slate-300 hover:bg-slate-800 disabled:opacity-40" disabled={terms.length === 1} onClick={() => setTerms(terms.filter((_, j) => j !== i))}>
+                <button type="button" className="rounded px-2 py-1.5 text-xs text-fg-2 hover:bg-raised disabled:opacity-40" disabled={terms.length === 1} onClick={() => setTerms(terms.filter((_, j) => j !== i))}>
                   Remove
                 </button>
               </div>
@@ -150,12 +150,12 @@ export function ManualLoanForm({ loan, onClose }: { loan: ManualLoanDto | null; 
           </div>
           <button
             type="button"
-            className="mt-2 rounded-md border border-slate-700 px-2.5 py-1 text-xs hover:bg-slate-800"
+            className="mt-2 rounded-md border border-line-strong px-2.5 py-1 text-xs hover:bg-raised"
             onClick={() => setTerms([...terms, { from: today, principal: last?.principal ?? "", apr: last?.apr ?? "" }])}
           >
             Add rate change or top-up
           </button>
-          <p className="mt-2 text-xs text-slate-400">
+          <p className="mt-2 text-xs text-muted">
             {perDay != null ? (
               <>
                 At the latest terms this accrues <b className="num">{formatUsd(perDay)}</b> a day (simple interest, {formatUsd(perDay * 30)} per 30 days).{" "}
@@ -166,7 +166,7 @@ export function ManualLoanForm({ loan, onClose }: { loan: ManualLoanDto | null; 
         </div>
 
         <div>
-          <div className="mb-1.5 text-xs uppercase tracking-[.05em] text-slate-400">Collateral and risk limits (optional)</div>
+          <div className="mb-1.5 text-xs uppercase tracking-[.05em] text-muted">Collateral and risk limits (optional)</div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <label className={label} htmlFor="ml-collateral">Collateral asset</label>
@@ -203,24 +203,24 @@ export function ManualLoanForm({ loan, onClose }: { loan: ManualLoanDto | null; 
                   <label className={label} htmlFor={`coll-amount-${i}`}>Amount ({collateralAsset || "units"})</label>
                   <input id={`coll-amount-${i}`} type="number" step="any" min="0" className={input} value={c.amount} onChange={(e) => setColl(i, { amount: e.target.value })} />
                 </div>
-                <button type="button" className="rounded px-2 py-1.5 text-xs text-slate-300 hover:bg-slate-800 disabled:opacity-40" disabled={collateral.length === 1} onClick={() => setCollateral(collateral.filter((_, j) => j !== i))}>
+                <button type="button" className="rounded px-2 py-1.5 text-xs text-fg-2 hover:bg-raised disabled:opacity-40" disabled={collateral.length === 1} onClick={() => setCollateral(collateral.filter((_, j) => j !== i))}>
                   Remove
                 </button>
               </div>
             ))}
           </div>
-          <button type="button" className="mt-2 rounded-md border border-slate-700 px-2.5 py-1 text-xs hover:bg-slate-800" onClick={() => setCollateral([...collateral, { from: today, amount: collateral[collateral.length - 1]?.amount ?? "" }])}>
+          <button type="button" className="mt-2 rounded-md border border-line-strong px-2.5 py-1 text-xs hover:bg-raised" onClick={() => setCollateral([...collateral, { from: today, amount: collateral[collateral.length - 1]?.amount ?? "" }])}>
             Add top-up or withdrawal
           </button>
-          <p className="mt-2 text-xs text-slate-400">Add a row whenever your collateral changes. It lets the app chart collateral ÷ debt for days before today.</p>
+          <p className="mt-2 text-xs text-muted">Add a row whenever your collateral changes. It lets the app chart collateral ÷ debt for days before today.</p>
         </div>
 
-        {save.error && <div className="text-sm text-rose-400" role="alert">{save.error.message}</div>}
+        {save.error && <div className="text-sm text-down" role="alert">{save.error.message}</div>}
         <div className="flex justify-end gap-2">
-          <button type="button" className="rounded-md px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800" onClick={onClose}>
+          <button type="button" className="rounded-md px-3 py-1.5 text-sm text-fg-2 hover:bg-raised" onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" className="rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50" disabled={save.isPending || !owner}>
+          <button type="submit" className="rounded-md bg-accent-solid px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-fill disabled:opacity-50" disabled={save.isPending || !owner}>
             {save.isPending ? "Saving…" : "Save loan"}
           </button>
         </div>

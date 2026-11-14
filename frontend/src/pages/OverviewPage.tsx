@@ -34,10 +34,10 @@ import { pairLabel } from "../lib/attention";
 
 /** A text label per kind, each with its own colour, so a row is readable without decoding an icon. */
 const alertStyle: Record<AlertKind, { label: string; className: string }> = {
-  out: { label: "Out of range", className: "border-rose-500/50 bg-rose-500/10 text-rose-300" },
-  edge: { label: "Near edge", className: "border-orange-500/50 bg-orange-500/10 text-orange-300" },
-  unclaimed: { label: "Unclaimed", className: "border-sky-500/50 bg-sky-500/10 text-sky-300" },
-  prices: { label: "No price", className: "border-slate-500/50 bg-slate-500/10 text-slate-300" },
+  out: { label: "Out of range", className: "border-down-fill/50 bg-down-fill/10 text-down" },
+  edge: { label: "Near edge", className: "border-warn-fill/50 bg-warn-fill/10 text-warn" },
+  unclaimed: { label: "Unclaimed", className: "border-accent-fill/50 bg-accent-fill/10 text-accent" },
+  prices: { label: "No price", className: "border-line-strong/50 bg-muted/10 text-fg-2" },
 };
 
 export function OverviewPage() {
@@ -85,7 +85,7 @@ export function OverviewPage() {
       <div className="flex items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-muted">
             Everything you provide liquidity to, across wallets and protocols.
           </p>
         </div>
@@ -202,16 +202,16 @@ function AttentionPanel({
   return (
     <Panel
       title="Needs attention"
-      actions={<span className="text-sm text-slate-400">{alerts.length}</span>}
+      actions={<span className="text-sm text-muted">{alerts.length}</span>}
     >
       {error ? (
         <ErrorText error={error} />
       ) : loading ? (
         <Skeleton className="h-40 w-full" />
       ) : !alerts.length ? (
-        <p className="text-sm text-slate-400">Nothing needs attention.</p>
+        <p className="text-sm text-muted">Nothing needs attention.</p>
       ) : (
-        <ul className="max-h-96 divide-y divide-slate-800 overflow-y-auto">
+        <ul className="max-h-96 divide-y divide-line overflow-y-auto">
           {alerts.map((a) => (
             <li
               key={`${a.kind}-${a.position.id}`}
@@ -224,11 +224,11 @@ function AttentionPanel({
               </span>
               <div className="text-sm">
                 <div>{a.title}</div>
-                <div className="text-xs text-slate-400">
+                <div className="text-xs text-muted">
                   {a.detail}{" "}
                   <button
                     type="button"
-                    className="font-medium text-sky-400 hover:underline"
+                    className="font-medium text-accent hover:underline"
                     onClick={() => drawer.open(a.position.id)}
                   >
                     View position
@@ -265,7 +265,7 @@ function AllocationPanel({
       ) : !rows.length ? (
         <Empty>
           No open positions.{" "}
-          <Link className="text-sky-400 underline" to="/addresses">
+          <Link className="text-accent underline" to="/addresses">
             Add a wallet
           </Link>
         </Empty>
@@ -283,7 +283,7 @@ function AllocationPanel({
           ))}
         </div>
       )}
-      {note && <p className="mt-4 text-xs text-slate-500">{note}</p>}
+      {note && <p className="mt-4 text-xs text-faint">{note}</p>}
     </Panel>
   );
 }

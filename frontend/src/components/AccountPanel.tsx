@@ -4,7 +4,7 @@ import { MIN_PASSWORD_LENGTH, useAuth } from "../lib/auth";
 import { ErrorText, Panel } from "./ui";
 
 const inputClass =
-  "w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm";
+  "w-full rounded-md border border-control bg-surface px-3 py-2 text-sm";
 
 /** Change the password, or sign every device out (for example after losing one). */
 export function AccountPanel() {
@@ -68,7 +68,7 @@ export function AccountPanel() {
           className="sr-only"
         />
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block space-y-1 text-xs font-medium text-slate-300">
+          <label className="block space-y-1 text-xs font-medium text-fg-2">
             Current password
             <input
               id="account-current-password"
@@ -80,7 +80,7 @@ export function AccountPanel() {
               required
             />
           </label>
-          <label className="block space-y-1 text-xs font-medium text-slate-300">
+          <label className="block space-y-1 text-xs font-medium text-fg-2">
             New password
             <input
               id="account-new-password"
@@ -96,30 +96,30 @@ export function AccountPanel() {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <button
-            className="rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+            className="rounded-md bg-accent-solid px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-fill disabled:opacity-50"
             disabled={busy || !current || !next}
           >
             {busy ? "Saving…" : "Change password"}
           </button>
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-faint">
             Other devices are signed out when you change it.
           </span>
         </div>
         {changed && (
-          <div role="status" className="text-sm text-emerald-400">
+          <div role="status" className="text-sm text-up">
             Password changed.
           </div>
         )}
         {error != null && <ErrorText error={error} />}
       </form>
-      <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-slate-800 pt-3">
+      <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-line pt-3">
         <button
-          className="rounded-md border border-slate-700 px-3 py-1.5 text-sm text-rose-400 hover:bg-slate-800"
+          className="rounded-md border border-line-strong px-3 py-1.5 text-sm text-down hover:bg-raised"
           onClick={() => void signOutEverywhere()}
         >
           Log out everywhere
         </button>
-        <span className="text-xs text-slate-500">Use this if a device is lost.</span>
+        <span className="text-xs text-faint">Use this if a device is lost.</span>
       </div>
     </Panel>
   );

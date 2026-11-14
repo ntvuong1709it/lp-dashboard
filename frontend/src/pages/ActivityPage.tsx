@@ -62,11 +62,11 @@ export function ActivityPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Activity</h1>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-muted">
             Adds, removals and fee collections across all positions.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
+        <div className="flex flex-wrap items-center gap-3 text-sm text-muted">
           <UpdatedAgo />
           <Segmented
             label="Event type"
@@ -86,9 +86,9 @@ export function ActivityPage() {
           {data?.length ? "No events of this type." : "No activity yet."}
         </Empty>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-slate-800 bg-slate-900">
+        <div className="overflow-x-auto rounded-lg border border-line bg-panel">
           <table className="w-full min-w-[44rem] text-sm">
-            <thead className="text-left text-xs uppercase text-slate-400">
+            <thead className="text-left text-xs uppercase text-muted">
               <tr>
                 <th className="px-3 py-2">Date</th>
                 <th className="px-3 py-2">Event</th>
@@ -97,20 +97,20 @@ export function ActivityPage() {
                 <th className="px-3 py-2">Transaction</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800">
+            <tbody className="divide-y divide-line">
               {rows.map((a) => {
                 const e = a.event;
                 return (
-                  <tr key={`${a.positionId}-${e.id}`} className="hover:bg-slate-800/40">
-                    <td className="whitespace-nowrap px-3 py-2.5 text-slate-400 num">
+                  <tr key={`${a.positionId}-${e.id}`} className="hover:bg-raised/40">
+                    <td className="whitespace-nowrap px-3 py-2.5 text-muted num">
                       {dateTime.format(new Date(e.timestamp))}
                     </td>
                     <td className="px-3 py-2.5">
-                      <span className="rounded bg-slate-800 px-1.5 py-0.5 text-xs">
+                      <span className="rounded bg-raised px-1.5 py-0.5 text-xs">
                         {typeLabels[e.type]}
                       </span>
                       {e.type === "RewardClaim" && (
-                        <span className="ml-2 text-xs text-slate-500 num">
+                        <span className="ml-2 text-xs text-faint num">
                           {formatAmount(e.rewardAmount)} {e.rewardTokenSymbol}
                         </span>
                       )}
@@ -122,16 +122,16 @@ export function ActivityPage() {
                         onClick={() => drawer.open(a.positionId)}
                       >
                         {a.pair}{" "}
-                        <span className="text-slate-500">#{a.tokenId}</span>
+                        <span className="text-faint">#{a.tokenId}</span>
                       </button>
-                      <span className="ml-2 text-xs text-slate-500">
+                      <span className="ml-2 text-xs text-faint">
                         {protocolLabels[a.protocol]} · {a.chain}
                       </span>
                     </td>
                     <td className="px-3 py-2.5 text-right num">
                       {formatUsd(e.valueUsd)}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2.5 text-xs text-slate-500 num">
+                    <td className="whitespace-nowrap px-3 py-2.5 text-xs text-faint num">
                       <ExternalLink
                         href={txUrl(a.chain, e.txHash)}
                         title="Open the transaction in the block explorer"
@@ -146,7 +146,7 @@ export function ActivityPage() {
             </tbody>
           </table>
           {(data?.length ?? 0) >= 500 && (
-            <p className="border-t border-slate-800 px-3 py-2 text-xs text-slate-500">
+            <p className="border-t border-line px-3 py-2 text-xs text-faint">
               Showing the most recent 500 events.
             </p>
           )}

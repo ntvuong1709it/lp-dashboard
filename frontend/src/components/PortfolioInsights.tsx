@@ -16,10 +16,10 @@ import { useHideBalances } from "../lib/privacy";
 import { BarRow, Empty, ErrorText, Panel, Skeleton } from "./ui";
 
 const classStyle: Record<AssetClass, { label: string; bar: string }> = {
-  Stablecoin: { label: "Stablecoins", bar: "bg-emerald-500" },
-  Ether: { label: "ETH", bar: "bg-indigo-400" },
-  Bitcoin: { label: "BTC", bar: "bg-amber-400" },
-  Other: { label: "Other", bar: "bg-slate-500" },
+  Stablecoin: { label: "Stablecoins", bar: "bg-up-fill" },
+  Ether: { label: "ETH", bar: "bg-[var(--wallet-1)]" },
+  Bitcoin: { label: "BTC", bar: "bg-warn-fill" },
+  Other: { label: "Other", bar: "bg-muted" },
 };
 
 const pct = (part: number, total: number) =>
@@ -47,7 +47,7 @@ export function ExposurePanel() {
       title="Token exposure"
       actions={
         stableShare != null && (
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-muted">
             {((1 - stableShare) * 100).toFixed(0)}% price-exposed ·{" "}
             {(stableShare * 100).toFixed(0)}% stable
           </span>
@@ -64,7 +64,7 @@ export function ExposurePanel() {
         <div className="space-y-4">
           <div>
             <div
-              className="flex h-3 overflow-hidden rounded-full bg-slate-800"
+              className="flex h-3 overflow-hidden rounded-full bg-raised"
               role="img"
               aria-label="Exposure by asset class"
             >
@@ -77,14 +77,14 @@ export function ExposurePanel() {
                 />
               ))}
             </div>
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
               {e.classes.map((c) => (
                 <span key={c.assetClass}>
                   <span
                     className={`mr-1.5 inline-block h-2 w-2 rounded-sm ${classStyle[c.assetClass].bar}`}
                   />
                   {classStyle[c.assetClass].label} {pct(c.totalUsd, e.totalUsd)}
-                  <span className="ml-1 text-slate-500 num">
+                  <span className="ml-1 text-faint num">
                     {formatUsd(c.totalUsd)}
                   </span>
                 </span>
@@ -105,7 +105,7 @@ export function ExposurePanel() {
             ))}
           </div>
 
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-faint">
             Amounts held inside open positions plus their unclaimed fees and
             rewards, at today&apos;s prices. A position that is out of range sits
             entirely in one token.
@@ -147,7 +147,7 @@ export function RewardTokensPanel() {
         <div className="space-y-4">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="text-left text-xs uppercase tracking-[.05em] text-slate-400">
+              <thead className="text-left text-xs uppercase tracking-[.05em] text-muted">
                 <tr>
                   <th className="pb-2 pr-3 font-normal">Token</th>
                   <th className="pb-2 pr-3 text-right font-normal">Claimed</th>
@@ -164,7 +164,7 @@ export function RewardTokensPanel() {
                   <th className="pb-2 text-right font-normal">Change</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-line">
                 {rewards.map((r) => (
                   <tr key={r.address ?? r.symbol}>
                     <td className="whitespace-nowrap py-2 pr-3">
@@ -173,7 +173,7 @@ export function RewardTokensPanel() {
                         {r.address &&
                           rewards.filter((o) => o.symbol === r.symbol).length > 1 && (
                             <span
-                              className="ml-1.5 text-xs font-normal text-slate-500"
+                              className="ml-1.5 text-xs font-normal text-faint"
                               title={r.address}
                             >
                               {r.address.slice(0, 6)}…{r.address.slice(-4)}
@@ -182,13 +182,13 @@ export function RewardTokensPanel() {
                       </div>
                       {r.currentPriceUsd == null && (
                         <div
-                          className="whitespace-nowrap text-xs text-slate-500"
+                          className="whitespace-nowrap text-xs text-faint"
                           title="No open position pays this token any more, so there is no current price to compare with."
                         >
                           no current price
                         </div>
                       )}
-                      <div className="text-xs text-slate-500">
+                      <div className="text-xs text-faint">
                         {r.claimCount} claim{r.claimCount === 1 ? "" : "s"}
                         {r.pendingAmount > 0 &&
                           ` · ${formatAmount(r.pendingAmount)} pending`}
@@ -203,7 +203,7 @@ export function RewardTokensPanel() {
                         : "—"}
                       {r.hasEstimatedPrices && (
                         <span
-                          className="ml-1 text-amber-400"
+                          className="ml-1 text-warn"
                           title="Some claims had no price on the day and use the next known price."
                         >
                           ~
@@ -236,11 +236,11 @@ export function RewardTokensPanel() {
             </table>
           </div>
           {rewards.some((r) => r.hasMissingPrices) && (
-            <p className="text-xs text-amber-400">
+            <p className="text-xs text-warn">
               Some claims have no price at all and are not valued.
             </p>
           )}
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-faint">
             Assumes claimed tokens were kept. A negative change is what
             selling right after each claim would have saved; a positive one is
             what holding earned. Pending rewards are on the Unclaimed card.

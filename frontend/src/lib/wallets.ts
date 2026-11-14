@@ -35,7 +35,7 @@ export function useWallets() {
         label: "",
         name: shortAddress(address),
         short: shortAddress(address),
-        color: "var(--color-slate-400)",
+        color: "var(--muted)",
       };
   }, [addresses]);
 }

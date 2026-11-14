@@ -19,8 +19,8 @@ export function WalletGroupLabel({ wallet, count, noun }: { wallet: WalletInfo; 
   return (
     <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
       <WalletChip wallet={wallet} />
-      {wallet.label && <span className="font-mono text-xs font-normal text-slate-500">{wallet.short}</span>}
-      <span className="text-xs font-normal text-slate-500">
+      {wallet.label && <span className="font-mono text-xs font-normal text-faint">{wallet.short}</span>}
+      <span className="text-xs font-normal text-faint">
         · {count} {count === 1 ? noun : `${noun}s`}
       </span>
     </span>

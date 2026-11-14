@@ -169,7 +169,7 @@ export function EarningsChart({
             <Line
               dataKey="avg"
               name={average.label}
-              stroke="var(--color-slate-300)"
+              stroke="var(--fg-2)"
               strokeDasharray="4 3"
               strokeWidth={1.5}
               dot={false}
@@ -180,17 +180,17 @@ export function EarningsChart({
             {data
               .filter((d) => d.low)
               .map((d) => (
-                <ReferenceDot key={d.date} x={d.date} y={d.total} r={3.5} fill="#fb7185" stroke="none" />
+                <ReferenceDot key={d.date} x={d.date} y={d.total} r={3.5} fill="var(--down)" stroke="none" />
               ))}
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-slate-400">
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-muted">
         <div className="flex flex-wrap gap-x-4 gap-y-1">
           <Key color="var(--chart-a)">Swap fees</Key>
           <Key color="var(--chart-d)">Rewards</Key>
           <span>- - {average.label}</span>
-          {grain === "day" && <Key color="#fb7185">Unusually low day</Key>}
+          {grain === "day" && <Key color="var(--down)">Unusually low day</Key>}
           {grain === "day" && <span>Faded bar: today ({soFarText()})</span>}
           {grain !== "day" && <span>Faded bar: {grain} in progress</span>}
         </div>

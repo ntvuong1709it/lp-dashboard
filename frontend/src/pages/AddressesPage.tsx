@@ -35,7 +35,7 @@ function LabelCell({ address, label }: { address: string; label: string }) {
       <span>
         {label}{" "}
         <button
-          className="text-xs text-sky-400 hover:underline"
+          className="text-xs text-accent hover:underline"
           onClick={() => {
             setValue(label);
             setEditing(true);
@@ -51,7 +51,7 @@ function LabelCell({ address, label }: { address: string; label: string }) {
     <span className="inline-flex items-center gap-2">
       <input
         autoFocus
-        className="w-40 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-sm"
+        className="w-40 rounded-md border border-control bg-surface px-2 py-1 text-sm"
         maxLength={100}
         value={value}
         onChange={(e) => setValue(e.target.value)}
@@ -61,13 +61,13 @@ function LabelCell({ address, label }: { address: string; label: string }) {
         }}
       />
       <button
-        className="text-xs text-sky-400 hover:underline"
+        className="text-xs text-accent hover:underline"
         onClick={() => void save()}
       >
         Save
       </button>
       <button
-        className="text-xs text-slate-400 hover:underline"
+        className="text-xs text-muted hover:underline"
         onClick={() => setEditing(false)}
       >
         Cancel
@@ -102,8 +102,8 @@ export function AddressesPage() {
   return (
     <div className="space-y-6">
       {addresses.length === 0 && (
-        <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 p-4 text-sm text-slate-300">
-          <div className="mb-1 font-medium text-slate-100">
+        <div className="rounded-lg border border-accent-fill/30 bg-accent-fill/10 p-4 text-sm text-fg-2">
+          <div className="mb-1 font-medium text-fg">
             Enter a wallet address to get started
           </div>
           The dashboard is read-only: it reads positions from the chain for the
@@ -115,21 +115,21 @@ export function AddressesPage() {
       <Panel title="Follow a wallet (read-only)">
         <form onSubmit={submit} className="flex flex-wrap gap-2">
           <input
-            className="min-w-96 flex-1 rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-mono"
+            className="min-w-96 flex-1 rounded-md border border-control bg-surface px-3 py-2 text-sm font-mono"
             placeholder="0x… (EVM) or Solana address"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             required
           />
           <input
-            className="w-48 rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
+            className="w-48 rounded-md border border-control bg-surface px-3 py-2 text-sm"
             placeholder="Label (optional)"
             maxLength={100}
             value={label}
             onChange={(e) => setLabel(e.target.value)}
           />
           <button
-            className="rounded-md bg-sky-600 px-4 py-2 text-sm font-medium hover:bg-sky-500 disabled:opacity-50"
+            className="rounded-md bg-accent-solid px-4 py-2 text-sm font-medium hover:bg-accent-fill disabled:opacity-50"
             disabled={add.isPending}
           >
             Add
@@ -140,7 +140,7 @@ export function AddressesPage() {
             <ErrorText error={add.error} />
           </div>
         )}
-        <p className="mt-2 text-xs text-slate-500">
+        <p className="mt-2 text-xs text-faint">
           Solana addresses are stored but not synced yet (EVM/Base only for
           now). The first sync of a wallet can take a while. Wallets and labels
           are saved to your account and shared by all your devices.
@@ -157,7 +157,7 @@ export function AddressesPage() {
           <Empty>No wallets yet.</Empty>
         ) : (
           <table className="w-full text-sm">
-            <tbody className="divide-y divide-slate-800">
+            <tbody className="divide-y divide-line">
               {addresses.map((a) => {
                 const family = a.address.startsWith("0x") ? "Evm" : "Solana";
                 return (
@@ -172,10 +172,10 @@ export function AddressesPage() {
                     <td className="py-2">
                       <LabelCell address={a.address} label={a.label} />
                     </td>
-                    <td className="py-2 text-xs text-slate-500">{family}</td>
+                    <td className="py-2 text-xs text-faint">{family}</td>
                     <td className="py-2 text-right">
                       <button
-                        className="mr-4 text-xs text-sky-400 hover:underline disabled:opacity-50"
+                        className="mr-4 text-xs text-accent hover:underline disabled:opacity-50"
                         disabled={selected === a.address}
                         onClick={() => setOwner(a.address)}
                       >
@@ -190,7 +190,7 @@ export function AddressesPage() {
                         </span>
                       )}
                       <button
-                        className="text-xs text-rose-400 hover:underline"
+                        className="text-xs text-down hover:underline"
                         onClick={() => {
                           if (
                             !confirm(
@@ -216,7 +216,7 @@ export function AddressesPage() {
       <Panel title="Sync status">
         <dl className="grid grid-cols-2 gap-2 text-sm md:grid-cols-4">
           <div>
-            <dt className="text-xs text-slate-500">State</dt>
+            <dt className="text-xs text-faint">State</dt>
             <dd>
               {status?.isRunning
                 ? `Running · ${Math.round(status.percent)}%`
@@ -226,15 +226,15 @@ export function AddressesPage() {
             </dd>
           </div>
           <div>
-            <dt className="text-xs text-slate-500">Last started</dt>
+            <dt className="text-xs text-faint">Last started</dt>
             <dd>{formatDate(status?.lastStartedAt)}</dd>
           </div>
           <div>
-            <dt className="text-xs text-slate-500">Last finished</dt>
+            <dt className="text-xs text-faint">Last finished</dt>
             <dd>{formatDate(status?.lastFinishedAt)}</dd>
           </div>
           <div>
-            <dt className="text-xs text-slate-500">Providers</dt>
+            <dt className="text-xs text-faint">Providers</dt>
             <dd>{status?.configuredProviders.join(", ") || "none"}</dd>
           </div>
         </dl>
@@ -245,7 +245,7 @@ export function AddressesPage() {
         )}
         {!!status?.lastErrors.length && (
           <div className="mt-4">
-            <div className="mb-2 text-sm font-medium text-amber-300">
+            <div className="mb-2 text-sm font-medium text-warn">
               {status.isRunning
                 ? "Current sync has"
                 : "Last sync finished with"}{" "}
@@ -262,7 +262,7 @@ export function AddressesPage() {
 
       {health?.backupEnabled && (
         <Panel title="Backup">
-          <p className="mb-3 text-sm text-slate-400">
+          <p className="mb-3 text-sm text-muted">
             Download a copy of the database. Price history and position
             snapshots cannot be rebuilt from chain data, so keep a backup
             before upgrades.
@@ -270,7 +270,7 @@ export function AddressesPage() {
           <a
             href="/api/backup"
             download
-            className="inline-block rounded-md border border-slate-700 px-3 py-1.5 text-sm hover:bg-slate-800"
+            className="inline-block rounded-md border border-line-strong px-3 py-1.5 text-sm hover:bg-raised"
           >
             Download database backup
           </a>

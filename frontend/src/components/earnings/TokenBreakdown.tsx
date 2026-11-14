@@ -5,10 +5,10 @@ import { formatAmount, formatUsd } from "../../lib/format";
 import { Panel } from "../ui";
 
 function Cell({ a }: { a: TokenAmount }) {
-  if (a.amount <= 0 && a.usd <= 0) return <span className="text-slate-600">–</span>;
+  if (a.amount <= 0 && a.usd <= 0) return <span className="text-faint">–</span>;
   return (
     <>
-      {formatAmount(a.amount)} <span className="text-slate-500">{formatUsd(a.usd)}</span>
+      {formatAmount(a.amount)} <span className="text-faint">{formatUsd(a.usd)}</span>
     </>
   );
 }
@@ -22,7 +22,7 @@ export function TokenBreakdown({ days }: { days: DailyEarningsDto[] }) {
     <Panel title="What you earned, by token">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="text-left text-xs uppercase text-slate-500">
+          <thead className="text-left text-xs uppercase text-faint">
             <tr>
               <th className="py-1 pr-3">Token</th>
               <th className="py-1 px-3 text-right">Yesterday</th>
@@ -31,12 +31,12 @@ export function TokenBreakdown({ days }: { days: DailyEarningsDto[] }) {
               <th className="py-1 pl-3">Share</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800">
+          <tbody className="divide-y divide-line">
             {rows.map((r) => (
               <tr key={r.key}>
                 <td className="whitespace-nowrap py-1.5 pr-3 font-medium">
                   {r.symbol}
-                  <span className="ml-2 rounded border border-slate-700 px-1 text-[11px] font-normal text-slate-400">
+                  <span className="ml-2 rounded border border-line-strong px-1 text-[11px] font-normal text-muted">
                     {r.kind === "reward" ? "reward" : "fee"}
                   </span>
                 </td>
@@ -51,7 +51,7 @@ export function TokenBreakdown({ days }: { days: DailyEarningsDto[] }) {
                 </td>
                 <td className="whitespace-nowrap py-1.5 pl-3">
                   <span className="num">{Math.round(r.share * 100)}%</span>
-                  <span className="ml-2 inline-block h-1.5 w-16 overflow-hidden rounded bg-slate-800 align-middle">
+                  <span className="ml-2 inline-block h-1.5 w-16 overflow-hidden rounded bg-raised align-middle">
                     <span
                       className="block h-full"
                       style={{
@@ -66,7 +66,7 @@ export function TokenBreakdown({ days }: { days: DailyEarningsDto[] }) {
           </tbody>
         </table>
       </div>
-      <p className="mt-2 text-xs text-slate-500">
+      <p className="mt-2 text-xs text-faint">
         Swap fees are paid in the pool's two tokens, rewards in the gauge token. USD uses the price at the time
         each amount accrued.
       </p>

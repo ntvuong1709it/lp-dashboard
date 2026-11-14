@@ -12,9 +12,9 @@ import { Panel, Segmented } from "../ui";
 type State = "earning" | "idle" | "closed";
 
 const stateChip: Record<State, { label: string; cls: string }> = {
-  earning: { label: "Earning", cls: "bg-emerald-500/15 text-emerald-400" },
-  idle: { label: "Not earning", cls: "bg-rose-500/15 text-rose-400" },
-  closed: { label: "Closed", cls: "bg-slate-700/60 text-slate-400" },
+  earning: { label: "Earning", cls: "bg-up-fill/15 text-up" },
+  idle: { label: "Not earning", cls: "bg-down-fill/15 text-down" },
+  closed: { label: "Closed", cls: "bg-line-strong/60 text-muted" },
 };
 
 /** Which positions produce the earnings, over the last 30 days. */
@@ -78,7 +78,7 @@ export function PositionBreakdown({
     >
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="text-left text-xs uppercase text-slate-500">
+          <thead className="text-left text-xs uppercase text-faint">
             <tr>
               <th className="py-1 pr-3">Position</th>
               <th className="py-1 px-3">Status</th>
@@ -89,7 +89,7 @@ export function PositionBreakdown({
               <th className="py-1 pl-3 text-right">APR (30d)</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800">
+          <tbody className="divide-y divide-line">
             {ordered.map((r) => {
               const state = stateOf(r);
               const chip = stateChip[state];
@@ -101,7 +101,7 @@ export function PositionBreakdown({
               return (
                 <Fragment key={r.positionId}>
                   {group && (
-                    <tr className="bg-slate-950/60 font-medium">
+                    <tr className="bg-surface/60 font-medium">
                       <td colSpan={2} className="py-1.5 pr-3">
                         <WalletGroupLabel wallet={group.wallet} count={group.items.length} noun="position" />
                       </td>
@@ -114,11 +114,11 @@ export function PositionBreakdown({
                       <td className="py-1.5 pl-3" />
                     </tr>
                   )}
-                <tr className={state === "idle" ? "text-slate-400" : ""}>
+                <tr className={state === "idle" ? "text-muted" : ""}>
                   <td className="whitespace-nowrap py-1.5 pr-3">
                     <button
                       type="button"
-                      className="text-sky-400 hover:underline"
+                      className="text-accent hover:underline"
                       onClick={() => drawer.open(r.positionId)}
                     >
                       {r.pair} #{r.tokenId}
@@ -128,7 +128,7 @@ export function PositionBreakdown({
                         <WalletChip wallet={walletOf(r.owner ?? "")} />
                       </span>
                     )}
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-faint">
                       {protocolLabels[r.protocol]}
                       {rangeById.get(r.positionId) === false && " · out of range"}
                     </div>
@@ -143,8 +143,8 @@ export function PositionBreakdown({
                   <td className="px-3 py-1.5 text-right num">{formatUsd(r.last30Usd)}</td>
                   <td className="whitespace-nowrap px-3 py-1.5">
                     <span className="num">{Math.round(share * 100)}%</span>
-                    <span className="ml-2 inline-block h-1.5 w-16 overflow-hidden rounded bg-slate-800 align-middle">
-                      <span className="block h-full bg-sky-400" style={{ width: `${share * 100}%` }} />
+                    <span className="ml-2 inline-block h-1.5 w-16 overflow-hidden rounded bg-raised align-middle">
+                      <span className="block h-full bg-accent-fill" style={{ width: `${share * 100}%` }} />
                     </span>
                   </td>
                   <td className="py-1.5 pl-3 text-right num">

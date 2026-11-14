@@ -44,10 +44,10 @@ export const STATUS_LABEL: Record<CoverageStatus, string> = {
 };
 
 export const STATUS_CLASS: Record<CoverageStatus, string> = {
-  Covered: "bg-emerald-500/15 text-emerald-400",
-  Thin: "bg-amber-500/15 text-amber-300",
-  Shortfall: "bg-rose-500/15 text-rose-400",
-  NoDebt: "bg-slate-800 text-slate-400",
+  Covered: "bg-up-fill/15 text-up",
+  Thin: "bg-warn-fill/15 text-warn",
+  Shortfall: "bg-down-fill/15 text-down",
+  NoDebt: "bg-raised text-muted",
 };
 
 export const LEVEL_LABEL: Record<RiskLevel, string> = {
@@ -57,9 +57,9 @@ export const LEVEL_LABEL: Record<RiskLevel, string> = {
 };
 
 export const LEVEL_CLASS: Record<RiskLevel, string> = {
-  Ok: "bg-emerald-500/15 text-emerald-400",
-  Warn: "bg-amber-500/15 text-amber-300",
-  Critical: "bg-rose-500/15 text-rose-400",
+  Ok: "bg-up-fill/15 text-up",
+  Warn: "bg-warn-fill/15 text-warn",
+  Critical: "bg-down-fill/15 text-down",
 };
 
 /** Same cut-offs as the server (BorrowCoverageCalculator). */

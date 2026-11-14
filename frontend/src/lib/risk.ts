@@ -17,19 +17,19 @@ export function verdictLabel(level: VerdictLevel | null | undefined, run = 0, to
 }
 
 export const verdictDot: Record<VerdictLevel, string> = {
-  Green: "bg-emerald-400",
-  Yellow: "bg-amber-400",
-  Red: "bg-rose-500",
-  Partial: "bg-slate-400",
-  NotChecked: "bg-slate-600",
+  Green: "bg-up-fill",
+  Yellow: "bg-warn-fill",
+  Red: "bg-down-fill",
+  Partial: "bg-muted",
+  NotChecked: "bg-muted",
 };
 
 export const verdictText: Record<VerdictLevel, string> = {
-  Green: "text-emerald-400",
-  Yellow: "text-amber-400",
-  Red: "text-rose-400",
-  Partial: "text-slate-300",
-  NotChecked: "text-slate-500",
+  Green: "text-up",
+  Yellow: "text-warn",
+  Red: "text-down",
+  Partial: "text-fg-2",
+  NotChecked: "text-faint",
 };
 
 /** Higher is riskier: Red first when sorting "worst first". A pool nobody checked sorts below one that is Partial. */

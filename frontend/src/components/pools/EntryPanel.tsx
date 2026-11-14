@@ -134,10 +134,10 @@ export function EntryPanel({
   }, [mode, heldUsd, onHeldUsd]);
 
   return (
-    <section className="rounded-lg border border-dashed border-sky-400/70 p-3" aria-label="Enter this range">
+    <section className="rounded-lg border border-dashed border-accent/70 p-3" aria-label="Enter this range">
       <div className="mb-2 flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold">Enter this range</h3>
-        {isFetching && <span className="text-xs text-slate-500">Updating…</span>}
+        {isFetching && <span className="text-xs text-faint">Updating…</span>}
       </div>
 
       <div className="mb-3 empty:hidden">
@@ -155,7 +155,7 @@ export function EntryPanel({
           ]}
         />
         {mode === "budget" && (
-          <label className="flex items-center gap-2 text-xs text-slate-400">
+          <label className="flex items-center gap-2 text-xs text-muted">
             Paying with
             <select value={paysWith} onChange={(e) => setPaysWith(e.target.value)} className={`${input} py-1`}>
               <option value={AUTO}>Stable token (if any)</option>
@@ -181,7 +181,7 @@ export function EntryPanel({
           <ErrorText error={error} />
         </div>
       ) : !plan ? (
-        <p className="mt-3 text-sm text-slate-500">
+        <p className="mt-3 text-sm text-faint">
           {body == null ? (mode === "wallet" ? "Enter the amounts you hold." : "Enter a capital above.") : "Working out the swap…"}
         </p>
       ) : (
@@ -206,7 +206,7 @@ export function EntryPanel({
         />
       )}
 
-      <p className="mt-3 text-xs text-slate-500">Estimates, not quotes. Price impact is an input, not read from the pool's depth. Read-only: nothing is sent or signed.</p>
+      <p className="mt-3 text-xs text-faint">Estimates, not quotes. Price impact is an input, not read from the pool's depth. Read-only: nothing is sent or signed.</p>
     </section>
   );
 }
@@ -249,7 +249,7 @@ function WalletInputs({
     <div className="mt-2 space-y-2">
       <div className="grid grid-cols-2 gap-2">
         {(tokens ?? []).map((t) => (
-          <label key={t.address} className="flex flex-col gap-1 text-xs text-slate-400">
+          <label key={t.address} className="flex flex-col gap-1 text-xs text-muted">
             {t.symbol} in wallet
             <input
               type="number"
@@ -262,7 +262,7 @@ function WalletInputs({
           </label>
         ))}
       </div>
-      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+      <div className="flex flex-wrap items-center gap-2 text-xs text-faint">
         {addresses.length === 0 ? (
           <span>Add a wallet on the Addresses page to prefill from it. Type the amounts meanwhile.</span>
         ) : (
@@ -284,7 +284,7 @@ function WalletInputs({
         )}
         {hidden && <span>Balances are hidden, so nothing is prefilled. Turn off privacy mode or type the amounts.</span>}
         {balances.isFetching && <span>Reading balances…</span>}
-        {balances.error && <span className="text-amber-400">Could not read the wallet: {balances.error.message}</span>}
+        {balances.error && <span className="text-warn">Could not read the wallet: {balances.error.message}</span>}
         {note && !hidden && <span>{note}</span>}
       </div>
     </div>
@@ -317,12 +317,12 @@ function PlanReadout({ plan, t0, t1 }: { plan: EntryPlanDto; t0: PoolTokenDto; t
         )}
       </p>
       {e.swapShareWarning && e.swapShareOfTvl != null && (
-        <p className="text-xs text-amber-400">
+        <p className="text-xs text-warn">
           This swap is {(e.swapShareOfTvl * 100).toFixed(2)}% of the pool's TVL. Expect more price impact than the {plan.swapCostPct}% above assumes.
         </p>
       )}
       {!plan.priceInRange && (
-        <p className="text-xs text-amber-400">
+        <p className="text-xs text-warn">
           The pool price is outside this range, so a deposit here is a single token and earns no fees until the price gets back in.
         </p>
       )}
@@ -332,16 +332,16 @@ function PlanReadout({ plan, t0, t1 }: { plan: EntryPlanDto; t0: PoolTokenDto; t
         <Tile label={`Need ${t1.symbol}`} value={amt(e.amount1)} sub={`${Math.round(e.token1Share * 100)}% of position, ${usd0(e.amount1Usd)}`} />
         <Tile label="Swap and gas cost" value={usd2(e.entryCostUsd)} sub={`${usd2(e.swapCostUsd)} swap + ${usd2(e.gasUsd)} gas`} />
       </div>
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-faint">
         Required mix at this price: {Math.round(e.token0Share * 100)}% {t0.symbol} / {Math.round(e.token1Share * 100)}% {t1.symbol}. Position value after the swap: {usd0(e.valueUsd)}
         {!hidden && e.startValueUsd > 0 ? `, from ${usd0(e.startValueUsd)}` : ""}.
       </p>
 
-      <div className="rounded-lg border border-slate-800 bg-slate-950 px-3 py-2">
-        <div className="mb-1 text-xs text-slate-400">Deposit this</div>
+      <div className="rounded-lg border border-line bg-surface px-3 py-2">
+        <div className="mb-1 text-xs text-muted">Deposit this</div>
         <DepositRow token={t0} value={e.deposit0} />
         <DepositRow token={t1} value={e.deposit1} />
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1 text-xs text-faint">
           Rounded down to token decimals: leftover about {usd2(e.dustUsd)}. Enter both amounts in the deposit screen; it may use slightly less of one token.
         </p>
       </div>
@@ -382,7 +382,7 @@ function BorrowRateSuggestion({
   const loan = volatile ? loans.data?.find((l) => l.debtSymbol.toUpperCase() === volatile.symbol.toUpperCase() && l.debtUsd > 0) : undefined;
   if (!loan) return null;
   return (
-    <button type="button" onClick={() => onUse(Number(loan.aprPercent.toFixed(2)))} className="text-xs text-sky-400 hover:underline">
+    <button type="button" onClick={() => onUse(Number(loan.aprPercent.toFixed(2)))} className="text-xs text-accent hover:underline">
       Use my {loan.source} {loan.debtSymbol} loan rate ({loan.aprPercent.toFixed(2)}%)
     </button>
   );

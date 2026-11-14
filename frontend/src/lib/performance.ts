@@ -81,12 +81,12 @@ export function poolComparisonText(c: PoolComparisonDto): string {
 /** Table cell text for catching up with holding: the standing, and how long closing the gap takes. */
 export function catchUpCell(b: HodlBreakEvenDto | undefined): { text: string; className: string; title: string } {
   if (!b) {
-    return { text: "—", className: "text-slate-500", title: "Closed positions no longer earn, so there is nothing to project" };
+    return { text: "—", className: "text-faint", title: "Closed positions no longer earn, so there is nothing to project" };
   }
   const title = breakEvenText(b);
-  if (b.gapUsd >= 0) return { text: "Ahead", className: "text-emerald-400", title };
-  if (b.daysToBreakEven == null) return { text: "Not closing", className: "text-rose-400", title };
-  if (b.daysToBreakEven < 1) return { text: "< 1 day", className: "text-amber-400", title };
-  if (b.daysToBreakEven > 730) return { text: "> 2 years", className: "text-amber-400", title };
-  return { text: `~${Math.ceil(b.daysToBreakEven)} days`, className: "text-amber-400", title };
+  if (b.gapUsd >= 0) return { text: "Ahead", className: "text-up", title };
+  if (b.daysToBreakEven == null) return { text: "Not closing", className: "text-down", title };
+  if (b.daysToBreakEven < 1) return { text: "< 1 day", className: "text-warn", title };
+  if (b.daysToBreakEven > 730) return { text: "> 2 years", className: "text-warn", title };
+  return { text: `~${Math.ceil(b.daysToBreakEven)} days`, className: "text-warn", title };
 }

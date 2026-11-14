@@ -54,7 +54,7 @@ export function BorrowPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Borrow</h1>
-          <p className="text-sm text-slate-400">Does LP income pay the interest on your loans?</p>
+          <p className="text-sm text-muted">Does LP income pay the interest on your loans?</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {hasLoans && (
@@ -81,13 +81,13 @@ export function BorrowPage() {
         <PageSkeleton cards={4} />
       ) : !summary.data || !loans.data || !answers ? null : !hasLoans ? (
         <>
-          <section className="rounded-lg border border-slate-800 bg-slate-900 px-4 py-10 text-center">
+          <section className="rounded-lg border border-line bg-panel px-4 py-10 text-center">
             <h2 className="text-lg font-semibold">No loans yet</h2>
-            <p className="mx-auto mt-1.5 max-w-xl text-sm text-slate-400">
+            <p className="mx-auto mt-1.5 max-w-xl text-sm text-muted">
               Add a loan you borrowed against your LP tokens, such as one on Binance. The app then shows what it costs, whether LP income
               covers it, and how close you are to liquidation.
             </p>
-            <button className="mt-4 rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500" onClick={() => openForm(null)}>
+            <button className="mt-4 rounded-md bg-accent-solid px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-fill" onClick={() => openForm(null)}>
               Add manual loan
             </button>
           </section>

@@ -42,7 +42,7 @@ export const signedUsd0 = (v: number) => {
   const r = Math.round(v);
   return `${r > 0 ? "+" : r < 0 ? "-" : ""}$${nf(Math.abs(r), 0)}`;
 };
-export const gainClass = (v: number) => (Math.round(v) > 0 ? "text-emerald-400" : Math.round(v) < 0 ? "text-rose-400" : "text-slate-300");
+export const gainClass = (v: number) => (Math.round(v) > 0 ? "text-up" : Math.round(v) < 0 ? "text-down" : "text-fg-2");
 
 /** The pool's two tokens in the order the plan uses; before the first answer, the list's own order. */
 export function poolTokens(pool: PoolDto, plan: EntryPlanDto | undefined): [PoolTokenDto, PoolTokenDto] {

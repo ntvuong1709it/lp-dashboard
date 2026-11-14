@@ -57,7 +57,7 @@ export function PoolDetail({ pool }: { pool: PoolDto }) {
   return (
     <div className="space-y-4 p-4">
       {hasUnreliableVolume(pool) && (
-        <p className="rounded-md border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs text-amber-400">
+        <p className="rounded-md border border-warn/40 bg-warn/10 px-3 py-2 text-xs text-warn">
           {UNRELIABLE_VOLUME_NOTE}
         </p>
       )}
@@ -66,11 +66,11 @@ export function PoolDetail({ pool }: { pool: PoolDto }) {
       ) : isLoading || !data ? (
         <Skeleton className="h-64 w-full" />
       ) : data.points.length < 2 || !metric ? (
-        <p className="py-6 text-center text-sm text-slate-500">This pool has no daily history yet.</p>
+        <p className="py-6 text-center text-sm text-faint">This pool has no daily history yet.</p>
       ) : (
         <>
           {data.sourceTvlUsd != null && data.tvlUsd != null && (
-            <p className="rounded-md border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs text-amber-400">
+            <p className="rounded-md border border-warn/40 bg-warn/10 px-3 py-2 text-xs text-warn">
               TVL is read from the pool on-chain: {usd(data.tvlUsd)}. The data source reports {usd(data.sourceTvlUsd)}, and the daily
               history below is the source's own, so recent days of TVL, APR, fees and volume are off by that gap.
             </p>
@@ -91,7 +91,7 @@ export function PoolDetail({ pool }: { pool: PoolDto }) {
         </>
       )}
 
-      <div className="grid gap-px overflow-hidden rounded-lg border border-slate-800 bg-slate-800 text-sm md:grid-cols-3">
+      <div className="grid gap-px overflow-hidden rounded-lg border border-line bg-raised text-sm md:grid-cols-3">
         <StatGroup title="Liquidity">
           <Stat label="TVL" value={usd(pool.tvlUsd)} />
           <Stat label="Volume 24h" value={usd(pool.volume1dUsd)} />
@@ -130,11 +130,11 @@ function MetricTile({
       type="button"
       aria-pressed={active}
       onClick={onSelect}
-      className={`rounded-lg border p-3 text-left transition-colors ${active ? "border-sky-400 bg-sky-400/10" : "border-slate-800 bg-slate-900 hover:bg-slate-800/60"}`}
+      className={`rounded-lg border p-3 text-left transition-colors ${active ? "border-accent-fill bg-accent/10" : "border-line bg-panel hover:bg-raised/60"}`}
     >
-      <span className={`block text-xs ${active ? "text-sky-400" : "text-slate-400"}`}>{m.label}</span>
+      <span className={`block text-xs ${active ? "text-accent" : "text-muted"}`}>{m.label}</span>
       <span className="num block text-lg font-semibold">{m.format(m.headline(history, pool))}</span>
-      <span className={m.key === "apr" || m.key === "emissions" ? "text-emerald-400" : "text-sky-400"}>
+      <span className={m.key === "apr" || m.key === "emissions" ? "text-up" : "text-accent"}>
         <Sparkline values={history.points.map(m.pick)} kind={m.kind === "bar" ? "bar" : "line"} />
       </span>
     </button>
@@ -163,16 +163,16 @@ function MetricChart({ metric: m, pool, history }: { metric: Metric; pool: PoolD
   );
 
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-900 p-3">
+    <div className="rounded-lg border border-line bg-panel p-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
           <div className="num text-2xl font-semibold">{m.format(m.headline(history, pool))}</div>
-          <div className="text-xs text-slate-500">
+          <div className="text-xs text-faint">
             {m.label}
             {latest && <> · latest {m.format(latest.v)} on {shortDate(latest.date)}</>}
           </div>
         </div>
-        <span className="rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-0.5 text-xs text-amber-400">
+        <span className="rounded-md border border-warn/40 bg-warn/10 px-2 py-0.5 text-xs text-warn">
           {days} of {history.points.length} days
         </span>
       </div>
@@ -198,7 +198,7 @@ function MetricChart({ metric: m, pool, history }: { metric: Metric; pool: PoolD
         </ResponsiveContainer>
       </div>
       {m.derived && (
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1 text-xs text-faint">
           Worked out from each day's TVL and fee APR at the {feeLabel(history.feePercent)} fee tier, not measured volume.
         </p>
       )}
@@ -208,8 +208,8 @@ function MetricChart({ metric: m, pool, history }: { metric: Metric; pool: PoolD
 
 function StatGroup({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="bg-slate-900 p-3">
-      <h3 className="mb-1 text-xs font-medium uppercase tracking-[.05em] text-slate-400">{title}</h3>
+    <div className="bg-panel p-3">
+      <h3 className="mb-1 text-xs font-medium uppercase tracking-[.05em] text-muted">{title}</h3>
       <dl className="space-y-1">{children}</dl>
     </div>
   );
@@ -218,7 +218,7 @@ function StatGroup({ title, children }: { title: string; children: ReactNode }) 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <dt className="text-slate-400">{label}</dt>
+      <dt className="text-muted">{label}</dt>
       <dd className="num text-right font-medium">{value}</dd>
     </div>
   );

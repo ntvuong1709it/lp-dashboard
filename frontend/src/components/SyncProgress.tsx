@@ -16,14 +16,14 @@ const stageLabels: Record<SyncStage, string> = {
 
 const stateStyles: Record<SyncTaskState, { label: string; className: string }> =
   {
-    Pending: { label: "Waiting", className: "bg-slate-700/40 text-slate-400" },
-    Running: { label: "Running", className: "bg-sky-500/15 text-sky-300" },
-    Succeeded: { label: "Done", className: "bg-emerald-500/15 text-emerald-300" },
+    Pending: { label: "Waiting", className: "bg-line-strong/40 text-muted" },
+    Running: { label: "Running", className: "bg-accent-fill/15 text-accent" },
+    Succeeded: { label: "Done", className: "bg-up-fill/15 text-up" },
     CompletedWithErrors: {
       label: "Done with errors",
-      className: "bg-amber-500/15 text-amber-300",
+      className: "bg-warn-fill/15 text-warn",
     },
-    Failed: { label: "Failed", className: "bg-rose-500/15 text-rose-300" },
+    Failed: { label: "Failed", className: "bg-down-fill/15 text-down" },
   };
 
 const taskName = (t: SyncTaskStatus) =>
@@ -74,10 +74,10 @@ export function ProgressBar({
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(value)}
-      className={`h-1.5 overflow-hidden rounded-full bg-slate-800 ${className}`}
+      className={`h-1.5 overflow-hidden rounded-full bg-raised ${className}`}
     >
       <div
-        className={`h-full rounded-full transition-[width] duration-500 ${hasErrors ? "bg-amber-400" : "bg-sky-500"}`}
+        className={`h-full rounded-full transition-[width] duration-500 ${hasErrors ? "bg-warn-fill" : "bg-accent-fill"}`}
         style={{ width: `${value}%` }}
       />
     </div>
@@ -94,7 +94,7 @@ export function SyncProgressDetails({ status }: { status: SyncStatus }) {
     <div className="space-y-3">
       <div>
         <div className="mb-1 flex items-baseline justify-between gap-3 text-xs">
-          <span className="text-slate-300">
+          <span className="text-fg-2">
             {active
               ? describeSync(status)
               : status.isQueued
@@ -102,7 +102,7 @@ export function SyncProgressDetails({ status }: { status: SyncStatus }) {
                 : `Last sync finished ${formatDate(status.lastFinishedAt)}`}
           </span>
           {showBar && (
-            <span className="num shrink-0 font-medium text-slate-200">
+            <span className="num shrink-0 font-medium text-fg-2">
               {Math.round(active ? status.percent : 100)}%
             </span>
           )}
@@ -116,7 +116,7 @@ export function SyncProgressDetails({ status }: { status: SyncStatus }) {
       </div>
 
       {status.tasks.length > 0 && (
-        <ul className="max-h-64 divide-y divide-slate-800 overflow-y-auto rounded-md border border-slate-800">
+        <ul className="max-h-64 divide-y divide-line overflow-y-auto rounded-md border border-line">
           {status.tasks.map((t, i) => {
             const style = stateStyles[t.state];
             return (
@@ -126,26 +126,26 @@ export function SyncProgressDetails({ status }: { status: SyncStatus }) {
                     className={`rounded px-1.5 py-0.5 font-medium ${style.className}`}
                   >
                     {t.state === "Running" && (
-                      <span className="mr-1 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-sky-300 align-middle" />
+                      <span className="mr-1 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-accent-fill align-middle" />
                     )}
                     {style.label}
                   </span>
-                  <span className="text-slate-200">{taskName(t)}</span>
+                  <span className="text-fg-2">{taskName(t)}</span>
                   {t.scope && (
-                    <span className="rounded bg-sky-500/10 px-1.5 py-0.5 text-sky-300">
+                    <span className="rounded bg-accent-fill/10 px-1.5 py-0.5 text-accent">
                       {t.scope}
                     </span>
                   )}
-                  <span className="font-mono text-slate-500" title={t.owner}>
+                  <span className="font-mono text-faint" title={t.owner}>
                     {shortAddress(t.owner)}
                   </span>
-                  <span className="num ml-auto text-slate-400">
+                  <span className="num ml-auto text-muted">
                     {Math.round(t.percent)}%
                   </span>
                 </div>
                 {t.state === "Running" && (
                   <>
-                    <div className="text-slate-400">{stepText(t)}</div>
+                    <div className="text-muted">{stepText(t)}</div>
                     <ProgressBar
                       percent={t.percent}
                       hasErrors={t.errors.length > 0}
@@ -154,14 +154,14 @@ export function SyncProgressDetails({ status }: { status: SyncStatus }) {
                 )}
                 {(t.state === "Succeeded" ||
                   t.state === "CompletedWithErrors") && (
-                  <div className="text-slate-500">
+                  <div className="text-faint">
                     {t.market
                       ? "Borrow history up to date"
                       : `${t.positionsTotal} ${t.positionsTotal === 1 ? "position" : "positions"} processed`}
                   </div>
                 )}
                 {t.errors.length > 0 && (
-                  <div className="text-amber-300">
+                  <div className="text-warn">
                     {t.errors.length}{" "}
                     {t.errors.length === 1 ? "error" : "errors"} — see below
                   </div>

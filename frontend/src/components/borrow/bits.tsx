@@ -23,7 +23,7 @@ export const LevelChip = ({ level, children }: { level: RiskLevel; children?: Re
 export function Delta({ value, text, goodUp }: { value: number; text: string; goodUp: boolean }) {
   const up = value >= 0;
   return (
-    <span className={up === goodUp ? "text-emerald-400" : "text-rose-400"}>
+    <span className={up === goodUp ? "text-up" : "text-down"}>
       {up ? "▲" : "▼"} {text}
     </span>
   );
@@ -54,7 +54,7 @@ export function Gauge({
   const at = (v: number) => Math.max(0, Math.min(100, ((v - min) / (max - min)) * 100));
   return (
     <div className="relative my-5 h-2.5" role="img" aria-label={label}>
-      <div className="absolute inset-0 overflow-hidden rounded-full bg-slate-800">
+      <div className="absolute inset-0 overflow-hidden rounded-full bg-raised">
         {zones.map((z) => (
           <span
             key={`${z.from}-${z.to}`}
@@ -64,13 +64,13 @@ export function Gauge({
         ))}
       </div>
       <i
-        className="absolute -top-1 h-4.5 w-0.75 -translate-x-1/2 rounded-sm bg-slate-50"
+        className="absolute -top-1 h-4.5 w-0.75 -translate-x-1/2 rounded-sm bg-fg"
         style={{ left: `${at(value)}%` }}
       />
       {ticks.map((t) => (
         <span
           key={t.text}
-          className="absolute top-4 -translate-x-1/2 whitespace-nowrap text-[10px] text-slate-400"
+          className="absolute top-4 -translate-x-1/2 whitespace-nowrap text-[10px] text-muted"
           style={{ left: `${at(t.value)}%` }}
         >
           {t.text}
@@ -87,9 +87,9 @@ export const HealthGauge = ({ value }: { value: number }) => (
     value={value}
     label={`Health factor ${value.toFixed(2)}`}
     zones={[
-      { from: 1, to: 1.2, className: "bg-rose-500/70" },
-      { from: 1.2, to: 1.5, className: "bg-amber-500/70" },
-      { from: 1.5, to: 2.5, className: "bg-emerald-500/70" },
+      { from: 1, to: 1.2, className: "bg-down-fill/70" },
+      { from: 1.2, to: 1.5, className: "bg-warn-fill/70" },
+      { from: 1.5, to: 2.5, className: "bg-up-fill/70" },
     ]}
     ticks={[
       { value: 1.2, text: "1.2 critical" },
@@ -118,9 +118,9 @@ export const LtvGauge = ({
       value={Math.min(value, max)}
       label={`LTV ${value.toFixed(0)} percent`}
       zones={[
-        { from: min, to: warn, className: "bg-emerald-500/70" },
-        { from: warn, to: critical, className: "bg-amber-500/70" },
-        { from: critical, to: max, className: "bg-rose-500/70" },
+        { from: min, to: warn, className: "bg-up-fill/70" },
+        { from: warn, to: critical, className: "bg-warn-fill/70" },
+        { from: critical, to: max, className: "bg-down-fill/70" },
       ]}
       ticks={[
         { value: warn, text: `${warn.toFixed(0)} warn` },

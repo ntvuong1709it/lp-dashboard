@@ -5,9 +5,9 @@ import { Panel } from "../ui";
 function Mini({ label, value, sub }: { label: string; value: string; sub: React.ReactNode }) {
   return (
     <div className="min-w-0">
-      <div className="text-xs text-slate-400">{label}</div>
+      <div className="text-xs text-muted">{label}</div>
       <div className="text-xl font-medium num">{value}</div>
-      <div className="truncate text-xs text-slate-500">{sub}</div>
+      <div className="truncate text-xs text-faint">{sub}</div>
     </div>
   );
 }
@@ -48,23 +48,23 @@ export function ClaimHealth({ stats }: { stats: ClaimHealthStats }) {
       </div>
       {split > 0 && (
         <>
-          <div className="mt-4 flex h-2.5 overflow-hidden rounded-full bg-slate-800">
-            <div className="bg-emerald-400" style={{ width: `${claimedShare}%` }} />
-            <div className="bg-amber-400" style={{ width: `${100 - claimedShare}%` }} />
+          <div className="mt-4 flex h-2.5 overflow-hidden rounded-full bg-raised">
+            <div className="bg-up-fill" style={{ width: `${claimedShare}%` }} />
+            <div className="bg-warn-fill" style={{ width: `${100 - claimedShare}%` }} />
           </div>
-          <div className="mt-1.5 flex gap-4 text-xs text-slate-400">
+          <div className="mt-1.5 flex gap-4 text-xs text-muted">
             <span>
-              <span className="mr-1.5 inline-block h-2 w-2 rounded-sm bg-emerald-400" />
+              <span className="mr-1.5 inline-block h-2 w-2 rounded-sm bg-up-fill" />
               Claimed
             </span>
             <span>
-              <span className="mr-1.5 inline-block h-2 w-2 rounded-sm bg-amber-400" />
+              <span className="mr-1.5 inline-block h-2 w-2 rounded-sm bg-warn-fill" />
               Still unclaimed
             </span>
           </div>
         </>
       )}
-      {note && <p className="mt-3 text-xs text-slate-500">{note}</p>}
+      {note && <p className="mt-3 text-xs text-faint">{note}</p>}
     </Panel>
   );
 }

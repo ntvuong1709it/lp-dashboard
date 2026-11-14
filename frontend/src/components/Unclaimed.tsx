@@ -6,8 +6,8 @@ import { usePositionDrawer } from "../lib/positionDrawer";
 import { Panel, Skeleton } from "./ui";
 
 /** Fees and rewards share the same two colours everywhere unclaimed money is drawn. */
-const FEES_BAR = "bg-sky-400";
-const REWARDS_BAR = "bg-amber-400";
+const FEES_BAR = "bg-accent-fill";
+const REWARDS_BAR = "bg-warn-fill";
 
 /** Thin two-segment bar: fees then rewards, filling `fraction` of the track. */
 export function SplitBar({
@@ -24,7 +24,7 @@ export function SplitBar({
   const total = fees + rewards;
   const feesShare = total > 0 ? (fees / total) * 100 : 0;
   return (
-    <div className={`overflow-hidden rounded-full bg-slate-800 ${className}`}>
+    <div className={`overflow-hidden rounded-full bg-raised ${className}`}>
       <div
         className="flex h-full"
         style={{ width: `${Math.max(0, Math.min(1, fraction)) * 100}%` }}
@@ -38,7 +38,7 @@ export function SplitBar({
 
 function Legend() {
   return (
-    <div className="flex gap-4 text-xs text-slate-400">
+    <div className="flex gap-4 text-xs text-muted">
       <span>
         <span className={`mr-1.5 inline-block h-2 w-2 rounded-sm ${FEES_BAR}`} />
         Fees
@@ -103,15 +103,15 @@ function RewardTokenLine({
   const value = valueUsd ?? (r.priceUsd == null ? null : r.amount * r.priceUsd);
   return (
     <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 num">
-      <span className={`font-semibold text-amber-300 ${large ? "text-lg" : "text-sm"}`}>
+      <span className={`font-semibold text-warn ${large ? "text-lg" : "text-sm"}`}>
         {formatAmount(r.amount)} {r.symbol}
       </span>
       {value != null && (
-        <span className={`font-semibold text-amber-200 ${large ? "text-base" : "text-xs"}`}>
+        <span className={`font-semibold text-warn ${large ? "text-base" : "text-xs"}`}>
           ≈ {formatUsd(value)}
         </span>
       )}
-      <span className="text-xs text-slate-400">
+      <span className="text-xs text-muted">
         {r.priceUsd == null ? "price unknown" : `@ ${formatPrice(r.priceUsd)} USD each`}
       </span>
     </div>
@@ -140,22 +140,22 @@ export function UnclaimedCard({
 
   return (
     <div
-      className={`min-w-0 rounded-lg border border-sky-700 bg-sky-950/40 p-4 ring-4 ring-sky-400/10 ${className}`}
+      className={`min-w-0 rounded-lg border border-accent-fill/50 bg-accent-fill/5 p-4 ring-4 ring-accent/10 ${className}`}
     >
-      <div className="text-xs font-semibold uppercase tracking-[.05em] text-sky-300">
+      <div className="text-xs font-semibold uppercase tracking-[.05em] text-accent">
         Unclaimed
       </div>
       {loading ? (
         <Skeleton className="mt-2 h-8 w-28" />
       ) : (
         <>
-          <div className="mt-1 text-3xl font-semibold tracking-tight text-sky-400 num">
+          <div className="mt-1 text-3xl font-semibold tracking-tight text-accent num">
             {formatUsd(total)}
           </div>
           <div className="mt-3">
             <SplitBar fees={fees} rewards={rewards} />
           </div>
-          <div className="mt-2 flex justify-between gap-2 text-xs text-slate-300 num">
+          <div className="mt-2 flex justify-between gap-2 text-xs text-fg-2 num">
             <span>
               <span className={`mr-1.5 inline-block h-2 w-2 rounded-sm ${FEES_BAR}`} />
               Fees {formatUsd(fees)}
@@ -166,17 +166,17 @@ export function UnclaimedCard({
             </span>
           </div>
           {rewardTokens?.map((r) => (
-            <div key={r.symbol} className="mt-1 text-xs text-slate-400 num">
+            <div key={r.symbol} className="mt-1 text-xs text-muted num">
               Rewards: {formatRewardToken(r)}
               {r.priceUsd == null && " (price unknown)"}
             </div>
           ))}
           {insights?.map((line) => (
-            <div key={line} className="mt-1 text-xs text-slate-300">
+            <div key={line} className="mt-1 text-xs text-fg-2">
               {line}
             </div>
           ))}
-          {note && <div className="mt-2 text-xs text-slate-400">{note}</div>}
+          {note && <div className="mt-2 text-xs text-muted">{note}</div>}
         </>
       )}
     </div>
@@ -214,13 +214,13 @@ export function ReadyToClaimPanel({
     <Panel
       title="Ready to claim"
       actions={
-        <span className="text-sm text-slate-400">
+        <span className="text-sm text-muted">
           Total{" "}
-          <span className="font-semibold text-sky-400 num">{formatUsd(sum)}</span>
+          <span className="font-semibold text-accent num">{formatUsd(sum)}</span>
           {positionValue > 0 && (
             <span className="num">
               {" · "}
-              <span className="font-semibold text-slate-200">
+              <span className="font-semibold text-fg-2">
                 {formatPercent(sum, positionValue)}
               </span>{" "}
               of position value
@@ -232,13 +232,13 @@ export function ReadyToClaimPanel({
       {loading ? (
         <Skeleton className="h-40 w-full" />
       ) : !rows.length ? (
-        <p className="text-sm text-slate-400">Nothing to claim right now.</p>
+        <p className="text-sm text-muted">Nothing to claim right now.</p>
       ) : (
         <>
           {tokens.map((t) => (
             <div
               key={t.symbol}
-              className="mb-3 rounded-lg border border-amber-500/40 bg-amber-400/10 px-3 py-2"
+              className="mb-3 rounded-lg border border-warn-fill/40 bg-warn/10 px-3 py-2"
             >
               <RewardTokenLine
                 r={t}
@@ -250,29 +250,29 @@ export function ReadyToClaimPanel({
           <Legend />
           <ul className="mt-2 max-h-96 overflow-y-auto">
             {rows.map(({ p, fees, rewards, total }) => (
-              <li key={p.id} className="border-t border-slate-800 first:border-t-0">
+              <li key={p.id} className="border-t border-line first:border-t-0">
                 <button
                   type="button"
                   onClick={() => drawer.open(p.id)}
-                  className="block w-full rounded px-2 py-3 text-left hover:bg-slate-800/50"
+                  className="block w-full rounded px-2 py-3 text-left hover:bg-raised/50"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0 truncate">
                       <span className="text-sm font-semibold">
                         {pairLabel(p)} #{p.tokenId}
                       </span>
-                      <span className="ml-2 text-xs text-slate-400">
+                      <span className="ml-2 text-xs text-muted">
                         {protocolLabels[p.protocol]} · {p.chain}
                       </span>
                     </div>
                     <div className="flex flex-none items-center gap-2.5">
                       {total >= UNCLAIMED_ALERT_USD && (
-                        <span className="rounded-full bg-sky-400 px-2 py-0.5 text-[11px] font-semibold text-sky-950">
+                        <span className="rounded-full bg-accent-fill px-2 py-0.5 text-[11px] font-semibold text-surface">
                           Claim now
                         </span>
                       )}
                       <span
-                        className={`text-[15px] font-semibold num ${total >= UNCLAIMED_ALERT_USD ? "text-sky-400" : "text-slate-200"}`}
+                        className={`text-[15px] font-semibold num ${total >= UNCLAIMED_ALERT_USD ? "text-accent" : "text-fg-2"}`}
                       >
                         {formatUsd(total)}
                       </span>
@@ -287,18 +287,18 @@ export function ReadyToClaimPanel({
                   </div>
                   <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs num">
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                      <span className="text-slate-300">
+                      <span className="text-fg-2">
                         <span className={`mr-1.5 inline-block h-2 w-2 rounded-sm ${FEES_BAR}`} />
                         Fees <span className="font-semibold">{formatUsd(fees)}</span>
                       </span>
-                      <span className="text-slate-300">
+                      <span className="text-fg-2">
                         <span className={`mr-1.5 inline-block h-2 w-2 rounded-sm ${REWARDS_BAR}`} />
                         Rewards <span className="font-semibold">{formatUsd(rewards)}</span>
                       </span>
                     </div>
                     {p.metrics.currentValueUsd > 0 && (
-                      <span className="text-slate-400">
-                        <span className="font-semibold text-slate-200">
+                      <span className="text-muted">
+                        <span className="font-semibold text-fg-2">
                           {formatPercent(total, p.metrics.currentValueUsd)}
                         </span>{" "}
                         of position value
@@ -321,7 +321,7 @@ export function ReadyToClaimPanel({
               </li>
             ))}
           </ul>
-          <p className="mt-3 text-xs text-slate-500">
+          <p className="mt-3 text-xs text-faint">
             "Claim now" appears above {formatUsd(UNCLAIMED_ALERT_USD)}. Click a
             row to open the position.
           </p>

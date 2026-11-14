@@ -28,7 +28,7 @@ export function CostTable({ summary, loans }: { summary: BorrowSummaryDto; loans
       <div className="overflow-x-auto">
         <table className="w-full min-w-[44rem] text-sm">
           <thead>
-            <tr className="text-left text-xs uppercase tracking-[.04em] text-slate-400">
+            <tr className="text-left text-xs uppercase tracking-[.04em] text-muted">
               <th className="px-2.5 py-1.5 font-medium">Loan</th>
               <th className="px-2.5 py-1.5 text-right font-medium">Debt</th>
               <th className="px-2.5 py-1.5 text-right font-medium">APR</th>
@@ -42,9 +42,9 @@ export function CostTable({ summary, loans }: { summary: BorrowSummaryDto; loans
             {costs.wallets.map((w) => (
               <WalletRows key={w.owner} name={walletName(w.owner)} count={w.loanKeys.length} subtotal={w.subtotal}>
                 {w.loanKeys.map((k) => byKey.get(k)).filter((l): l is LoanDto => l != null).map((l) => (
-                  <tr key={l.key} className="border-t border-slate-800">
+                  <tr key={l.key} className="border-t border-line">
                     <td className="px-2.5 py-2">
-                      <span className="mr-2 rounded border border-slate-700 px-1.5 text-[11px] text-slate-400">{l.source}</span>
+                      <span className="mr-2 rounded border border-line-strong px-1.5 text-[11px] text-muted">{l.source}</span>
                       {l.label}
                     </td>
                     <td className="px-2.5 py-2 text-right num">{formatUsd(l.debtUsd)}</td>
@@ -56,14 +56,14 @@ export function CostTable({ summary, loans }: { summary: BorrowSummaryDto; loans
             ))}
           </tbody>
           <tfoot>
-            <tr className="border-t border-slate-700 font-semibold">
+            <tr className="border-t border-line-strong font-semibold">
               <td className="px-2.5 py-2" colSpan={3}>You pay, all loans</td>
               {cells(costs.total)}
             </tr>
           </tfoot>
         </table>
       </div>
-      <p className="mt-2 text-xs text-slate-500">
+      <p className="mt-2 text-xs text-faint">
         Interest at today's balances and rates; a week is 7 days and a month a twelfth of the year. Aave rates float, so these move.
       </p>
     </Panel>
@@ -83,9 +83,9 @@ function WalletRows({
 }) {
   return (
     <>
-      <tr className="bg-slate-800/60">
+      <tr className="bg-raised/60">
         <td className="px-2.5 py-2" colSpan={3}>
-          <b className="num">{name}</b> <span className="text-xs text-slate-400">{count} loan{count > 1 ? "s" : ""}</span>
+          <b className="num">{name}</b> <span className="text-xs text-muted">{count} loan{count > 1 ? "s" : ""}</span>
         </td>
         {cells(subtotal, "font-semibold")}
       </tr>

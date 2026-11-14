@@ -102,7 +102,7 @@ export function MonthlyPnlChart({ owner }: { owner: string | null }) {
             {months.map((m) => (
               <Cell
                 key={m.month}
-                fill={m.netPnlUsd >= 0 ? "var(--color-emerald-400)" : "var(--color-rose-400)"}
+                fill={m.netPnlUsd >= 0 ? "var(--up)" : "var(--down)"}
               />
             ))}
           </Bar>

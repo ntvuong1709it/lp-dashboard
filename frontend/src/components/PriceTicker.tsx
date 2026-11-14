@@ -17,9 +17,9 @@ const badgeColor: Record<string, string> = {
 };
 
 function changeClasses(change: number) {
-  if (change > 0) return "bg-emerald-400/15 text-emerald-400";
-  if (change < 0) return "bg-rose-400/15 text-rose-400";
-  return "bg-slate-800 text-slate-300";
+  if (change > 0) return "bg-up/15 text-up";
+  if (change < 0) return "bg-down/15 text-down";
+  return "bg-raised text-fg-2";
 }
 
 /** Spot prices of BTC, ETH, BNB and AERO. Market prices are not balances, so the hide-balances mask does not apply. */
@@ -29,7 +29,7 @@ export function PriceTicker() {
   // Keep showing the last prices if a refresh fails; only say so when there is nothing to show.
   if (!data) {
     return (
-      <div className="py-1.5 text-xs text-slate-400" role="status">
+      <div className="py-1.5 text-xs text-muted" role="status">
         {isError ? "Prices unavailable" : "Loading prices…"}
       </div>
     );
@@ -44,15 +44,15 @@ export function PriceTicker() {
         <li key={p.symbol} className="flex flex-wrap items-center gap-x-2.5 gap-y-1 sm:flex-nowrap sm:whitespace-nowrap">
           <span
             aria-hidden="true"
-            className={`grid h-[26px] w-[26px] shrink-0 place-items-center rounded-full text-[9px] font-bold tracking-tighter text-white ${badgeColor[p.symbol] ?? "bg-slate-600"}`}
+            className={`grid h-[26px] w-[26px] shrink-0 place-items-center rounded-full text-[9px] font-bold tracking-tighter text-white ${badgeColor[p.symbol] ?? "bg-muted"}`}
           >
             {p.symbol}
           </span>
           <span className="flex flex-col leading-tight">
-            <span className="text-[11px] font-semibold tracking-wider text-slate-400">
+            <span className="text-[11px] font-semibold tracking-wider text-muted">
               {p.symbol}
             </span>
-            <span className="num text-base font-semibold text-slate-50">
+            <span className="num text-base font-semibold text-fg">
               {formatTickerPrice(p.priceUsd)}
             </span>
           </span>

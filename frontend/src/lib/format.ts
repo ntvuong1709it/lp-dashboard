@@ -219,7 +219,7 @@ export function invertRange(range: RangeDto): RangeDto {
 
 export const pnlClass = (value: number | null | undefined) =>
   value == null || value === 0
-    ? "text-slate-300"
+    ? "text-fg-2"
     : value > 0
-      ? "text-emerald-400"
-      : "text-rose-400";
+      ? "text-up"
+      : "text-down";

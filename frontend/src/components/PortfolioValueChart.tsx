@@ -142,7 +142,7 @@ export function PortfolioValueChart({ owner }: { owner: string | null }) {
               </LineChart>
             </ResponsiveContainer>
           </div>
-          <p className="mt-2 text-xs text-slate-500">
+          <p className="mt-2 text-xs text-faint">
             {estimatedUntil > points[0].t
               ? "The shaded part is estimated: before a position's first sync its value is rebuilt from its deposits and historical token prices (hourly), so it can be off by a percent or so and leaves out unclaimed fees. "
               : ""}

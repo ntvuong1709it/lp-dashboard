@@ -45,7 +45,7 @@ export function RiskPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Risk</h1>
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-muted">
           Should I put money in this token or pool? Flags and facts from GoPlus, honeypot.is, DexScreener and the chain itself, with the
           evidence behind each. No flags is not a guarantee of safety. Tokens you hold or follow are re-checked every night.
         </p>
@@ -69,27 +69,27 @@ export function RiskPage() {
               autoComplete="off"
               aria-invalid={inputError != null}
               aria-describedby={inputError ? "risk-token-error" : undefined}
-              className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-sm text-slate-50"
+              className="w-full rounded-md border border-control bg-surface px-3 py-2 font-mono text-sm text-fg"
             />
             {inputError && (
-              <p id="risk-token-error" className="mt-1 text-xs text-rose-400">
+              <p id="risk-token-error" className="mt-1 text-xs text-down">
                 {inputError}
               </p>
             )}
           </div>
-          <button type="submit" className="rounded-md bg-sky-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-sky-400">
+          <button type="submit" className="rounded-md bg-accent-fill px-4 py-2 text-sm font-medium text-surface hover:bg-accent-fill">
             Check
           </button>
         </form>
 
         {address && (
-          <div className="mt-4 border-t border-slate-800 pt-4">
+          <div className="mt-4 border-t border-line pt-4">
             {lookup.isLoading || lookup.isFetching && !lookup.data ? (
               <div className="space-y-2" aria-busy="true">
                 <Skeleton className="h-5 w-1/3" />
                 <Skeleton className="h-12 w-full" />
                 <Skeleton className="h-12 w-full" />
-                <p className="text-xs text-slate-500">Asking the sources. A first check takes a few seconds.</p>
+                <p className="text-xs text-faint">Asking the sources. A first check takes a few seconds.</p>
               </div>
             ) : lookup.error ? (
               <ErrorText error={lookup.error} />
@@ -135,7 +135,7 @@ function HeldTable({ rows, onOpen, openAddress }: { rows: RiskHeldRowDto[]; onOp
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[520px] text-sm">
-        <thead className="text-left text-xs uppercase text-slate-400">
+        <thead className="text-left text-xs uppercase text-muted">
           <tr>
             <th className="px-3 py-2">Token</th>
             <th className="px-3 py-2">Why</th>
@@ -144,22 +144,22 @@ function HeldTable({ rows, onOpen, openAddress }: { rows: RiskHeldRowDto[]; onOp
             <th className="px-3 py-2" />
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800">
+        <tbody className="divide-y divide-line">
           {rows.map((r) => (
-            <tr key={r.address} className={`hover:bg-slate-800/50 ${openAddress === r.address ? "bg-sky-400/10" : ""}`}>
+            <tr key={r.address} className={`hover:bg-raised/50 ${openAddress === r.address ? "bg-accent/10" : ""}`}>
               <td className="px-3 py-2">
                 <div className="font-medium">{r.symbol}</div>
-                <div className="font-mono text-xs text-slate-500">{shortAddress(r.address)}</div>
+                <div className="font-mono text-xs text-faint">{shortAddress(r.address)}</div>
               </td>
-              <td className="px-3 py-2 text-xs text-slate-400">{r.reasons.map((x) => (x === "held" ? "You hold it" : "You follow its pool")).join(" · ")}</td>
+              <td className="px-3 py-2 text-xs text-muted">{r.reasons.map((x) => (x === "held" ? "You hold it" : "You follow its pool")).join(" · ")}</td>
               <td className="px-3 py-2">
                 <RiskBadge summary={r.risk} />
               </td>
-              <td className="px-3 py-2 text-xs text-slate-500" title={r.risk?.checkedAt ? formatDate(r.risk.checkedAt) : undefined}>
+              <td className="px-3 py-2 text-xs text-faint" title={r.risk?.checkedAt ? formatDate(r.risk.checkedAt) : undefined}>
                 {r.risk?.checkedAt ? formatAgo(r.risk.checkedAt, now) : "never"}
               </td>
               <td className="px-3 py-2 text-right">
-                <button type="button" onClick={() => onOpen(r.address)} className="text-xs text-sky-400 hover:underline">
+                <button type="button" onClick={() => onOpen(r.address)} className="text-xs text-accent hover:underline">
                   {r.risk ? "Open report" : "Check now"}
                 </button>
               </td>
@@ -173,18 +173,18 @@ function HeldTable({ rows, onOpen, openAddress }: { rows: RiskHeldRowDto[]; onOp
 
 function ChangeList({ changes }: { changes: RiskChangeDto[] }) {
   return (
-    <ul className="divide-y divide-slate-800">
+    <ul className="divide-y divide-line">
       {changes.map((c, i) => (
         <li key={`${c.subject}-${c.at}-${i}`} className="flex gap-3 py-2 text-sm">
-          <span aria-hidden="true" className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${c.isWorse ? "bg-rose-500" : "bg-emerald-400"}`} />
+          <span aria-hidden="true" className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${c.isWorse ? "bg-down-fill" : "bg-up-fill"}`} />
           <div className="min-w-0">
             <div className="break-words">
               <span className="font-medium">{c.symbol ?? shortAddress(c.subject)}</span>
-              <span className="text-slate-500"> · {c.kind === "Pool" ? "pool" : "token"}</span>
+              <span className="text-faint"> · {c.kind === "Pool" ? "pool" : "token"}</span>
               <span className="sr-only">{c.isWorse ? ", got worse" : ", improved"}</span>
             </div>
-            <div className="break-words text-slate-400">{c.description}</div>
-            <div className="text-xs text-slate-500">{formatDate(c.at)}</div>
+            <div className="break-words text-muted">{c.description}</div>
+            <div className="text-xs text-faint">{formatDate(c.at)}</div>
           </div>
         </li>
       ))}

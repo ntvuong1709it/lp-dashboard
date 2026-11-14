@@ -5,11 +5,11 @@ import { formatUsd } from "../../lib/format";
 type Level = "critical" | "warn" | "info";
 
 const STYLE: Record<Level, string> = {
-  critical: "border-rose-500/50 bg-rose-500/10",
-  warn: "border-amber-500/50 bg-amber-500/10",
-  info: "border-sky-500/50 bg-sky-500/10",
+  critical: "border-down-fill/50 bg-down-fill/10",
+  warn: "border-warn-fill/50 bg-warn-fill/10",
+  info: "border-accent-fill/50 bg-accent-fill/10",
 };
-const MARK: Record<Level, string> = { critical: "text-rose-400", warn: "text-amber-300", info: "text-sky-300" };
+const MARK: Record<Level, string> = { critical: "text-down", warn: "text-warn", info: "text-accent" };
 
 /** What needs attention, in order of severity. Built here, not on the server, so hidden balances stay hidden. */
 export function BorrowBanners({ summary, loans }: { summary: BorrowSummaryDto; loans: LoanDto[] }) {

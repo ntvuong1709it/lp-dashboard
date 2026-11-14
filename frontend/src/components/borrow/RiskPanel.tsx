@@ -120,10 +120,10 @@ export function RiskPanel({ loans }: { loans: LoanDto[] }) {
   return (
     <Panel
       title="Liquidation risk"
-      actions={<span className="text-xs text-slate-500">Closest first. Warn below health factor 1.5, critical below 1.2.</span>}
+      actions={<span className="text-xs text-faint">Closest first. Warn below health factor 1.5, critical below 1.2.</span>}
     >
       {withFigures.length === 0 ? (
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-faint">
           No loan has risk data yet. For a manual loan, add its collateral and liquidation LTV.
         </p>
       ) : (
@@ -134,7 +134,7 @@ export function RiskPanel({ loans }: { loans: LoanDto[] }) {
               <WalletCard key={w.owner} wallet={w} info={walletOf(w.owner)} />
             ))}
           </div>
-          <p className="mt-3 text-xs text-slate-500">
+          <p className="mt-3 text-xs text-faint">
             The cushion assumes only the collateral's price moves and the debt stays the same. A manual loan uses the collateral and
             limits you entered, so update them when they change.
           </p>
@@ -158,10 +158,10 @@ function Closest({
   const alert = wallet.level !== "Ok";
   const tone =
     wallet.level === "Critical"
-      ? "border-rose-500/60 bg-rose-500/10"
+      ? "border-down-fill/60 bg-down-fill/10"
       : wallet.level === "Warn"
-        ? "border-amber-500/60 bg-amber-500/10"
-        : "border-slate-800 bg-slate-800/40";
+        ? "border-warn-fill/60 bg-warn-fill/10"
+        : "border-line bg-raised/40";
   return (
     <div className={`mb-3 rounded-lg border px-3.5 py-2.5 text-sm ${tone}`}>
       <b>{name} is closest to liquidation.</b> Its collateral can fall about {wallet.drop!.toFixed(0)}% before it is liquidated
@@ -171,29 +171,29 @@ function Closest({
           ({others.filter((o) => o.drop != null).map((o, i) => `${i ? ", " : ""}${nameOf(o.owner)} about ${o.drop!.toFixed(0)}%`)}).
         </>
       )}
-      {!alert && <span className="text-slate-400"> All wallets are above the warning level.</span>}
+      {!alert && <span className="text-muted"> All wallets are above the warning level.</span>}
     </div>
   );
 }
 
 function WalletCard({ wallet, info }: { wallet: WalletRisk; info: WalletInfo }) {
   const { level, entries, unknown } = wallet;
-  const ring = level === "Critical" ? "ring-1 ring-rose-500/70" : level === "Warn" ? "ring-1 ring-amber-500/70" : "";
+  const ring = level === "Critical" ? "ring-1 ring-down-fill/70" : level === "Warn" ? "ring-1 ring-warn-fill/70" : "";
   return (
-    <article className={`min-w-0 rounded-lg border border-slate-800 bg-slate-900 p-3.5 ${ring}`} style={{ borderTop: `3px solid ${info.color}` }}>
+    <article className={`min-w-0 rounded-lg border border-line bg-panel p-3.5 ${ring}`} style={{ borderTop: `3px solid ${info.color}` }}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="inline-flex flex-wrap items-center gap-x-2">
           <WalletChip wallet={info} />
-          {info.label && <span className="num text-[11px] text-slate-500">{info.short}</span>}
+          {info.label && <span className="num text-[11px] text-faint">{info.short}</span>}
         </span>
         {entries.length > 0 && <LevelChip level={level} />}
       </div>
       {entries.map((e) => (
         <EntryBlock key={e.id} e={e} />
       ))}
-      {entries.length === 0 && <p className="mt-3 text-sm text-slate-500">No risk figure yet.</p>}
+      {entries.length === 0 && <p className="mt-3 text-sm text-faint">No risk figure yet.</p>}
       {unknown.map((l) => (
-        <p key={l.key} className="mt-3 border-t border-slate-800 pt-3 text-xs text-slate-500">
+        <p key={l.key} className="mt-3 border-t border-line pt-3 text-xs text-faint">
           {l.label}: add its collateral and liquidation LTV to see its risk.
         </p>
       ))}
@@ -215,14 +215,14 @@ function EntryBlock({ e }: { e: Entry }) {
   const marginDrop = !e.health && e.marginCallLtv != null ? ltvDrop(e.value, e.marginCallLtv) : null;
 
   return (
-    <div className="mt-3 border-t border-slate-800 pt-3 first-of-type:mt-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-2 text-xs text-slate-400">
+    <div className="mt-3 border-t border-line pt-3 first-of-type:mt-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-2 text-xs text-muted">
         <span>{e.title}</span>
         <span>{e.health ? "liquidated at 1.00" : `liquidation LTV ${e.liquidationLtv ?? 80}%`}</span>
       </div>
       <div className="mt-1 flex flex-wrap items-baseline gap-x-2.5">
         <span className="text-3xl font-medium tracking-tight num">{e.health ? e.value.toFixed(2) : `${e.value.toFixed(0)}%`}</span>
-        <span className="text-xs text-slate-400">{e.health ? e.note : `LTV · ${e.note}`}</span>
+        <span className="text-xs text-muted">{e.health ? e.note : `LTV · ${e.note}`}</span>
       </div>
       {e.health ? (
         <HealthGauge value={e.value} />
@@ -233,11 +233,11 @@ function EntryBlock({ e }: { e: Entry }) {
         <div className="grid grid-cols-3 gap-2">
           <Fact label="Collateral now" value={formatUsd(e.collateralUsd)} />
           <Fact label="Debt" value={formatUsd(e.debtUsd)} />
-          <Fact label="Collateral at liquidation" value={liquidationAt != null ? formatUsd(liquidationAt) : "–"} tone="text-rose-400" />
+          <Fact label="Collateral at liquidation" value={liquidationAt != null ? formatUsd(liquidationAt) : "–"} tone="text-down" />
         </div>
       )}
       {e.drop != null && (
-        <p className="mt-2.5 rounded-md bg-slate-800/60 px-2.5 py-2 text-sm">
+        <p className="mt-2.5 rounded-md bg-raised/60 px-2.5 py-2 text-sm">
           <b>Cushion: about {e.drop.toFixed(0)}%</b>
           {cushionUsd != null && <> ({formatUsd(cushionUsd)})</>}
           {e.level === "Ok" ? " before liquidation." : ". If your collateral loses that much while the debt stays the same, it can be liquidated."}
@@ -255,7 +255,7 @@ function Fact({ label, value, tone = "" }: { label: string; value: string; tone?
   return (
     <div className="min-w-0">
       <div className={`text-sm num ${tone}`}>{value}</div>
-      <div className="text-[11px] text-slate-400">{label}</div>
+      <div className="text-[11px] text-muted">{label}</div>
     </div>
   );
 }

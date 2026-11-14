@@ -20,7 +20,7 @@ export function UpdatedAgo({ prefix = "Updated" }: { prefix?: string }) {
 
   return (
     <span
-      className="text-xs text-slate-500"
+      className="text-xs text-faint"
       title={status.lastFinishedAt ? formatDate(status.lastFinishedAt) : undefined}
     >
       {status.lastFinishedAt

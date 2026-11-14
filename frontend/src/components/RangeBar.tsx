@@ -20,14 +20,14 @@ export function RangeBar({
 
   const color =
     range.inRange == null
-      ? "bg-slate-500"
+      ? "bg-muted"
       : range.inRange
-        ? "bg-emerald-500/70"
-        : "bg-rose-500/70";
+        ? "bg-up-fill/70"
+        : "bg-down-fill/70";
 
   return (
     <div className={`w-full ${showLabels ? "min-w-48" : "min-w-32"}`}>
-      <div className="relative h-2 rounded bg-slate-800">
+      <div className="relative h-2 rounded bg-raised">
         <div
           className={`absolute h-2 rounded ${color}`}
           style={{
@@ -37,7 +37,7 @@ export function RangeBar({
         />
         {entry != null && (
           <div
-            className="absolute -top-0.5 h-3 w-3 -translate-x-1/2 rounded-full border-2 border-[var(--marker)] bg-sky-400"
+            className="absolute -top-0.5 h-3 w-3 -translate-x-1/2 rounded-full border-2 border-[var(--marker)] bg-accent-fill"
             title={`Entry ${formatPrice(entry)}`}
             style={{ left: `${Math.min(100, Math.max(0, pct(entry)))}%` }}
           />
@@ -50,9 +50,9 @@ export function RangeBar({
         )}
       </div>
       {showLabels && (
-        <div className="mt-1 flex justify-between gap-2 whitespace-nowrap text-[11px] text-slate-400 num">
+        <div className="mt-1 flex justify-between gap-2 whitespace-nowrap text-[11px] text-muted num">
           <span>{formatPrice(lower)}</span>
-          <span className="text-slate-200">{formatPrice(current)}</span>
+          <span className="text-fg-2">{formatPrice(current)}</span>
           <span>{formatPrice(upper)}</span>
         </div>
       )}
@@ -71,23 +71,23 @@ export function RangeBadge({
 }) {
   if (closed)
     return (
-      <span className="rounded bg-slate-700 px-1.5 py-0.5 text-[11px] text-slate-300">
+      <span className="rounded bg-line-strong px-1.5 py-0.5 text-[11px] text-fg-2">
         Closed
       </span>
     );
   if (inRange == null) return null;
   if (inRange && nearEdge)
     return (
-      <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[11px] text-amber-400">
+      <span className="rounded bg-warn-fill/15 px-1.5 py-0.5 text-[11px] text-warn">
         Near edge
       </span>
     );
   return inRange ? (
-    <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[11px] text-emerald-400">
+    <span className="rounded bg-up-fill/15 px-1.5 py-0.5 text-[11px] text-up">
       In range
     </span>
   ) : (
-    <span className="rounded bg-rose-500/15 px-1.5 py-0.5 text-[11px] text-rose-400">
+    <span className="rounded bg-down-fill/15 px-1.5 py-0.5 text-[11px] text-down">
       Out of range
     </span>
   );
