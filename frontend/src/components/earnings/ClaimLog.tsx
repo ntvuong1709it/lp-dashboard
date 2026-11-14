@@ -51,8 +51,16 @@ export function ClaimLog({
             {weeks.map((w) => (
               <Fragment key={w.weekStart}>
                 <tr
+                  tabIndex={0}
+                  aria-expanded={expanded === w.weekStart}
                   className="cursor-pointer hover:bg-raised/50"
                   onClick={() => setExpanded(expanded === w.weekStart ? null : w.weekStart)}
+                  onKeyDown={(e) => {
+                    if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+                      e.preventDefault();
+                      setExpanded(expanded === w.weekStart ? null : w.weekStart);
+                    }
+                  }}
                 >
                   <td className="py-1.5">
                     {expanded === w.weekStart ? "▾" : "▸"} {w.weekStart}

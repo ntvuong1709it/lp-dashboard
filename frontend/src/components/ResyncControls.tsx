@@ -36,6 +36,7 @@ export function ResyncControls({
         <>
           <input
             autoFocus
+            aria-label="Rescan from block"
             inputMode="numeric"
             className="w-28 rounded-md border border-control bg-surface px-2 py-1 text-xs"
             placeholder="from block"

@@ -10,10 +10,15 @@ export function PositionDrawer() {
   useEffect(() => {
     if (openId == null) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
+    // Remember what opened the drawer so closing it puts keyboard focus back there.
+    const opener = document.activeElement as HTMLElement | null;
     document.addEventListener("keydown", onKey);
     ref.current?.focus();
     ref.current?.scrollTo(0, 0);
-    return () => document.removeEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      if (opener && opener !== document.body && document.contains(opener)) opener.focus();
+    };
   }, [openId, close]);
 
   if (openId == null) return null;

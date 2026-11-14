@@ -51,6 +51,7 @@ function LabelCell({ address, label }: { address: string; label: string }) {
     <span className="inline-flex items-center gap-2">
       <input
         autoFocus
+        aria-label="Wallet label"
         className="w-40 rounded-md border border-control bg-surface px-2 py-1 text-sm"
         maxLength={100}
         value={value}
@@ -115,6 +116,7 @@ export function AddressesPage() {
       <Panel title="Follow a wallet (read-only)">
         <form onSubmit={submit} className="flex flex-wrap gap-2">
           <input
+            aria-label="Wallet address"
             className="min-w-96 flex-1 rounded-md border border-control bg-surface px-3 py-2 text-sm font-mono"
             placeholder="0x… (EVM) or Solana address"
             value={address}
@@ -122,6 +124,7 @@ export function AddressesPage() {
             required
           />
           <input
+            aria-label="Label (optional)"
             className="w-48 rounded-md border border-control bg-surface px-3 py-2 text-sm"
             placeholder="Label (optional)"
             maxLength={100}

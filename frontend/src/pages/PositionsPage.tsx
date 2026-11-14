@@ -157,6 +157,7 @@ export function PositionsPage() {
           <UpdatedAgo />
           <input
             type="search"
+            aria-label="Search positions"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search token, pool, #id…"
@@ -164,6 +165,7 @@ export function PositionsPage() {
           />
           {(protocols.length > 1 || protocol !== "") && (
             <select
+              aria-label="Protocol"
               value={protocol}
               onChange={(e) => setProtocol(e.target.value as Protocol | "")}
               className="rounded-md border border-control bg-panel px-2 py-1.5 text-fg-2"
@@ -364,8 +366,15 @@ function PositionsTable({
                   </tr>
                 )}
               <tr
+                tabIndex={0}
                 className="cursor-pointer hover:bg-panel/70"
                 onClick={() => drawer.open(p.id)}
+                onKeyDown={(e) => {
+                  if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+                    e.preventDefault();
+                    drawer.open(p.id);
+                  }
+                }}
               >
                 <td className="px-3 py-2 text-right num text-faint">
                   {index + 1}

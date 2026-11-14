@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState, type KeyboardEvent, type ReactNode } from "react";
 
 export function Skeleton({ className = "" }: { className?: string }) {
   return (
@@ -212,6 +212,16 @@ export function BarRow({
     <div
       className={`grid grid-cols-[8rem_1fr_6.5rem] items-center gap-3 text-sm ${onClick ? "cursor-pointer hover:bg-raised/50" : ""}`}
       onClick={onClick}
+      {...(onClick && {
+        role: "button",
+        tabIndex: 0,
+        onKeyDown: (e: KeyboardEvent<HTMLDivElement>) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClick();
+          }
+        },
+      })}
     >
       <span className="truncate" title={typeof label === "string" ? label : undefined}>
         {label}

@@ -150,6 +150,7 @@ function OwnerSelect() {
 
   return (
     <select
+      aria-label="Wallet"
       className="rounded-md border border-control bg-panel px-2 py-1.5 text-sm"
       value={selected ?? ""}
       onChange={(e) => setOwner(e.target.value || null)}
