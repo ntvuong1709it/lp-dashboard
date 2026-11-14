@@ -2,25 +2,15 @@ import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { usePositionDrawer } from "../lib/positionDrawer";
 import { usePositions, useSummary } from "../api/client";
-import { PortfolioBreakEven } from "../components/BreakEvenCallout";
+import { PortfolioBreakEvenCard } from "../components/BreakEvenCallout";
 import { PortfolioValueChart } from "../components/PortfolioValueChart";
 import { ExposurePanel, RewardTokensPanel } from "../components/PortfolioInsights";
+import { NeedsYouCard } from "../components/overview/NeedsYouCard";
 import { UpdatedAgo } from "../components/UpdatedAgo";
-import { ReadyToClaimPanel, UnclaimedCard, rewardTotals } from "../components/Unclaimed";
-import {
-  BarRow,
-  Empty,
-  ErrorText,
-  Panel,
-  Skeleton,
-  StatCard,
-} from "../components/ui";
+import { READY_TO_CLAIM_ID, ReadyToClaimPanel } from "../components/Unclaimed";
+import { BarRow, Empty, Panel, Skeleton, StatCard } from "../components/ui";
 import type { PortfolioSummaryDto, PositionDto } from "../api/types";
-import {
-  UNCLAIMED_ALERT_USD,
-  buildAlerts,
-  type AlertKind,
-} from "../lib/attention";
+import { UNCLAIMED_ALERT_USD, buildAlerts, pairLabel } from "../lib/attention";
 import {
   formatPercent,
   formatPrice,
@@ -30,15 +20,6 @@ import {
 } from "../lib/format";
 import { useOwner } from "../lib/owner";
 import { useHideBalances } from "../lib/privacy";
-import { pairLabel } from "../lib/attention";
-
-/** A text label per kind, each with its own colour, so a row is readable without decoding an icon. */
-const alertStyle: Record<AlertKind, { label: string; className: string }> = {
-  out: { label: "Out of range", className: "border-down-fill/50 bg-down-fill/10 text-down" },
-  edge: { label: "Near edge", className: "border-warn-fill/50 bg-warn-fill/10 text-warn" },
-  unclaimed: { label: "Unclaimed", className: "border-accent-fill/50 bg-accent-fill/10 text-accent" },
-  prices: { label: "No price", className: "border-line-strong/50 bg-muted/10 text-fg-2" },
-};
 
 export function OverviewPage() {
   useHideBalances(); // re-render when the toggle changes; formatters read the flag
@@ -92,63 +73,70 @@ export function OverviewPage() {
         <UpdatedAgo />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[repeat(4,minmax(0,1fr))_minmax(0,1.3fr)]">
-        <StatCard
-          label="Portfolio value"
-          loading={summary.isLoading}
-          value={formatUsd(s?.currentValueUsd)}
-          hint={s && `${s.openCount} open · ${s.closedCount} closed`}
-        />
-        <StatCard
-          label="Total P/L (all time)"
-          loading={summary.isLoading}
-          value={formatUsd(s?.pnlUsd, true)}
-          valueClass={pnlClass(s?.pnlUsd)}
-          hint={
-            s &&
-            `${formatPercent(
-              s.depositedUsd > 0 ? (s.pnlUsd / s.depositedUsd) * 100 : null,
-              true,
-            )} on ${formatUsd(s.depositedUsd)} deposited`
-          }
-        />
-        <StatCard
-          label="Fees earned"
-          loading={summary.isLoading}
-          value={formatUsd(s?.feesEarnedUsd)}
-          hint={s && "claimed + unclaimed"}
-        />
-        <StatCard
-          label="Impermanent loss"
-          loading={summary.isLoading}
-          value={formatUsd(s?.impermanentLossUsd, true)}
-          valueClass={pnlClass(s?.impermanentLossUsd)}
-          hint={
-            s?.hasMissingPrices ? "some prices missing" : "excluding fees"
-          }
-        />
-        <UnclaimedCard
-          fees={s?.uncollectedFeesUsd ?? 0}
-          rewards={s?.pendingRewardsUsd ?? 0}
-          rewardTokens={rewardTotals(open.data ?? [])}
-          note={s && unclaimedNote(s, open.data ?? [])}
-          loading={summary.isLoading || open.isLoading}
-          className="sm:col-span-2 lg:col-span-1"
-        />
+      {/* What needs you comes first: on a phone it sits above the numbers, from lg up it sits beside them. */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
+        <div className="lg:order-2">
+          <NeedsYouCard
+            alerts={alerts}
+            open={open.data ?? []}
+            loading={open.isLoading}
+            error={open.error}
+          />
+        </div>
+
+        <div className="min-w-0 space-y-4 lg:order-1">
+          <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 md:grid-cols-3">
+            <StatCard
+              label="Portfolio value"
+              loading={summary.isLoading}
+              value={formatUsd(s?.currentValueUsd)}
+              hint={s && `${s.openCount} open · ${s.closedCount} closed`}
+            />
+            <StatCard
+              label="Total P/L (all time)"
+              loading={summary.isLoading}
+              value={formatUsd(s?.pnlUsd, true)}
+              valueClass={pnlClass(s?.pnlUsd)}
+              hint={
+                s &&
+                `${formatPercent(
+                  s.depositedUsd > 0 ? (s.pnlUsd / s.depositedUsd) * 100 : null,
+                  true,
+                )} on ${formatUsd(s.depositedUsd)} deposited`
+              }
+            />
+            <StatCard
+              label="Fees earned"
+              loading={summary.isLoading}
+              value={formatUsd(s?.feesEarnedUsd)}
+              hint={s && "claimed + unclaimed"}
+            />
+            <StatCard
+              label="Impermanent loss"
+              loading={summary.isLoading}
+              value={formatUsd(s?.impermanentLossUsd, true)}
+              valueClass={pnlClass(s?.impermanentLossUsd)}
+              hint={
+                s?.hasMissingPrices ? "some prices missing" : "excluding fees"
+              }
+            />
+            <StatCard
+              accent
+              label="Unclaimed"
+              loading={summary.isLoading || open.isLoading}
+              value={formatUsd(s ? s.uncollectedFeesUsd + s.pendingRewardsUsd : 0)}
+              hint={s && unclaimedNote(s, open.data ?? [])}
+            />
+            <PortfolioBreakEvenCard owner={owner} />
+          </div>
+
+          <PortfolioValueChart owner={owner} />
+        </div>
       </div>
 
-      <PortfolioBreakEven owner={owner} />
-
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
+      <div id={READY_TO_CLAIM_ID} className="scroll-mt-32">
         <ReadyToClaimPanel open={open.data ?? []} loading={open.isLoading} />
-        <AttentionPanel
-          loading={open.isLoading}
-          error={open.error}
-          alerts={alerts}
-        />
       </div>
-
-      <PortfolioValueChart owner={owner} />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <AllocationPanel
@@ -186,60 +174,6 @@ function unclaimedNote(
     (s.feesEarnedUsd > 0
       ? ` · ${((total / s.feesEarnedUsd) * 100).toFixed(0)}% of fees earned`
       : "")
-  );
-}
-
-function AttentionPanel({
-  alerts,
-  loading,
-  error,
-}: {
-  alerts: ReturnType<typeof buildAlerts>;
-  loading: boolean;
-  error: unknown;
-}) {
-  const drawer = usePositionDrawer();
-  return (
-    <Panel
-      title="Needs attention"
-      actions={<span className="text-sm text-muted">{alerts.length}</span>}
-    >
-      {error ? (
-        <ErrorText error={error} />
-      ) : loading ? (
-        <Skeleton className="h-40 w-full" />
-      ) : !alerts.length ? (
-        <p className="text-sm text-muted">Nothing needs attention.</p>
-      ) : (
-        <ul className="max-h-96 divide-y divide-line overflow-y-auto">
-          {alerts.map((a) => (
-            <li
-              key={`${a.kind}-${a.position.id}`}
-              className="flex gap-3 py-2.5 first:pt-0 last:pb-0"
-            >
-              <span
-                className={`mt-0.5 h-fit w-24 flex-none rounded-full border px-2 py-0.5 text-center text-[11px] font-semibold ${alertStyle[a.kind].className}`}
-              >
-                {alertStyle[a.kind].label}
-              </span>
-              <div className="text-sm">
-                <div>{a.title}</div>
-                <div className="text-xs text-muted">
-                  {a.detail}{" "}
-                  <button
-                    type="button"
-                    className="font-medium text-accent hover:underline"
-                    onClick={() => drawer.open(a.position.id)}
-                  >
-                    View position
-                  </button>
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Panel>
   );
 }
 

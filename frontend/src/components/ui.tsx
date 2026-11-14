@@ -45,22 +45,27 @@ export function StatCard({
   hint,
   valueClass,
   loading,
+  accent,
 }: {
   label: string;
   value: ReactNode;
   hint?: ReactNode;
   valueClass?: string;
   loading?: boolean;
+  /** Highlights the card (used for money waiting to be claimed). */
+  accent?: boolean;
 }) {
   return (
-    <div className="rounded-lg border border-line bg-panel p-4">
-      <div className="text-xs uppercase tracking-[.05em] text-muted">
+    <div
+      className={`min-w-0 rounded-lg border p-4 ${accent ? "border-accent-fill/50 bg-accent-fill/5 ring-4 ring-accent/10" : "border-line bg-panel"}`}
+    >
+      <div className={`text-xs uppercase tracking-[.05em] ${accent ? "font-semibold text-accent" : "text-muted"}`}>
         {label}
       </div>
       {loading ? (
         <Skeleton className="mt-2 h-6 w-24" />
       ) : (
-        <div className={`mt-1 text-2xl font-medium tracking-tight num ${valueClass ?? ""}`}>
+        <div className={`mt-1 text-2xl font-medium tracking-tight num ${accent ? "text-accent" : ""} ${valueClass ?? ""}`}>
           {value}
         </div>
       )}
@@ -81,8 +86,8 @@ export function Panel({
   actions?: ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-line bg-panel">
-      <div className="flex items-center justify-between border-b border-line px-4 py-2">
+    <section className="min-w-0 rounded-lg border border-line bg-panel">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-b border-line px-4 py-2">
         <h2 className="text-sm font-medium text-fg-2">{title}</h2>
         {actions}
       </div>

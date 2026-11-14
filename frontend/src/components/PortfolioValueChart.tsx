@@ -55,7 +55,7 @@ export function PortfolioValueChart({ owner }: { owner: string | null }) {
     <Panel
       title={metric === "pnl" ? "Cumulative P/L" : "Portfolio value over time"}
       actions={
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Segmented
             label="Metric"
             options={[

@@ -183,6 +183,45 @@ export function UnclaimedCard({
   );
 }
 
+/** Where the full Ready to claim panel sits on the Overview page; "See breakdown" scrolls to it. */
+export const READY_TO_CLAIM_ID = "ready-to-claim";
+
+/** A few lines on what is waiting to be claimed, with a button down to the full panel. */
+export function ClaimSummary({ open }: { open: PositionDto[] }) {
+  const rows = open.filter((p) => p.metrics.uncollectedFeesUsd + p.metrics.pendingRewardsUsd > 0);
+  if (!rows.length) return <p className="text-sm text-muted">Nothing to claim right now.</p>;
+  const sum = rows.reduce((s, p) => s + p.metrics.uncollectedFeesUsd + p.metrics.pendingRewardsUsd, 0);
+  const positionValue = rows.reduce((s, p) => s + p.metrics.currentValueUsd, 0);
+  const tokens = rewardTotals(rows);
+  const where = `${rows.length} ${rows.length === 1 ? "position" : "positions"}`;
+  const parts = [
+    tokens.length ? `${tokens.map((t) => `${formatAmount(t.amount)} ${t.symbol}`).join(" + ")} across ${where}` : where,
+    positionValue > 0 ? `${formatPercent(sum, positionValue)} of position value` : null,
+  ].filter(Boolean);
+
+  return (
+    <div className="space-y-2">
+      <div className="text-sm">
+        <span className="font-semibold text-fg">Ready to claim</span>{" "}
+        <span className="num font-semibold text-accent">{formatUsd(sum)}</span>
+      </div>
+      <div className="text-xs text-muted num">{parts.join(" · ")}</div>
+      <button
+        type="button"
+        className="rounded-md border border-line-strong px-2.5 py-1 text-xs text-fg-2 hover:bg-raised"
+        onClick={() =>
+          document.getElementById(READY_TO_CLAIM_ID)?.scrollIntoView({
+            behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+            block: "start",
+          })
+        }
+      >
+        See breakdown
+      </button>
+    </div>
+  );
+}
+
 export function ReadyToClaimPanel({
   open,
   loading,

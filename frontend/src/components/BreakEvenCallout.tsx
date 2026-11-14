@@ -1,7 +1,9 @@
 import { usePerformance } from "../api/client";
 import type { HodlBreakEvenDto, PositionDto } from "../api/types";
-import { breakEvenHeadline, breakEvenText } from "../lib/performance";
+import { formatUsd } from "../lib/format";
+import { breakEvenHeadline, breakEvenHint, breakEvenText } from "../lib/performance";
 import { useHideBalances } from "../lib/privacy";
+import { StatCard } from "./ui";
 
 /** Green when ahead, amber while the gap is closing, red when it is not closing at all. */
 function tone(b: HodlBreakEvenDto) {
@@ -51,16 +53,24 @@ export function PositionBreakEven({ position: p }: { position: PositionDto }) {
   return <BreakEvenCallout breakEven={b} label="Against holding" />;
 }
 
-/** Callout for the selected wallets: every position's gap (closed ones included) against what the open ones earn per day. */
-export function PortfolioBreakEven({ owner }: { owner: string | null }) {
+/** Stat card for the selected wallets: every position's gap (closed ones included) against simply holding, and how soon the open ones close it. */
+export function PortfolioBreakEvenCard({ owner }: { owner: string | null }) {
   useHideBalances();
-  const { data } = usePerformance(owner);
-  if (!data?.portfolio) return null;
+  const { data, isLoading } = usePerformance(owner);
+  if (isLoading) return <StatCard label="LP vs holding" value="" loading />;
+  const b = data?.portfolio;
+  if (!b) return null;
+  const tone = b.gapUsd >= 0 ? "text-up" : b.daysToBreakEven == null ? "text-down" : "text-warn";
   return (
-    <BreakEvenCallout
-      breakEven={data.portfolio}
-      label="LP vs just holding, all positions"
-      note="Closed positions count towards the gap but no longer earn."
+    <StatCard
+      label="LP vs holding"
+      value={formatUsd(b.gapUsd, true)}
+      valueClass={tone}
+      hint={
+        <span title={`${breakEvenText(b)} Closed positions count towards the gap but no longer earn.`}>
+          {breakEvenHint(b)}
+        </span>
+      }
     />
   );
 }
