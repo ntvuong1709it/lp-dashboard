@@ -8,7 +8,8 @@ export function RangeBar({
   entry,
 }: {
   range: RangeDto;
-  showLabels?: boolean;
+  /** true: lower, current and upper price under the bar. "ends": only the lower and upper price. */
+  showLabels?: boolean | "ends";
   /** Price when the position was opened, drawn as a dot on the bar. */
   entry?: number | null;
 }) {
@@ -52,7 +53,7 @@ export function RangeBar({
       {showLabels && (
         <div className="mt-1 flex justify-between gap-2 whitespace-nowrap text-[11px] text-muted num">
           <span>{formatPrice(lower)}</span>
-          <span className="text-fg-2">{formatPrice(current)}</span>
+          {showLabels !== "ends" && <span className="text-fg-2">{formatPrice(current)}</span>}
           <span>{formatPrice(upper)}</span>
         </div>
       )}

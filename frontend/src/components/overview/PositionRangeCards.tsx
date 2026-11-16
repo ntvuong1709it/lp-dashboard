@@ -2,7 +2,15 @@ import { Link } from "react-router-dom";
 import { usePosition } from "../../api/client";
 import type { PositionDto, RangeDto } from "../../api/types";
 import { isNearEdge, pairLabel } from "../../lib/attention";
-import { formatFee, formatPercent, formatPrice, formatUsd, invertRange, protocolLabels } from "../../lib/format";
+import {
+  formatFee,
+  formatPercent,
+  formatPrice,
+  formatRangeWidth,
+  formatUsd,
+  invertRange,
+  protocolLabels,
+} from "../../lib/format";
 import { usePositionDrawer } from "../../lib/positionDrawer";
 import { useHideBalances } from "../../lib/privacy";
 import { usePersistentState } from "../../lib/usePersistentState";
@@ -28,17 +36,43 @@ const cardBorder: Record<Status, string> = {
   unknown: "border-line",
 };
 
-/** How far the price is from the range, in the direction the prices are shown. */
-function distanceText(range: RangeDto): { text: string; className: string } | null {
+/**
+ * One plain sentence on whether the position is earning and how much room the price has, in the direction the prices are
+ * shown. Null when there is no usable price.
+ */
+function sayStatus(range: RangeDto): { lead: string; rest: string; pct: string; tail: string; className: string } | null {
   const { priceLower: lo, priceUpper: hi, priceCurrent: cur } = range;
   if (cur == null || !(lo > 0) || !(cur > 0)) return null;
-  if (cur < lo) return { text: `${(((lo - cur) / lo) * 100).toFixed(1)}% below range`, className: "text-down" };
-  if (cur > hi) return { text: `${(((cur - hi) / hi) * 100).toFixed(1)}% above range`, className: "text-down" };
+  if (cur < lo)
+    return { lead: "Not earning.", rest: "Price is ", pct: (((lo - cur) / lo) * 100).toFixed(1), tail: "below your range.", className: "text-down" };
+  if (cur > hi)
+    return { lead: "Not earning.", rest: "Price is ", pct: (((cur - hi) / hi) * 100).toFixed(1), tail: "above your range.", className: "text-down" };
   const toLower = (cur - lo) / cur;
   const toUpper = (hi - cur) / cur;
-  const lower = toLower <= toUpper;
-  const text = `${(Math.min(toLower, toUpper) * 100).toFixed(1)}% to ${lower ? "lower" : "upper"} edge`;
-  return { text, className: isNearEdge(range) ? "text-warn" : "text-muted" };
+  const verb = toLower <= toUpper ? "fall" : "rise";
+  const near = isNearEdge(range);
+  return {
+    lead: near ? "Close to the edge." : "Earning.",
+    rest: `Price can ${verb} `,
+    pct: (Math.min(toLower, toUpper) * 100).toFixed(1),
+    tail: "before it stops.",
+    className: near ? "text-warn" : "text-up",
+  };
+}
+
+/** Hover text with the detail the card leaves out: where the position lives, exact prices, entry and range width. */
+function cardTitle(p: PositionDto, range: RangeDto | null, unit: string, entry: number | null, sinceEntry: number | null) {
+  const lines = [`${protocolLabels[p.protocol]} · ${p.chain} · #${p.tokenId}`];
+  if (range) {
+    lines.push(`Range ${formatPrice(range.priceLower)} – ${formatPrice(range.priceUpper)} ${unit}`);
+    if (range.priceCurrent != null) lines.push(`Now ${formatPrice(range.priceCurrent)}`);
+    if (entry != null)
+      lines.push(
+        `Entry ${formatPrice(entry)}${sinceEntry != null ? ` (${sinceEntry > 0 ? "+" : ""}${sinceEntry.toFixed(1)}% since)` : ""}`,
+      );
+    lines.push(`Range width ${formatRangeWidth(range)}`);
+  }
+  return lines.join("\n");
 }
 
 /**
@@ -107,7 +141,7 @@ function PositionCard({ p, inverted, wallet }: { p: PositionDto; inverted: boole
   const status = statusOf(p.range);
   const range = p.range && (inverted ? invertRange(p.range) : p.range);
   const [base, quote] = inverted ? [p.token1, p.token0] : [p.token0, p.token1];
-  const dist = range && distanceText(range);
+  const say = range && sayStatus(range);
 
   // The pool price at the first deposit, in the same units as the range. It comes from the position's events, so the
   // card loads them (cached, and shared with the position drawer).
@@ -117,11 +151,13 @@ function PositionCard({ p, inverted, wallet }: { p: PositionDto; inverted: boole
   const entry = entry0 == null ? null : inverted ? 1 / entry0 : entry0;
   const current = range?.priceCurrent ?? null;
   const sinceEntry = entry != null && current != null && entry > 0 ? (current / entry - 1) * 100 : null;
+  const unit = `${quote?.symbol} per ${base?.symbol}`;
 
   return (
     <button
       type="button"
       onClick={() => drawer.open(p.id)}
+      title={cardTitle(p, range, unit, entry, sinceEntry)}
       className={`block h-full w-full rounded-lg border bg-surface p-3 text-left hover:bg-raised/40 ${cardBorder[status]}`}
     >
       <div className="flex items-center justify-between gap-2">
@@ -132,49 +168,41 @@ function PositionCard({ p, inverted, wallet }: { p: PositionDto; inverted: boole
         <RangeBadge inRange={p.range?.inRange ?? null} nearEdge={isNearEdge(p.range)} />
       </div>
       <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-faint">
-        <span>
-          {protocolLabels[p.protocol]} · {p.chain} · #{p.tokenId}
-        </span>
         {wallet && <WalletChip wallet={wallet} />}
+        <span>{protocolLabels[p.protocol]}</span>
       </div>
-      <div className="mt-3">
-        {range ? (
-          <>
-            <RangeBar range={range} showLabels entry={entry} />
-            <div className="mt-0.5 flex flex-wrap items-center justify-between gap-x-3 text-[11px] text-faint">
-              <span>
-                {quote?.symbol} per {base?.symbol}
-              </span>
-              {entry != null ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <span
-                    aria-hidden="true"
-                    className="inline-block h-2.5 w-2.5 rounded-full border-2 border-[var(--marker)] bg-accent-fill"
-                  />
-                  Entry <span className="num font-medium text-fg-2">{formatPrice(entry)}</span>
-                  {sinceEntry != null && (
-                    <span className="num">
-                      ({sinceEntry > 0 ? "+" : ""}
-                      {sinceEntry.toFixed(1)}% since)
-                    </span>
-                  )}
-                </span>
-              ) : (
-                detail.isLoading && <span>Entry…</span>
-              )}
-            </div>
-          </>
-        ) : (
-          <div className="text-xs text-faint">No range for this position</div>
-        )}
-      </div>
-      <div className="mt-2 flex items-baseline justify-between gap-2 text-xs">
-        <span className="num font-medium text-fg">{formatUsd(p.metrics.currentValueUsd)}</span>
-        {dist && <span className={dist.className}>{dist.text}</span>}
-        <span className="num text-muted">
-          {p.metrics.feeAprPercent != null ? `${formatPercent(p.metrics.feeAprPercent)} APR` : "no APR yet"}
-        </span>
-      </div>
+      {range ? (
+        <>
+          {say && (
+            <p className="mb-3 mt-2.5 font-display text-base font-semibold leading-snug text-fg">
+              <span className={say.className}>{say.lead}</span> {say.rest}
+              <span className="num">{say.pct}%</span> {say.tail}
+            </p>
+          )}
+          <div className={say ? "" : "mt-3"}>
+            <RangeBar range={range} showLabels="ends" entry={entry} />
+          </div>
+        </>
+      ) : (
+        <div className="mt-3 text-xs text-faint">No range for this position</div>
+      )}
+      <dl className="mt-3 grid grid-cols-3 gap-2 border-t border-line pt-2.5">
+        <Stat label="Value" value={formatUsd(p.metrics.currentValueUsd)} />
+        <Stat
+          label="Fee APR"
+          value={p.metrics.feeAprPercent != null ? formatPercent(p.metrics.feeAprPercent) : "—"}
+        />
+        <Stat label="Range" value={formatRangeWidth(range)} />
+      </dl>
     </button>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-[11px] uppercase tracking-wide text-faint">{label}</dt>
+      <dd className="num truncate text-sm font-medium text-fg">{value}</dd>
+    </div>
   );
 }
