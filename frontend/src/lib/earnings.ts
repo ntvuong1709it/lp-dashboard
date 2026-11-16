@@ -209,6 +209,12 @@ export interface ChartPoint {
   fees: number;
   rewards: number;
   total: number;
+  /** Loan interest that accrued in the bucket; 0 without loans. */
+  interest: number;
+  /** How far earnings fell short of the interest (0 when they covered it). Stacked on the bar to reach the interest line. */
+  shortfall: number;
+  /** Earnings minus interest. */
+  net: number;
   /** Average of the finished buckets ending here; null for the current bucket and the first few. */
   avg: number | null;
   /** The bucket that contains today, still filling up. */
@@ -216,8 +222,16 @@ export interface ChartPoint {
   low: boolean;
 }
 
-/** Oldest-first series for the chart, summed per day, week (Monday start) or month; `range` buckets, 0 means everything. */
-export function chartSeries(days: DailyEarningsDto[], grain: Grain, range: number): ChartPoint[] {
+/**
+ * Oldest-first series for the chart, summed per day, week (Monday start) or month; `range` buckets, 0 means everything.
+ * `interestByDay` maps a local date to the loan interest accrued that day.
+ */
+export function chartSeries(
+  days: DailyEarningsDto[],
+  grain: Grain,
+  range: number,
+  interestByDay?: ReadonlyMap<string, number>,
+): ChartPoint[] {
   const oldest = [...days].reverse();
   const low = grain === "day" ? lowDays(days) : new Map<string, unknown>();
   const startOf = (d: string) => (grain === "day" ? d : grain === "week" ? weekStartOf(d) : monthStartOf(d));
@@ -229,12 +243,20 @@ export function chartSeries(days: DailyEarningsDto[], grain: Grain, range: numbe
     const start = startOf(d.date);
     let b = buckets[buckets.length - 1];
     if (!b || b.date !== start) {
-      b = { date: start, end: endOf(start), fees: 0, rewards: 0, total: 0, avg: null, partial: false, low: low.has(start) };
+      b = {
+        date: start, end: endOf(start), fees: 0, rewards: 0, total: 0,
+        interest: 0, shortfall: 0, net: 0, avg: null, partial: false, low: low.has(start),
+      };
       buckets.push(b);
     }
     b.fees += d.feesUsd;
     b.rewards += d.rewardsUsd;
     b.total += d.totalUsd;
+    b.interest += interestByDay?.get(d.date) ?? 0;
+  }
+  for (const b of buckets) {
+    b.shortfall = Math.max(0, b.interest - b.total);
+    b.net = b.total - b.interest;
   }
   if (buckets.length) buckets[buckets.length - 1].partial = true; // the bucket holding today
 

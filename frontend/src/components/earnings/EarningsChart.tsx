@@ -11,7 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { DailyEarningsDto } from "../../api/types";
+import type { DailyCoverageDto, DailyEarningsDto } from "../../api/types";
 import { chart as theme } from "../../lib/chartTheme";
 import { weekdayDate } from "../../lib/dates";
 import { chartSeries, grainAverage, shortDate, type ChartPoint, type Grain } from "../../lib/earnings";
@@ -107,10 +107,13 @@ function Key({ color, children }: { color: string; children: string }) {
 
 export function EarningsChart({
   days,
+  interest,
   projection,
   monthName,
 }: {
   days: DailyEarningsDto[];
+  /** Loan interest per day; empty or all zero when there are no loans. */
+  interest: DailyCoverageDto[];
   projection: number | null;
   monthName: string;
 }) {
@@ -122,7 +125,9 @@ export function EarningsChart({
   const range = grain === "day" ? dayRange : grain === "week" ? weekRange : monthRange;
   const setRange = grain === "day" ? setDayRange : grain === "week" ? setWeekRange : setMonthRange;
 
-  const data = useMemo(() => chartSeries(days, grain, range), [days, grain, range]);
+  const interestByDay = useMemo(() => new Map(interest.map((d) => [d.date, d.interestUsd])), [interest]);
+  const data = useMemo(() => chartSeries(days, grain, range, interestByDay), [days, grain, range, interestByDay]);
+  const hasInterest = data.some((d) => d.interest > 0);
   const average = grainAverage[grain];
 
   return (
@@ -138,6 +143,11 @@ export function EarningsChart({
       <div className="h-64">
         <ResponsiveContainer>
           <ComposedChart data={data}>
+            <defs>
+              <pattern id="shortfall-hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                <rect width="2" height="5" fill="var(--down)" />
+              </pattern>
+            </defs>
             <CartesianGrid stroke={theme.grid} vertical={false} />
             <XAxis
               dataKey="date"
@@ -147,6 +157,8 @@ export function EarningsChart({
               minTickGap={24}
             />
             <YAxis stroke={theme.axis} fontSize={11} tickFormatter={(v) => formatUsd(v)} width={64} />
+            {/* Own axis for the hidden "net" series: it can go negative and must not stretch the main one. */}
+            <YAxis yAxisId="net" hide />
             <Tooltip
               cursor={{ fill: theme.cursor }}
               contentStyle={{ background: theme.tooltip.background, border: theme.tooltip.border }}
@@ -154,7 +166,7 @@ export function EarningsChart({
                 const p = items?.[0]?.payload as ChartPoint | undefined;
                 return p ? tipLabel(grain, p) : "";
               }}
-              formatter={(v, name) => [formatUsd(v as number), name]}
+              formatter={(v, name) => [formatUsd(v as number, name === "Left after interest"), name]}
             />
             <Bar dataKey="fees" name="Swap fees" stackId="a" fill={theme.a}>
               {data.map((d) => (
@@ -166,6 +178,36 @@ export function EarningsChart({
                 <Cell key={d.date} fillOpacity={d.partial ? 0.45 : 1} />
               ))}
             </Bar>
+            {hasInterest && (
+              <Bar
+                dataKey="shortfall"
+                stackId="a"
+                fill="url(#shortfall-hatch)"
+                stroke="var(--down)"
+                strokeWidth={1}
+                legendType="none"
+                tooltipType="none"
+              >
+                {data.map((d) => (
+                  <Cell key={d.date} fillOpacity={d.partial ? 0.45 : 1} strokeOpacity={d.partial ? 0.45 : 1} />
+                ))}
+              </Bar>
+            )}
+            {hasInterest && (
+              <Line
+                dataKey="interest"
+                name="Interest owed"
+                stroke="var(--down)"
+                strokeWidth={2}
+                dot={false}
+                activeDot={false}
+                isAnimationActive={false}
+              />
+            )}
+            {hasInterest && (
+              // Carries "Left after interest" into the tooltip; draws nothing.
+              <Line dataKey="net" yAxisId="net" name="Left after interest" stroke="none" dot={false} activeDot={false} legendType="none" isAnimationActive={false} />
+            )}
             <Line
               dataKey="avg"
               name={average.label}
@@ -189,6 +231,21 @@ export function EarningsChart({
         <div className="flex flex-wrap gap-x-4 gap-y-1">
           <Key color="var(--chart-a)">Swap fees</Key>
           <Key color="var(--chart-d)">Rewards</Key>
+          {hasInterest && (
+            <span>
+              <span className="mr-1.5 inline-block h-0.5 w-3.5 align-middle" style={{ background: "var(--down)" }} />
+              Interest owed
+            </span>
+          )}
+          {hasInterest && (
+            <span>
+              <span
+                className="mr-1.5 inline-block h-2 w-2 rounded-sm border border-[var(--down)]"
+                style={{ backgroundImage: "repeating-linear-gradient(45deg, var(--down) 0 1px, transparent 1px 3px)" }}
+              />
+              Short of interest
+            </span>
+          )}
           <span>- - {average.label}</span>
           {grain === "day" && <Key color="var(--down)">Unusually low day</Key>}
           {grain === "day" && <span>Faded bar: today ({soFarText()})</span>}

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import {
+  useBorrowDaily,
   useDailyEarnings,
   useEarningsByPosition,
   usePositions,
@@ -54,6 +55,8 @@ function EarningsOverview() {
   const byPosition = useEarningsByPosition(owner);
   const open = usePositions(owner, "Open");
   const claims = useWeeklyClaims(owner);
+  // The chart's "All" range can reach back a year; the endpoint caps at 365 days.
+  const interest = useBorrowDaily(owner, 365);
 
   const days = daily.data;
   const txs = useMemo(() => claimTxs(claims.data ?? []), [claims.data, hidden]);
@@ -93,6 +96,7 @@ function EarningsOverview() {
       <HeadlineCards cards={view.head.cards} />
       <EarningsChart
         days={days}
+        interest={interest.data ?? []}
         projection={view.head.projection}
         monthName={view.head.monthName}
       />
