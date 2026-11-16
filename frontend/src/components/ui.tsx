@@ -329,15 +329,19 @@ export function MiniStat({
   label,
   value,
   valueClass = "",
+  sub,
 }: {
   label: string;
   value: ReactNode;
   valueClass?: string;
+  /** Small muted line under the value. */
+  sub?: ReactNode;
 }) {
   return (
     <div className="rounded-lg border border-line bg-panel px-3 py-2.5">
       <span className="block text-xs text-muted">{label}</span>
       <b className={`text-base font-medium num ${valueClass}`}>{value}</b>
+      {sub && <div className="mt-0.5 text-xs text-muted">{sub}</div>}
     </div>
   );
 }

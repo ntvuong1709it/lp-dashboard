@@ -217,6 +217,35 @@ export function invertRange(range: RangeDto): RangeDto {
   };
 }
 
+/**
+ * Half-width of a range as a percent, (upper - lower) / (upper + lower): the ± of the symmetric range with the same
+ * upper/lower ratio. Flipping the price direction does not change it, so it compares positions whichever way they are shown.
+ */
+export function rangeHalfWidthPercent(range: Pick<RangeDto, "priceLower" | "priceUpper">): number | null {
+  const { priceLower: l, priceUpper: u } = range;
+  if (!(l > 0) || !(u > l) || !Number.isFinite(u)) return null;
+  return ((u - l) / (u + l)) * 100;
+}
+
+/** "±28.0%", or "—" when the range has no usable bounds. */
+export function formatRangeWidth(range: Pick<RangeDto, "priceLower" | "priceUpper"> | null | undefined): string {
+  const half = range ? rangeHalfWidthPercent(range) : null;
+  return half == null ? "—" : `±${half.toFixed(half < 10 ? 2 : 1)}%`;
+}
+
+/** Tooltip for the ± figure: the exact prices, the full width and, when known, how far the current price is from each edge. */
+export function rangeWidthTitle(range: RangeDto, unit?: string): string {
+  const lines = [`${formatPrice(range.priceLower)} – ${formatPrice(range.priceUpper)}${unit ? ` ${unit}` : ""}`];
+  if (range.priceLower > 0) lines.push(`${((range.priceUpper / range.priceLower - 1) * 100).toFixed(1)}% wide`);
+  const { distanceToLowerPercent: lo, distanceToUpperPercent: hi } = range;
+  if (lo != null && hi != null) {
+    lines.push(
+      `Current price is ${Math.abs(lo).toFixed(1)}% ${lo >= 0 ? "above" : "below"} the lower edge and ${Math.abs(hi).toFixed(1)}% ${hi >= 0 ? "below" : "above"} the upper`,
+    );
+  }
+  return lines.join("\n");
+}
+
 export const pnlClass = (value: number | null | undefined) =>
   value == null || value === 0
     ? "text-fg-2"

@@ -49,12 +49,15 @@ import {
   formatFee,
   formatPercent,
   formatPrice,
+  formatRangeWidth,
   formatShare,
   formatUsd,
   invertRange,
   pnlClass,
   poolLinks,
   protocolLabels,
+  rangeHalfWidthPercent,
+  rangeWidthTitle,
   shortAddress,
   timeInRangeSource,
   txUrl,
@@ -176,7 +179,23 @@ export function PositionDetailPage({
               label="Unclaimed (fees + rewards)"
               value={formatUsd(m.uncollectedFeesUsd + m.pendingRewardsUsd)}
             />
-            <MiniStat label="Fee APR" value={formatPercent(m.feeAprPercent)} />
+            <MiniStat
+              label="Fee APR"
+              value={formatPercent(m.feeAprPercent)}
+              sub={
+                p.range && rangeHalfWidthPercent(p.range) != null ? (
+                  <span
+                    className="cursor-help"
+                    title={rangeWidthTitle(p.range, `${p.token1?.symbol ?? "?"} per ${p.token0?.symbol ?? "?"}`)}
+                  >
+                    <span className="font-medium text-fg-2">{formatRangeWidth(p.range)}</span> range
+                    <span className="block whitespace-nowrap text-[11px] text-faint">
+                      {formatPrice(p.range.priceLower)} – {formatPrice(p.range.priceUpper)}
+                    </span>
+                  </span>
+                ) : undefined
+              }
+            />
             <MiniStat label="Deposited" value={formatUsd(m.depositedUsd)} />
             <MiniStat label="If held instead" value={formatUsd(m.hodlValueUsd)} />
           </div>

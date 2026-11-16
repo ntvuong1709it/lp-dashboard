@@ -28,12 +28,15 @@ import {
   formatFee,
   formatHours,
   formatPercent,
+  formatRangeWidth,
   formatShare,
   formatUsd,
   invertRange,
   pnlClass,
   poolLinks,
   protocolLabels,
+  rangeHalfWidthPercent,
+  rangeWidthTitle,
   timeInRangeBand,
   timeInRangeSource,
 } from "../lib/format";
@@ -501,6 +504,14 @@ function PositionsTable({
                 })()}
                 <td className="px-3 py-2 text-right num">
                   {formatPercent(m.feeAprPercent)}
+                  {range && rangeHalfWidthPercent(range) != null && (
+                    <div
+                      className="cursor-help text-[11px] text-muted"
+                      title={rangeWidthTitle(range, `${quote?.symbol} per ${base?.symbol}`)}
+                    >
+                      <span className="font-medium text-fg-2">{formatRangeWidth(range)}</span> range
+                    </div>
+                  )}
                   {m.hasMissingPrices && (
                     <div
                       className="text-[11px] text-warn"
