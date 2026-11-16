@@ -7,8 +7,11 @@ import { usePersistentState } from "../../lib/usePersistentState";
 import { Skeleton, Segmented } from "../ui";
 import { Delta, LevelChip, StatusChip } from "./bits";
 
-/** The Earnings page's answer to "do my LP earnings pay the interest?". Hidden while there is nothing to show. */
-export function CoverageCard() {
+/**
+ * The answer to "do my LP earnings pay the interest?", on the Earnings and Overview pages. Hidden while there is nothing
+ * to show. `compact` stacks the three parts so the card fits a narrow column.
+ */
+export function CoverageCard({ compact = false }: { compact?: boolean }) {
   const { owner } = useOwner();
   const [days, setDays] = usePersistentState<number>("lpdash.borrow.days", 30);
   const summary = useBorrowSummary(owner, days);
@@ -50,7 +53,7 @@ export function CoverageCard() {
         <h2 className="text-sm font-medium text-fg-2">Interest coverage</h2>
         <Segmented label="Window" options={DAY_OPTIONS} value={days} onChange={setDays} />
       </div>
-      <div className="grid gap-5 md:grid-cols-[1.1fr_1.4fr_1fr] md:items-center">
+      <div className={`grid gap-5 ${compact ? "" : "md:grid-cols-[1.1fr_1.4fr_1fr] md:items-center"}`}>
         <div>
           <div className="text-xs uppercase tracking-[.05em] text-muted">Last {days} days</div>
           <div className="mt-1 flex flex-wrap items-center gap-3">

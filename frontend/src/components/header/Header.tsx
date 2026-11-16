@@ -77,7 +77,7 @@ export function Header({ width }: { width: string }) {
       </div>
       <div className="border-t border-line bg-surface">
         <div className={`mx-auto flex ${width} items-center gap-2 px-4`}>
-          <div className="min-w-0 flex-1 overflow-x-auto py-1.5 [scrollbar-width:none]">
+          <div className="min-w-0 flex-1 overflow-x-auto py-2 [scrollbar-width:none]">
             <PriceTicker />
           </div>
           <div className="flex shrink-0 items-center gap-1 py-1">

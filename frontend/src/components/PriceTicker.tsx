@@ -38,27 +38,30 @@ export function PriceTicker() {
   return (
     <ul
       aria-label="Market prices"
-      className="flex w-max items-center gap-x-5 sm:gap-x-6"
+      className="flex w-max items-stretch gap-2 sm:gap-3"
     >
       {data.prices.map((p) => (
-        <li key={p.symbol} className="flex items-center gap-2.5 whitespace-nowrap">
+        <li
+          key={p.symbol}
+          className="flex items-center gap-3 whitespace-nowrap rounded-lg border border-line-strong bg-panel py-1.5 pl-2 pr-3"
+        >
           <span
             aria-hidden="true"
-            className={`grid h-[26px] w-[26px] shrink-0 place-items-center rounded-full text-[9px] font-bold tracking-tighter text-white ${badgeColor[p.symbol] ?? "bg-muted"}`}
+            className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-[11px] font-bold tracking-tight text-white ${badgeColor[p.symbol] ?? "bg-muted"}`}
           >
-            {p.symbol}
+            {p.symbol.slice(0, 4)}
           </span>
           <span className="flex flex-col leading-tight">
-            <span className="text-[11px] font-semibold tracking-wider text-muted">
+            <span className="text-xs font-semibold tracking-wider text-fg-2">
               {p.symbol}
             </span>
-            <span className="num text-base font-semibold text-fg">
+            <span className="num text-xl font-semibold tracking-tight text-fg">
               {formatTickerPrice(p.priceUsd)}
             </span>
           </span>
           {p.change24hPercent != null && (
             <span
-              className={`num rounded-full px-2 py-0.5 text-xs font-semibold ${changeClasses(p.change24hPercent)}`}
+              className={`num rounded-md px-2 py-1 text-sm font-semibold ${changeClasses(p.change24hPercent)}`}
               title="Change over the last 24 hours"
             >
               {p.change24hPercent > 0 ? "▲" : p.change24hPercent < 0 ? "▼" : ""}{" "}

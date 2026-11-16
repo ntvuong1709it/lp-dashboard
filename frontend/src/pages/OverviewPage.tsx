@@ -5,7 +5,10 @@ import { usePositions, useSummary } from "../api/client";
 import { PortfolioBreakEvenCard } from "../components/BreakEvenCallout";
 import { PortfolioValueChart } from "../components/PortfolioValueChart";
 import { ExposurePanel, RewardTokensPanel } from "../components/PortfolioInsights";
-import { NeedsYouCard } from "../components/overview/NeedsYouCard";
+import { CoverageCard } from "../components/borrow/CoverageCard";
+import { EarningsChartPanel } from "../components/earnings/EarningsChartPanel";
+import { AttentionStrip } from "../components/overview/AttentionStrip";
+import { PositionRangeCards } from "../components/overview/PositionRangeCards";
 import { UpdatedAgo } from "../components/UpdatedAgo";
 import { READY_TO_CLAIM_ID, ReadyToClaimPanel } from "../components/Unclaimed";
 import { BarRow, Empty, Panel, Skeleton, StatCard } from "../components/ui";
@@ -73,64 +76,72 @@ export function OverviewPage() {
         <UpdatedAgo />
       </div>
 
-      {/* What needs you comes first: on a phone it sits above the numbers, from lg up it sits beside them. */}
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
-        <div className="lg:order-2">
-          <NeedsYouCard
-            alerts={alerts}
-            open={open.data ?? []}
+      {/* What needs you comes first, then the numbers, then the two charts, then every position with its range. */}
+      <AttentionStrip
+        alerts={alerts}
+        open={open.data ?? []}
+        loading={open.isLoading}
+        error={open.error}
+      />
+
+      <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
+        <StatCard
+          label="Portfolio value"
+          loading={summary.isLoading}
+          value={formatUsd(s?.currentValueUsd)}
+          hint={s && `${s.openCount} open · ${s.closedCount} closed`}
+        />
+        <StatCard
+          label="Total P/L (all time)"
+          loading={summary.isLoading}
+          value={formatUsd(s?.pnlUsd, true)}
+          valueClass={pnlClass(s?.pnlUsd)}
+          hint={
+            s &&
+            `${formatPercent(
+              s.depositedUsd > 0 ? (s.pnlUsd / s.depositedUsd) * 100 : null,
+              true,
+            )} on ${formatUsd(s.depositedUsd)} deposited`
+          }
+        />
+        <StatCard
+          label="Fees earned"
+          loading={summary.isLoading}
+          value={formatUsd(s?.feesEarnedUsd)}
+          hint={s && "claimed + unclaimed"}
+        />
+        <StatCard
+          label="Impermanent loss"
+          loading={summary.isLoading}
+          value={formatUsd(s?.impermanentLossUsd, true)}
+          valueClass={pnlClass(s?.impermanentLossUsd)}
+          hint={s?.hasMissingPrices ? "some prices missing" : "excluding fees"}
+        />
+        <StatCard
+          accent
+          label="Unclaimed"
+          loading={summary.isLoading || open.isLoading}
+          value={formatUsd(s ? s.uncollectedFeesUsd + s.pendingRewardsUsd : 0)}
+          hint={s && unclaimedNote(s, open.data ?? [])}
+        />
+        <PortfolioBreakEvenCard owner={owner} />
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <EarningsChartPanel />
+        <PortfolioValueChart owner={owner} />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start">
+        <PositionRangeCards open={open.data ?? []} loading={open.isLoading} error={open.error} />
+        <div className="min-w-0 space-y-4">
+          <CoverageCard compact />
+          <AllocationPanel
+            title="Allocation by position"
             loading={open.isLoading}
-            error={open.error}
+            rows={byPosition}
+            onSelect={(id) => drawer.open(Number(id))}
           />
-        </div>
-
-        <div className="min-w-0 space-y-4 lg:order-1">
-          <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 md:grid-cols-3">
-            <StatCard
-              label="Portfolio value"
-              loading={summary.isLoading}
-              value={formatUsd(s?.currentValueUsd)}
-              hint={s && `${s.openCount} open · ${s.closedCount} closed`}
-            />
-            <StatCard
-              label="Total P/L (all time)"
-              loading={summary.isLoading}
-              value={formatUsd(s?.pnlUsd, true)}
-              valueClass={pnlClass(s?.pnlUsd)}
-              hint={
-                s &&
-                `${formatPercent(
-                  s.depositedUsd > 0 ? (s.pnlUsd / s.depositedUsd) * 100 : null,
-                  true,
-                )} on ${formatUsd(s.depositedUsd)} deposited`
-              }
-            />
-            <StatCard
-              label="Fees earned"
-              loading={summary.isLoading}
-              value={formatUsd(s?.feesEarnedUsd)}
-              hint={s && "claimed + unclaimed"}
-            />
-            <StatCard
-              label="Impermanent loss"
-              loading={summary.isLoading}
-              value={formatUsd(s?.impermanentLossUsd, true)}
-              valueClass={pnlClass(s?.impermanentLossUsd)}
-              hint={
-                s?.hasMissingPrices ? "some prices missing" : "excluding fees"
-              }
-            />
-            <StatCard
-              accent
-              label="Unclaimed"
-              loading={summary.isLoading || open.isLoading}
-              value={formatUsd(s ? s.uncollectedFeesUsd + s.pendingRewardsUsd : 0)}
-              hint={s && unclaimedNote(s, open.data ?? [])}
-            />
-            <PortfolioBreakEvenCard owner={owner} />
-          </div>
-
-          <PortfolioValueChart owner={owner} />
         </div>
       </div>
 
@@ -138,13 +149,7 @@ export function OverviewPage() {
         <ReadyToClaimPanel open={open.data ?? []} loading={open.isLoading} />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <AllocationPanel
-          title="Allocation by position"
-          loading={open.isLoading}
-          rows={byPosition}
-          onSelect={(id) => drawer.open(Number(id))}
-        />
+      <div className="grid gap-4 md:grid-cols-2">
         <AllocationPanel
           title="Allocation by protocol"
           loading={open.isLoading}

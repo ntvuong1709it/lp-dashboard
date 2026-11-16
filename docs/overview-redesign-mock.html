@@ -1,0 +1,555 @@
+<title>Overview Redesign Options</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout concept: three full Overview mockups stacked, each a replica of the real app frame (header + page), so they can be judged in the app's own look. */
+/* Tokens copied from frontend/src/tokens.css. The app is dark-first. */
+:root {
+  color-scheme: dark;
+  --surface: #020618; --panel: #0f172b; --raised: #1d293d;
+  --line: #1d293d; --line-strong: #314158; --control: #62748e;
+  --fg: #f1f5f9; --fg-2: #cad5e2; --muted: #90a1b9; --faint: #728299;
+  --accent: #00bcff; --accent-fill: #00a6f4; --accent-solid: #007bc2;
+  --up: #00d492; --up-fill: #00bc7d; --down: #ff637e; --down-fill: #ff2056; --warn: #ffb900; --warn-fill: #fe9a00;
+  --chart-a: #38bdf8; --chart-b: #34d399; --chart-c: #f59e0b; --chart-d: #a78bfa;
+  --marker: #fff;
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --font-display: "Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --surface: #f4f6f8; --panel: #ffffff; --raised: #e2e7ec;
+    --line: #e2e7ec; --line-strong: #cfd6de; --control: #848e9c;
+    --fg: #0f1720; --fg-2: #465363; --muted: #5b6675; --faint: #657080;
+    --accent: #2260ab; --accent-fill: #2a78d6; --accent-solid: #1d5fb0;
+    --up: #0d704e; --up-fill: #1aa675; --down: #a8332f; --down-fill: #c23b36; --warn: #8f5500; --warn-fill: #cf8300;
+    --chart-a: #2a78d6; --chart-b: #1baf7a; --chart-c: #d98a00; --chart-d: #7c4fd6;
+    --marker: #0f1720;
+  }
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --surface: #f4f6f8; --panel: #ffffff; --raised: #e2e7ec;
+  --line: #e2e7ec; --line-strong: #cfd6de; --control: #848e9c;
+  --fg: #0f1720; --fg-2: #465363; --muted: #5b6675; --faint: #657080;
+  --accent: #2260ab; --accent-fill: #2a78d6; --accent-solid: #1d5fb0;
+  --up: #0d704e; --up-fill: #1aa675; --down: #a8332f; --down-fill: #c23b36; --warn: #8f5500; --warn-fill: #cf8300;
+  --chart-a: #2a78d6; --chart-b: #1baf7a; --chart-c: #d98a00; --chart-d: #7c4fd6;
+  --marker: #0f1720;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--surface); color: var(--fg); font-family: var(--font-sans); font-size: 14px; line-height: 1.45;
+  padding-block: 0 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  -webkit-font-smoothing: antialiased;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--panel); }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.up { color: var(--up); } .down { color: var(--down); } .warn { color: var(--warn); } .muted { color: var(--muted); } .faint { color: var(--faint); }
+
+/* Page chrome (not part of the mockups) */
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 11; margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px))); padding: 10px max(16px, env(safe-area-inset-left, 0px)); background: var(--panel); border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.bar b { font-family: var(--font-display); font-size: 15px; }
+.bar nav { display: flex; gap: 4px; flex-wrap: wrap; }
+.bar nav a { color: var(--muted); text-decoration: none; padding: 4px 10px; border-radius: 6px; font-size: 13px; }
+.bar nav a:hover { background: var(--raised); color: var(--fg); }
+.bar .seg { margin-left: auto; }
+.intro { max-width: 78ch; margin: 22px 0 6px; color: var(--fg-2); }
+.intro small { display: block; margin-top: 6px; color: var(--faint); font-size: 12px; }
+.opt { margin-top: 34px; scroll-margin-top: 70px; }
+.optHead { max-width: 90ch; margin-bottom: 12px; }
+.optHead h2 { font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
+.optHead p { margin: 4px 0 0; color: var(--fg-2); }
+.optHead .trd { color: var(--muted); font-size: 13px; }
+
+/* The mock app frame */
+.app { background: var(--surface); border: 1px solid var(--line-strong); border-radius: 10px; overflow: hidden; }
+.main { max-width: 1240px; margin: 0 auto; padding: 20px 16px 24px; display: grid; gap: 16px; }
+.apphead { background: var(--panel); border-bottom: 1px solid var(--line); }
+.hrow { display: flex; align-items: center; gap: 6px 16px; padding: 10px 16px; flex-wrap: wrap; }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 17px; letter-spacing: -.01em; }
+.logo i { width: 18px; height: 18px; border-radius: 50% 50% 50% 4px; background: var(--accent-fill); display: inline-block; }
+.hnav { display: flex; gap: 2px; overflow-x: auto; }
+.hnav span { padding: 5px 11px; border-radius: 6px; font-size: 13.5px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+.hnav span.on { background: var(--raised); color: var(--fg); box-shadow: inset 0 -2px 0 var(--accent); }
+.hright { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.sel { height: 32px; border: 1px solid var(--control); border-radius: 6px; padding: 0 10px; display: inline-flex; align-items: center; font-size: 13px; min-width: 150px; }
+.hstat { background: var(--surface); border-top: 1px solid var(--line); display: flex; align-items: center; gap: 12px; padding: 6px 16px; overflow: hidden; }
+.tick { display: flex; gap: 18px; font-size: 12px; white-space: nowrap; overflow: hidden; }
+.tick b { font-weight: 500; color: var(--fg-2); margin-right: 5px; }
+.hstat .r { margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--up-fill); display: inline-block; }
+.ico { width: 16px; height: 16px; stroke: var(--fg-2); fill: none; stroke-width: 1.6; }
+
+.pagehead { display: flex; align-items: end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.pagehead h1 { font-size: 24px; font-weight: 600; letter-spacing: -.01em; }
+.pagehead p { margin: 0; color: var(--muted); font-size: 13.5px; }
+.upd { color: var(--faint); font-size: 12px; }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
+.ph { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; padding: 9px 14px; border-bottom: 1px solid var(--line); }
+.ph h3 { font-size: 14px; font-weight: 600; color: var(--fg-2); display: flex; align-items: center; gap: 8px; }
+.pb { padding: 12px 14px; }
+.ctl { display: flex; gap: 8px; flex-wrap: wrap; }
+.seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 6px; overflow: hidden; font-size: 12px; }
+.seg button { background: none; border: 0; border-right: 1px solid var(--line-strong); padding: 3px 10px; color: var(--muted); }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--raised); color: var(--fg); font-weight: 600; }
+.seg button:hover { color: var(--fg); }
+
+.strip { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.stat { background: var(--panel); padding: 11px 14px; min-width: 0; }
+.stat .l { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.stat .v { font-size: 22px; font-weight: 500; letter-spacing: -.01em; margin-top: 2px; }
+.stat .h { font-size: 11.5px; color: var(--faint); }
+.inline { display: flex; flex-wrap: wrap; gap: 6px 28px; padding: 2px 2px; }
+.inline div { display: flex; align-items: baseline; gap: 8px; }
+.inline .l { font-size: 12px; color: var(--muted); }
+.inline .v { font-size: 19px; font-weight: 500; }
+
+.g { display: grid; gap: 16px; }
+.g.a { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); align-items: start; }
+.g.b { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.g.c { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); }
+.g.d { grid-template-columns: minmax(0, 7fr) minmax(0, 4fr); }
+.g.e { grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr); align-items: start; }
+.stack { display: grid; gap: 16px; align-content: start; min-width: 0; }
+
+.pill { display: inline-block; border-radius: 999px; padding: 1px 9px; font-size: 11px; font-weight: 600; border: 1px solid; white-space: nowrap; text-align: center; }
+.pill.in { color: var(--up); border-color: color-mix(in srgb, var(--up-fill) 45%, transparent); background: color-mix(in srgb, var(--up-fill) 12%, transparent); }
+.pill.edge { color: var(--warn); border-color: color-mix(in srgb, var(--warn-fill) 50%, transparent); background: color-mix(in srgb, var(--warn-fill) 12%, transparent); }
+.pill.out { color: var(--down); border-color: color-mix(in srgb, var(--down-fill) 50%, transparent); background: color-mix(in srgb, var(--down-fill) 12%, transparent); }
+.pill.acc { color: var(--accent); border-color: color-mix(in srgb, var(--accent-fill) 50%, transparent); background: color-mix(in srgb, var(--accent-fill) 12%, transparent); }
+.count { border-radius: 999px; padding: 0 8px; font-size: 11px; font-weight: 700; font-family: var(--font-sans); background: color-mix(in srgb, var(--warn-fill) 15%, transparent); color: var(--warn); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warn-fill) 40%, transparent); }
+
+/* Range bar: the coloured segment is the position's range, the marker is the price now. */
+.rb { position: relative; height: 22px; }
+.rb .t { position: absolute; left: 0; right: 0; top: 9px; height: 4px; border-radius: 2px; background: var(--raised); }
+.rb .s { position: absolute; top: 7px; height: 8px; border-radius: 2px; }
+.rb .s.in { background: var(--up-fill); } .rb .s.edge { background: var(--warn-fill); } .rb .s.out { background: var(--down-fill); opacity: .75; }
+.rb .m { position: absolute; top: 2px; width: 3px; height: 18px; margin-left: -1.5px; border-radius: 1px; background: var(--marker); box-shadow: 0 0 0 2px var(--panel); }
+.rl { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--faint); margin-top: 1px; }
+.rl b { font-weight: 400; color: var(--fg-2); }
+
+.pcs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.pcs.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.pc { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 10px 12px; display: grid; gap: 6px; }
+.pc.out { border-color: color-mix(in srgb, var(--down-fill) 55%, var(--line)); }
+.pc.edge { border-color: color-mix(in srgb, var(--warn-fill) 50%, var(--line)); }
+.pc .t1 { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.pc b { font-weight: 600; }
+.pc .sub { font-size: 11.5px; color: var(--faint); margin-top: -4px; }
+.pc .ft { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+.pc .ft b { color: var(--fg); font-weight: 500; }
+
+.tbl { overflow-x: auto; }
+.tr { display: grid; grid-template-columns: 1.5fr .9fr 2.4fr .8fr .6fr .7fr; gap: 14px; align-items: center; padding: 9px 14px; min-width: 760px; border-top: 1px solid var(--line); }
+.tr.h { border-top: 0; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding-block: 7px; }
+.tr .r { text-align: right; }
+.tr small { display: block; font-size: 11.5px; color: var(--faint); }
+
+.lst { display: grid; }
+.li { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 4px 10px; padding: 9px 14px; border-top: 1px solid var(--line); align-items: center; }
+.li:first-child { border-top: 0; }
+.li .d { width: 9px; height: 9px; border-radius: 50%; }
+.li .d.in { background: var(--up-fill); } .li .d.edge { background: var(--warn-fill); } .li .d.out { background: var(--down-fill); }
+.li .n { display: flex; align-items: baseline; gap: 8px; }
+.li .n b { font-weight: 600; }
+.li .n span { font-size: 11.5px; color: var(--faint); }
+.li .rbw { grid-column: 2 / 4; }
+.li .st { font-size: 11.5px; }
+
+.need { padding: 4px 14px; }
+.nrow { display: flex; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); align-items: flex-start; }
+.nrow:first-child { border-top: 0; }
+.nrow .pill { width: 92px; flex: none; }
+.nrow div { font-size: 13px; }
+.nrow small { display: block; color: var(--muted); font-size: 12px; }
+.lnk { color: var(--accent); background: none; border: 0; padding: 0; font-weight: 500; font-size: 12px; }
+.banner { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; padding: 9px 14px; border-radius: 8px; border: 1px solid color-mix(in srgb, var(--warn-fill) 40%, var(--line)); background: color-mix(in srgb, var(--warn-fill) 8%, var(--panel)); font-size: 13px; }
+.banner .it { display: flex; gap: 6px; align-items: center; }
+
+.bar2 { display: grid; grid-template-columns: 74px minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 12px; margin-top: 7px; }
+.bar2 .tk { height: 8px; border-radius: 4px; background: var(--raised); overflow: hidden; }
+.bar2 .tk i { display: block; height: 100%; border-radius: 4px; }
+.big { font-size: 30px; font-weight: 500; letter-spacing: -.02em; }
+.alloc { display: grid; gap: 8px; }
+.al { display: grid; grid-template-columns: 112px minmax(0, 1fr) 82px; gap: 10px; align-items: center; font-size: 12.5px; }
+.al .tk { height: 8px; border-radius: 4px; background: var(--raised); overflow: hidden; }
+.al .tk i { display: block; height: 100%; background: var(--accent-fill); opacity: .85; }
+.al .p { text-align: right; }
+
+.chart { min-height: 40px; position: relative; }
+.chart svg { display: block; }
+.leg { display: flex; flex-wrap: wrap; gap: 4px 16px; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--muted); }
+.leg .k { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
+
+.foot { color: var(--faint); font-size: 12px; margin-top: 30px; max-width: 78ch; }
+
+@media (max-width: 960px) {
+  .strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .g.a, .g.b, .g.c, .g.d, .g.e { grid-template-columns: minmax(0, 1fr); }
+  .pcs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .pcs, .pcs.two { grid-template-columns: minmax(0, 1fr); }
+  .al { grid-template-columns: 90px minmax(0, 1fr) 70px; }
+  .tick span:nth-child(n+3) { display: none; }
+}
+@media (prefers-reduced-motion: no-preference) { .rb .m { transition: left .2s; } }
+</style>
+
+<div class="bar">
+  <b>Overview redesign</b>
+  <nav aria-label="Options"><a href="#d">D · B with A's positions</a><a href="#a">A · Earnings first</a><a href="#b">B · Two charts</a><a href="#c">C · One chart, positions beside it</a></nav>
+  <div class="seg" role="group" aria-label="Theme"><button type="button" data-theme-btn="dark" aria-pressed="true">Dark</button><button type="button" data-theme-btn="light" aria-pressed="false">Light</button></div>
+</div>
+
+<p class="intro">Four ways to rebuild the Overview page around charts. D combines your picks from B and A. Each uses the app's real colours, fonts and header, and the earnings chart works (Day, Week, Month, and the chart tabs). The numbers are example data, not yours.
+<small>Needs you, Ready to claim, Allocation and Borrow coverage appear in each option. Pools, Earnings, Positions and Borrow pages are unchanged here.</small></p>
+
+<section class="opt" id="d">
+  <div class="optHead"><h2>D · B with A's positions</h2>
+    <p>Option B's top half (warning line, number strip, earnings and portfolio value charts side by side), then A's position cards in two columns, with a column beside them holding Borrow and Allocation by position. Ready to claim lives in the warning line.</p>
+    <div class="trd">Trade-off: the cards are narrower (two per row, three rows), so a position's range bar is shorter than in A.</div></div>
+  <div class="app" id="mock-d"></div>
+</section>
+
+<section class="opt" id="a">
+  <div class="optHead"><h2>A · Earnings first</h2>
+    <p>The earnings chart is the page's hero, with Needs you and Borrow in a column beside it. Every position gets a range card underneath, so in range, near edge and out of range are visible at a glance.</p>
+    <div class="trd">Trade-off: the portfolio value chart drops to the bottom, and range cards take the most vertical space of the three options.</div></div>
+  <div class="app" id="mock-a"></div>
+</section>
+
+<section class="opt" id="b">
+  <div class="optHead"><h2>B · Two charts</h2>
+    <p>Earnings and portfolio value sit side by side at equal weight, with a single warning line above them instead of a Needs you card. Positions become a dense range table, one row each.</p>
+    <div class="trd">Trade-off: both charts are half-width, so each shows fewer days. The table is the most compact way to scan many positions.</div></div>
+  <div class="app" id="mock-b"></div>
+</section>
+
+<section class="opt" id="c">
+  <div class="optHead"><h2>C · One chart, positions beside it</h2>
+    <p>One large chart you switch between Earned, Value and P/L. The positions list sits beside it, sorted worst first, so anything out of range is at the top and Needs you merges into that list. The number cards shrink to one line.</p>
+    <div class="trd">Trade-off: you see one chart at a time. This is the calmest page and the least like today's Overview.</div></div>
+  <div class="app" id="mock-c"></div>
+</section>
+
+<p class="foot">Example data: 6 open positions worth $48,320, one loan. Chart tooltips on bars show the day and amounts. Real values come from the same sources as today's pages.</p>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- data (example) ---------- */
+  var DAYS = 190;
+  function rnd(i) { var x = Math.sin(i * 12.9898 + 4.1414) * 43758.5453; return x - Math.floor(x); }
+  var INTEREST = 12.4;
+  var today = new Date(2026, 10, 16);
+  var daily = [];
+  for (var i = 0; i < DAYS; i++) {
+    var d = new Date(today); d.setDate(today.getDate() - (DAYS - 1 - i));
+    var fees = 27 + 9 * Math.sin(i / 6) + rnd(i) * 11 + i * 0.07;
+    var rewards = 13 + 4 * Math.sin(i / 9 + 1) + rnd(i + 500) * 6 + i * 0.03;
+    if (i % 41 === 17) { fees *= 0.38; rewards *= 0.5; }
+    daily.push({ date: d, fees: fees, rewards: rewards, partial: false });
+  }
+  var last = daily[DAYS - 1]; last.fees *= 0.62; last.rewards *= 0.62; last.partial = true;
+
+  var valueSeries = [], pnlSeries = [];
+  for (var j = 0; j < DAYS; j++) {
+    var v = 36200 + j * 62 + 1100 * Math.sin(j / 11) + rnd(j + 9) * 500 + (j > 60 ? 1800 : 0) + (j > 120 ? 1500 : 0);
+    valueSeries.push(v);
+  }
+  var kv = 48320 / valueSeries[DAYS - 1];
+  valueSeries = valueSeries.map(function (v) { return v * kv; });
+  var cum = 0;
+  for (var q = 0; q < DAYS; q++) { cum += (q < 20 ? -5 : 22) + rnd(q + 77) * 30 - 14; pnlSeries.push(cum); }
+  var kp = 3874 / pnlSeries[DAYS - 1];
+  pnlSeries = pnlSeries.map(function (v) { return v * kp; });
+
+  var positions = [
+    { pair: "WETH / USDC", fee: "0.05%", proto: "Uniswap v3 · Base", lo: 2780, hi: 3420, cur: 3105, val: 14820, apr: 38, unc: 96, f: function (n) { return n.toLocaleString("en-US"); } },
+    { pair: "cbBTC / USDC", fee: "0.05%", proto: "Aerodrome · Base", lo: 88000, hi: 104000, cur: 102900, val: 11240, apr: 29, unc: 131, f: function (n) { return n.toLocaleString("en-US"); } },
+    { pair: "AERO / USDC", fee: "0.3%", proto: "Aerodrome · Base", lo: 0.62, hi: 0.94, cur: 0.57, val: 4180, apr: 0, unc: 38, f: function (n) { return n.toFixed(2); } },
+    { pair: "BNB / USDT", fee: "0.01%", proto: "PancakeSwap v3 · BSC", lo: 842, hi: 936, cur: 889, val: 9730, apr: 24, unc: 74, f: function (n) { return n.toLocaleString("en-US"); } },
+    { pair: "WETH / cbBTC", fee: "0.05%", proto: "Uniswap v3 · Base", lo: 0.0295, hi: 0.036, cur: 0.0318, val: 5060, apr: 21, unc: 49, f: function (n) { return n.toFixed(4); } },
+    { pair: "ETH / USDT", fee: "0.05%", proto: "Uniswap v3 · Arbitrum", lo: 2900, hi: 3300, cur: 3105, val: 3290, apr: 33, unc: 24, f: function (n) { return n.toLocaleString("en-US"); } }
+  ];
+  function statusOf(p) {
+    if (p.cur < p.lo || p.cur > p.hi) return "out";
+    return Math.min(p.cur - p.lo, p.hi - p.cur) / (p.hi - p.lo) < 0.1 ? "edge" : "in";
+  }
+  positions.forEach(function (p) { p.st = statusOf(p); });
+  var order = { out: 0, edge: 1, in: 2 };
+  var sorted = positions.slice().sort(function (a, b) { return order[a.st] - order[b.st] || b.val - a.val; });
+  var LABEL = { in: "In range", edge: "Near edge", out: "Out of range" };
+
+  /* ---------- helpers ---------- */
+  function usd(n, sign) { var s = (n < 0 ? "-" : sign && n > 0 ? "+" : "") + "$" + Math.abs(Math.round(n)).toLocaleString("en-US"); return s; }
+  function usd1(n) { return "$" + n.toFixed(2); }
+  function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+  var MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  function sd(d) { return MON[d.getMonth()] + " " + d.getDate(); }
+
+  /* ---------- pieces ---------- */
+  function appHeader() {
+    var nav = ["Overview", "Earnings", "Borrow", "Positions", "Pools", "Profit & loss", "Risk", "Addresses"].map(function (n) { return '<span class="' + (n === "Overview" ? "on" : "") + '">' + n.replace("&", "&amp;") + "</span>"; }).join("");
+    return '<header class="apphead"><div class="hrow"><span class="logo"><i></i>LP Dashboard</span><div class="hnav">' + nav + '</div><div class="hright"><span class="sel">All wallets</span><span class="sel" style="min-width:0;padding:0 8px"><svg class="ico" viewBox="0 0 16 16"><circle cx="8" cy="5.5" r="2.6"/><path d="M2.8 14c.6-2.6 2.7-4 5.2-4s4.6 1.4 5.2 4"/></svg></span></div></div>' +
+      '<div class="hstat"><div class="tick num"><span><b>BTC</b>$103,420 <em class="up" style="font-style:normal">+1.2%</em></span><span><b>ETH</b>$3,105 <em class="down" style="font-style:normal">-0.4%</em></span><span><b>BNB</b>$889 <em class="up" style="font-style:normal">+0.8%</em></span><span><b>AERO</b>$0.57 <em class="down" style="font-style:normal">-3.1%</em></span></div>' +
+      '<div class="r"><span><i class="dot"></i> Synced 4 min ago</span><svg class="ico" viewBox="0 0 16 16"><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/></svg><svg class="ico" viewBox="0 0 16 16"><path d="M13.5 9.5A5.8 5.8 0 0 1 6.5 2.5a5.8 5.8 0 1 0 7 7z"/></svg></div></div></header>';
+  }
+  function pageHead(sub) {
+    return '<div class="pagehead"><div><h1>Overview</h1><p>' + sub + '</p></div><span class="upd">Updated 4 min ago</span></div>';
+  }
+  function strip() {
+    var c = function (l, v, h, cls) { return '<div class="stat"><div class="l">' + l + '</div><div class="v num ' + (cls || "") + '">' + v + '</div><div class="h">' + h + "</div></div>"; };
+    return '<div class="strip">' +
+      c("Portfolio value", "$48,320", "6 open · 14 closed") +
+      c("Total P/L", "+$3,874", "+8.7% on $44,446 in", "up") +
+      c("Fees earned", "$5,912", "claimed + unclaimed") +
+      c("Impermanent loss", "-$1,206", "excluding fees", "down") +
+      c("Unclaimed", "$412", "3 of 6 above $50", "") + "</div>";
+  }
+  function inlineStats() {
+    var c = function (l, v, cls) { return '<div><span class="l">' + l + '</span><span class="v num ' + (cls || "") + '">' + v + "</span></div>"; };
+    return '<div class="inline">' + c("Portfolio", "$48,320") + c("P/L", "+$3,874", "up") + c("Fees earned", "$5,912") + c("IL", "-$1,206", "down") + c("Unclaimed", "$412") + "</div>";
+  }
+  function rangeBar(p, labels) {
+    var span = p.hi - p.lo, a0 = p.lo - 0.35 * span, a1 = p.hi + 0.35 * span, w = a1 - a0;
+    var left = (p.lo - a0) / w * 100, width = span / w * 100;
+    var m = Math.max(1.5, Math.min(98.5, (p.cur - a0) / w * 100));
+    var h = '<div class="rb" role="img" aria-label="' + p.pair + ': ' + LABEL[p.st] + '"><div class="t"></div><div class="s ' + p.st + '" style="left:' + left + '%;width:' + width + '%"></div><div class="m" style="left:' + m + '%"></div></div>';
+    if (labels) h += '<div class="rl num"><span>' + p.f(p.lo) + '</span><b>now ' + p.f(p.cur) + '</b><span>' + p.f(p.hi) + "</span></div>";
+    return h;
+  }
+  function distText(p) {
+    if (p.cur < p.lo) return ((p.lo - p.cur) / p.lo * 100).toFixed(1) + "% below range";
+    if (p.cur > p.hi) return ((p.cur - p.hi) / p.hi * 100).toFixed(1) + "% above range";
+    var d = Math.min(p.cur - p.lo, p.hi - p.cur) / p.cur * 100;
+    return d.toFixed(1) + "% to " + (p.cur - p.lo < p.hi - p.cur ? "lower" : "upper") + " edge";
+  }
+  function posCards(cls) {
+    return '<div class="pcs ' + (cls || "") + '">' + sorted.map(function (p) {
+      return '<div class="pc ' + p.st + '"><div class="t1"><b>' + p.pair + '</b><span class="pill ' + p.st + '">' + LABEL[p.st] + '</span></div><div class="sub">' + p.fee + " · " + p.proto + "</div>" + rangeBar(p, true) +
+        '<div class="ft"><span><b class="num">' + usd(p.val) + '</b></span><span class="' + (p.st === "in" ? "" : p.st === "out" ? "down" : "warn") + '">' + distText(p) + '</span><span class="num">' + (p.apr ? p.apr + "% APR" : "no fees") + "</span></div></div>";
+    }).join("") + "</div>";
+  }
+  function posTable() {
+    var head = '<div class="tr h"><span>Position</span><span>Status</span><span>Range and price now</span><span class="r">Value</span><span class="r">Fee APR</span><span class="r">Unclaimed</span></div>';
+    return '<div class="tbl">' + head + sorted.map(function (p) {
+      return '<div class="tr"><span><b style="font-weight:600">' + p.pair + '</b><small>' + p.fee + " · " + p.proto + '</small></span><span><span class="pill ' + p.st + '">' + LABEL[p.st] + '</span><small>' + distText(p) + "</small></span><span>" + rangeBar(p, true) + '</span><span class="r num">' + usd(p.val) + '</span><span class="r num">' + (p.apr ? p.apr + "%" : "—") + '</span><span class="r num">' + usd(p.unc) + "</span></div>";
+    }).join("") + "</div>";
+  }
+  function posList() {
+    return '<div class="lst">' + sorted.map(function (p) {
+      return '<div class="li"><span class="d ' + p.st + '"></span><span class="n"><b>' + p.pair + '</b><span>' + p.proto.split(" · ")[1] + '</span></span><span class="st ' + (p.st === "in" ? "muted" : p.st === "out" ? "down" : "warn") + '">' + (p.st === "in" ? usd(p.val) : LABEL[p.st]) + '</span><div class="rbw">' + rangeBar(p, false) + "</div></div>";
+    }).join("") + "</div>";
+  }
+  function needsCard() {
+    return '<section class="panel" aria-label="Needs you"><div class="ph"><h3>Needs you <span class="count">2</span></h3></div><div class="need">' +
+      '<div class="nrow"><span class="pill out">Out of range</span><div>AERO / USDC #4182 is out of range<small>Price 0.57 is 8.1% below the range. <button class="lnk" type="button">View position</button></small></div></div>' +
+      '<div class="nrow"><span class="pill edge">Near edge</span><div>cbBTC / USDC #3907 is near the upper edge<small>1.1% below the top of its range. <button class="lnk" type="button">View position</button></small></div></div>' +
+      '<div class="nrow"><span class="pill acc">Ready to claim</span><div>$412 unclaimed<small>3 positions are above $50. <button class="lnk" type="button">Claim list</button></small></div></div></div></section>';
+  }
+  function banner() {
+    return '<div class="banner" role="status"><span class="count" style="font-size:12px">2</span><span class="it"><span class="pill out">Out of range</span> AERO / USDC</span><span class="it"><span class="pill edge">Near edge</span> cbBTC / USDC</span><span class="it"><span class="pill acc">$412</span> ready to claim in 3 positions</span><button class="lnk" type="button" style="margin-left:auto">Review all</button></div>';
+  }
+  function borrowCard() {
+    return '<section class="panel" aria-label="Borrow coverage"><div class="ph"><h3>Borrow <span class="pill in">Covered</span></h3><button class="lnk" type="button">Open Borrow</button></div><div class="pb">' +
+      '<div style="display:flex;align-items:baseline;gap:10px"><span class="big num">3.1×</span><span class="muted" style="font-size:12.5px">LP income vs loan interest, at today\'s pace</span></div>' +
+      '<div class="bar2"><span class="muted">Income</span><span class="tk"><i style="width:100%;background:var(--chart-a)"></i></span><span class="num">$38.40/day</span></div>' +
+      '<div class="bar2"><span class="muted">Interest</span><span class="tk"><i style="width:32%;background:var(--down-fill)"></i></span><span class="num">$12.40/day</span></div>' +
+      '<div class="bar2" style="margin-top:12px"><span class="muted">Room</span><span class="tk"><i style="width:60%;background:var(--up-fill)"></i></span><span class="num">40% drop</span></div>' +
+      '<p class="faint" style="font-size:11.5px;margin:6px 0 0">Collateral ÷ debt is 2.10. Liquidation starts at 1.25.</p></div></section>';
+  }
+  function allocCard() {
+    var max = Math.max.apply(null, positions.map(function (p) { return p.val; }));
+    var rows = positions.slice().sort(function (a, b) { return b.val - a.val; }).map(function (p) {
+      return '<div class="al"><span>' + p.pair + '</span><span class="tk"><i style="width:' + (p.val / max * 100) + '%"></i></span><span class="p num">' + usd(p.val) + ' <span class="faint">' + Math.round(p.val / 48320 * 100) + "%</span></span></div>";
+    }).join("");
+    return '<section class="panel" aria-label="Allocation"><div class="ph"><h3>Allocation by position</h3></div><div class="pb"><div class="alloc">' + rows + "</div></div></section>";
+  }
+  function claimCard() {
+    var rows = [["cbBTC / USDC", "$131", "AERO + fees"], ["WETH / USDC", "$96", "fees"], ["BNB / USDT", "$74", "CAKE + fees"]].map(function (r) {
+      return '<div class="nrow"><div style="flex:1"><b style="font-weight:600">' + r[0] + '</b><small>' + r[2] + '</small></div><span class="num">' + r[1] + "</span></div>";
+    }).join("");
+    return '<section class="panel" aria-label="Ready to claim"><div class="ph"><h3>Ready to claim</h3><span class="num" style="font-size:13px">$412</span></div><div class="need">' + rows + "</div></section>";
+  }
+
+  /* ---------- charts ---------- */
+  var panels = {}, uid = 0;
+  var GR = { day: { size: 1, n: 30, label: "day", avg: "Average per day", ranges: [["7D", 7], ["30D", 30], ["90D", 90]] }, week: { size: 7, n: 12, label: "week", avg: "Average per week", ranges: [["8W", 8], ["12W", 12], ["26W", 26]] }, month: { size: 30, n: 6, label: "month", avg: "Average per month", ranges: [["3M", 3], ["6M", 6]] } };
+
+  function buckets(grain, n) {
+    var g = GR[grain], out = [];
+    for (var b = 0; b < n; b++) {
+      var end = DAYS - b * g.size, start = Math.max(0, end - g.size);
+      if (end <= 0) break;
+      var f = 0, r = 0, part = false;
+      for (var k = start; k < end; k++) { f += daily[k].fees; r += daily[k].rewards; if (daily[k].partial) part = true; }
+      var days = end - start;
+      if (b === 0 && grain !== "day" && g.size > 1) part = true;
+      out.unshift({ start: daily[start].date, end: daily[end - 1].date, fees: f, rewards: r, days: days, partial: part });
+    }
+    return out;
+  }
+  function nice(max) { var p = Math.pow(10, Math.floor(Math.log10(max))); var m = max / p; var s = m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10; return s * p; }
+  function short(n) { return n >= 1000 ? "$" + (n / 1000).toFixed(n % 1000 ? 1 : 0).replace(/\.0$/, "") + "k" : "$" + Math.round(n); }
+
+  function drawBars(host, st, o) {
+    var w = host.clientWidth; if (!w) return;
+    var h = o.h, pad = { l: 46, r: 6, t: 8, b: 22 }, g = GR[st.grain];
+    var bs = buckets(st.grain, st.range[st.grain]);
+    var tot = bs.map(function (b) { return b.fees + b.rewards; });
+    var full = bs.filter(function (b) { return !b.partial; });
+    var avg = full.length ? full.reduce(function (s, b) { return s + b.fees + b.rewards; }, 0) / full.length : 0;
+    var intr = bs.map(function (b) { return INTEREST * b.days; });
+    var maxv = Math.max.apply(null, tot.concat(o.interest ? intr : [0], [avg])) * 1.08;
+    var top = nice(maxv / 4) * 4;
+    var iw = w - pad.l - pad.r, ih = h - pad.t - pad.b, bw = iw / bs.length;
+    var Y = function (v) { return pad.t + ih - v / top * ih; };
+    var s = '<svg width="' + w + '" height="' + h + '" role="img" aria-label="Earned per ' + g.label + '">';
+    for (var t = 0; t <= 4; t++) { var v = top / 4 * t; s += '<line x1="' + pad.l + '" x2="' + (w - pad.r) + '" y1="' + Y(v) + '" y2="' + Y(v) + '" stroke="var(--line)"/><text x="' + (pad.l - 6) + '" y="' + (Y(v) + 3.5) + '" text-anchor="end" font-size="10.5" fill="var(--faint)" font-family="IBM Plex Mono, monospace">' + short(v) + "</text>"; }
+    var every = Math.ceil(bs.length / Math.max(2, Math.floor(iw / 70)));
+    bs.forEach(function (b, i) {
+      var x = pad.l + i * bw + bw * 0.14, ww = bw * 0.72, op = b.partial ? 0.45 : 1;
+      var yr = Y(b.fees + b.rewards), yf = Y(b.fees);
+      s += '<g><title>' + (st.grain === "day" ? sd(b.start) : sd(b.start) + " – " + sd(b.end)) + (b.partial ? " (so far)" : "") + " · Fees " + usd1(b.fees) + " · Rewards " + usd1(b.rewards) + " · Total " + usd1(b.fees + b.rewards) + '</title>' +
+        '<rect x="' + x + '" y="' + yf + '" width="' + ww + '" height="' + (pad.t + ih - yf) + '" fill="var(--chart-a)" opacity="' + op + '"/>' +
+        '<rect x="' + x + '" y="' + yr + '" width="' + ww + '" height="' + Math.max(0, yf - yr) + '" fill="var(--chart-d)" opacity="' + op + '"/></g>';
+      if (st.grain === "day" && !b.partial && avg && b.fees + b.rewards < avg * 0.6) s += '<circle cx="' + (x + ww / 2) + '" cy="' + (yr - 5) + '" r="3" fill="var(--down)"/>';
+      if (i % every === 0 || i === bs.length - 1 && (bs.length - 1) % every > every / 2) {
+        var lab = st.grain === "month" ? MON[b.start.getMonth()] : sd(b.start);
+        s += '<text x="' + (x + ww / 2) + '" y="' + (h - 6) + '" text-anchor="middle" font-size="10.5" fill="var(--faint)">' + lab + "</text>";
+      }
+    });
+    if (avg) s += '<line x1="' + pad.l + '" x2="' + (w - pad.r) + '" y1="' + Y(avg) + '" y2="' + Y(avg) + '" stroke="var(--fg-2)" stroke-width="1.4" stroke-dasharray="4 3"/>';
+    if (o.interest) {
+      var pts = intr.map(function (v, i) { return (pad.l + i * bw + bw / 2) + "," + Y(v); }).join(" ");
+      s += '<polyline points="' + pts + '" fill="none" stroke="var(--down)" stroke-width="2"/>';
+    }
+    host.innerHTML = s + "</svg>";
+    return { avg: avg, label: g.avg };
+  }
+
+  function drawLine(host, series, st, o) {
+    var w = host.clientWidth; if (!w) return;
+    var n = Math.min(DAYS, st.vrange), pts = series.slice(DAYS - n);
+    var h = o.h, pad = { l: 52, r: 8, t: 8, b: 22 }, iw = w - pad.l - pad.r, ih = h - pad.t - pad.b;
+    var mn = Math.min.apply(null, pts), mx = Math.max.apply(null, pts);
+    if (st.mode === "pnl") { mn = Math.min(mn, 0); }
+    var step = nice((mx - mn) / 4 || 1), lo = Math.floor(mn / step) * step, hi = Math.ceil(mx / step) * step; if (hi === lo) hi = lo + step;
+    var X = function (i) { return pad.l + i / (pts.length - 1) * iw; }, Y = function (v) { return pad.t + ih - (v - lo) / (hi - lo) * ih; };
+    var s = '<svg width="' + w + '" height="' + h + '" role="img" aria-label="' + (st.mode === "pnl" ? "Cumulative P/L" : "Portfolio value") + '">';
+    for (var v = lo; v <= hi + 1e-6; v += step) s += '<line x1="' + pad.l + '" x2="' + (w - pad.r) + '" y1="' + Y(v) + '" y2="' + Y(v) + '" stroke="var(--line)"/><text x="' + (pad.l - 6) + '" y="' + (Y(v) + 3.5) + '" text-anchor="end" font-size="10.5" fill="var(--faint)" font-family="IBM Plex Mono, monospace">' + (v < 0 ? "-" : "") + short(Math.abs(v)) + "</text>";
+    var line = pts.map(function (p, i) { return (i ? "L" : "M") + X(i).toFixed(1) + "," + Y(p).toFixed(1); }).join("");
+    var col = st.mode === "pnl" ? "var(--chart-b)" : "var(--chart-a)";
+    s += '<path d="' + line + "L" + X(pts.length - 1) + "," + Y(Math.max(lo, 0 > lo && st.mode === "pnl" ? 0 : lo)) + "L" + X(0) + "," + Y(Math.max(lo, 0 > lo && st.mode === "pnl" ? 0 : lo)) + 'Z" fill="' + col + '" opacity=".13"/>';
+    s += '<path d="' + line + '" fill="none" stroke="' + col + '" stroke-width="2" stroke-linejoin="round"/>';
+    if (st.mode === "pnl" && lo < 0) s += '<line x1="' + pad.l + '" x2="' + (w - pad.r) + '" y1="' + Y(0) + '" y2="' + Y(0) + '" stroke="var(--fg-2)" stroke-dasharray="3 3"/>';
+    var ticks = Math.max(2, Math.floor(iw / 90));
+    for (var t = 0; t < ticks; t++) { var idx = Math.round(t / (ticks - 1) * (pts.length - 1)), dt = daily[DAYS - n + idx].date; s += '<text x="' + (t === 0 ? X(idx) : t === ticks - 1 ? X(idx) : X(idx)) + '" y="' + (h - 6) + '" text-anchor="' + (t === 0 ? "start" : t === ticks - 1 ? "end" : "middle") + '" font-size="10.5" fill="var(--faint)">' + sd(dt) + "</text>"; }
+    s += '<circle cx="' + X(pts.length - 1) + '" cy="' + Y(pts[pts.length - 1]) + '" r="3.5" fill="' + col + '" stroke="var(--panel)" stroke-width="2"/>';
+    host.innerHTML = s + "</svg>";
+    return { first: pts[0], last: pts[pts.length - 1] };
+  }
+
+  function chartPanel(o) {
+    var id = "p" + (uid++);
+    panels[id] = { o: o, mode: o.modes[0], grain: "day", range: { day: 30, week: 12, month: 6 }, vrange: 90 };
+    return '<section class="panel" id="' + id + '"></section>';
+  }
+  function seg(label, pid, key, opts, cur) {
+    return '<div class="seg" role="group" aria-label="' + label + '">' + opts.map(function (x) { return '<button type="button" data-pid="' + pid + '" data-k="' + key + '" data-v="' + x[1] + '" aria-pressed="' + (x[1] === cur) + '">' + x[0] + "</button>"; }).join("") + "</div>";
+  }
+  function renderPanel(id) {
+    var P = panels[id], o = P.o, node = document.getElementById(id); if (!node) return;
+    var title = P.mode === "earn" ? "Earned per " + GR[P.grain].label : P.mode === "value" ? "Portfolio value" : "Cumulative P/L";
+    var ctl = "";
+    if (o.modes.length > 1) ctl += seg("Chart", id, "mode", [["Earned", "earn"], ["Value", "value"], ["P/L", "pnl"]].filter(function (m) { return o.modes.indexOf(m[1]) >= 0; }), P.mode);
+    if (P.mode === "earn") {
+      ctl += seg("Group by", id, "grain", [["Day", "day"], ["Week", "week"], ["Month", "month"]], P.grain);
+      ctl += seg("Range", id, "range", GR[P.grain].ranges, P.range[P.grain]);
+    } else ctl += seg("Range", id, "vrange", [["30D", 30], ["90D", 90], ["All", 190]], P.vrange);
+    node.innerHTML = '<div class="ph"><h3>' + title + '</h3><div class="ctl">' + ctl + '</div></div><div class="pb"><div class="chart" data-chart="' + id + '"></div><div class="leg" data-leg="' + id + '"></div></div>';
+    drawPanel(id);
+  }
+  function drawPanel(id) {
+    var P = panels[id], o = P.o, node = document.getElementById(id); if (!node) return;
+    var host = node.querySelector(".chart"), leg = node.querySelector(".leg");
+    if (P.mode === "earn") {
+      var r = drawBars(host, { grain: P.grain, range: P.range }, o); if (!r) return;
+      var k = '<span class="k"><span><i class="sw" style="background:var(--chart-a)"></i>Swap fees</span><span><i class="sw" style="background:var(--chart-d)"></i>Rewards</span>' +
+        (o.interest ? '<span><i class="sw" style="background:var(--down);height:2px;width:14px;vertical-align:middle"></i>Interest owed</span>' : "") +
+        "<span>- - " + r.label + " " + usd(r.avg) + "</span><span>Faded bar: in progress</span></span>";
+      leg.innerHTML = k + '<span>On pace for $1,380 in November</span>';
+    } else {
+      var series = P.mode === "pnl" ? pnlSeries : valueSeries;
+      var res = drawLine(host, series, { mode: P.mode, vrange: P.vrange }, o); if (!res) return;
+      var diff = res.last - res.first;
+      leg.innerHTML = '<span class="k"><span>' + (P.mode === "pnl" ? "Cumulative P/L, fees claimed and unclaimed, minus impermanent loss" : "Positions, estimated before the first sync") + '</span></span><span class="num ' + (diff >= 0 ? "up" : "down") + '">' + usd(diff, true) + " over the range</span>";
+    }
+  }
+  function redrawAll() { Object.keys(panels).forEach(drawPanel); }
+
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-pid]"); if (b) {
+      var P = panels[b.dataset.pid], k = b.dataset.k, v = b.dataset.v;
+      if (k === "mode") P.mode = v;
+      else if (k === "grain") P.grain = v;
+      else if (k === "range") P.range[P.grain] = +v;
+      else if (k === "vrange") P.vrange = +v;
+      renderPanel(b.dataset.pid); return;
+    }
+    var t = e.target.closest("button[data-theme-btn]"); if (t) {
+      document.documentElement.setAttribute("data-theme", t.dataset.themeBtn);
+      document.querySelectorAll("[data-theme-btn]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === t)); });
+      requestAnimationFrame(redrawAll);
+    }
+  });
+
+  /* ---------- the three mockups ---------- */
+  var A = appHeader() + '<div class="main">' + pageHead("Everything you provide liquidity to, across wallets and protocols.") + strip() +
+    '<div class="g a">' + chartPanel({ modes: ["earn"], h: 270, interest: true }) + '<div class="stack">' + needsCard() + borrowCard() + "</div></div>" +
+    '<section class="panel"><div class="ph"><h3>Positions <span class="faint" style="font-family:var(--font-sans);font-weight:400;font-size:12px">worst first · bar is the position\'s range, white marker is the price now</span></h3><button class="lnk" type="button">All positions</button></div><div class="pb">' + posCards() + "</div></section>" +
+    '<div class="g d">' + chartPanel({ modes: ["value", "pnl"], h: 220 }) + allocCard() + "</div></div>";
+
+  var B = appHeader() + '<div class="main">' + pageHead("Everything you provide liquidity to, across wallets and protocols.") + banner() + strip() +
+    '<div class="g b">' + chartPanel({ modes: ["earn"], h: 250, interest: true }) + chartPanel({ modes: ["value", "pnl"], h: 250 }) + "</div>" +
+    '<div class="g e"><section class="panel"><div class="ph"><h3>Positions</h3><button class="lnk" type="button">All positions</button></div>' + posTable() + '</section><div class="stack">' + borrowCard() + allocCard() + "</div></div></div>";
+
+  var C = appHeader() + '<div class="main">' + pageHead("Everything you provide liquidity to, across wallets and protocols.") + inlineStats() +
+    '<div class="g e">' + chartPanel({ modes: ["earn", "value", "pnl"], h: 340, interest: true }) +
+    '<section class="panel" aria-label="Positions"><div class="ph"><h3>Positions <span class="count">2 need you</span></h3><button class="lnk" type="button">All</button></div>' + posList() + "</section></div>" +
+    '<div class="g c">' + borrowCard() + allocCard() + claimCard() + "</div></div>";
+
+
+  function allocProto() {
+    var rows = [["Uniswap v3 · Base", 19880], ["Aerodrome · Base", 15420], ["PancakeSwap v3 · BSC", 9730], ["Uniswap v3 · Arbitrum", 3290]];
+    var max = rows[0][1];
+    return '<section class="panel" aria-label="Allocation by protocol"><div class="ph"><h3>Allocation by protocol</h3></div><div class="pb"><div class="alloc">' + rows.map(function (r) {
+      return '<div class="al"><span>' + r[0] + '</span><span class="tk"><i style="width:' + (r[1] / max * 100) + '%"></i></span><span class="p num">' + usd(r[1]) + ' <span class="faint">' + Math.round(r[1] / 48320 * 100) + "%</span></span></div>";
+    }).join("") + '</div></div></section>';
+  }
+  var D = appHeader() + '<div class="main">' + pageHead("Everything you provide liquidity to, across wallets and protocols.") + banner() + strip() +
+    '<div class="g b">' + chartPanel({ modes: ["earn"], h: 250, interest: true }) + chartPanel({ modes: ["value", "pnl"], h: 250 }) + "</div>" +
+    '<div class="g e"><section class="panel"><div class="ph"><h3>Positions <span class="faint" style="font-family:var(--font-sans);font-weight:400;font-size:12px">worst first · bar is the range, white marker is the price now</span></h3><button class="lnk" type="button">All positions</button></div><div class="pb">' + posCards("two") + "</div></section>" +
+    '<div class="stack">' + borrowCard() + allocCard() + "</div></div></div>";
+  document.getElementById("mock-d").innerHTML = D;
+  document.getElementById("mock-a").innerHTML = A;
+  document.getElementById("mock-b").innerHTML = B;
+  document.getElementById("mock-c").innerHTML = C;
+  Object.keys(panels).forEach(renderPanel);
+  var tm; window.addEventListener("resize", function () { clearTimeout(tm); tm = setTimeout(redrawAll, 80); });
+  if (window.ResizeObserver) new ResizeObserver(function () { clearTimeout(tm); tm = setTimeout(redrawAll, 60); }).observe(document.body);
+})();
+</script>

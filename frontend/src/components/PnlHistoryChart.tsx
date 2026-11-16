@@ -3,8 +3,6 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  Line,
-  LineChart,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -13,8 +11,10 @@ import {
 } from "recharts";
 import { usePnlHistory } from "../api/client";
 import { chart } from "../lib/chartTheme";
-import { weekdayOf } from "../lib/dates";
+import { rangeLabel } from "../lib/chartAxis";
 import { formatUsd } from "../lib/format";
+import { useHideBalances } from "../lib/privacy";
+import { HistoryChart } from "./HistoryChart";
 import { Empty, ErrorText, Skeleton } from "./ui";
 
 const DAY = 86_400_000;
@@ -37,39 +37,22 @@ export function CumulativePnlChart({
     .map((p) => ({ t: new Date(p.timestamp).getTime(), pnl: p.cumulativePnlUsd }))
     .filter((p) => p.t >= from);
 
+  useHideBalances(); // the chart formats amounts, so re-render when the mask toggles
   if (error) return <ErrorText error={error} />;
   if (isLoading) return <Skeleton className="h-64 w-full" />;
   if (points.length < 2) return <Empty>Not enough history yet.</Empty>;
   return (
-    <div className="h-64">
-      <ResponsiveContainer>
-        <LineChart data={points}>
-          <CartesianGrid stroke={chart.grid} />
-          <XAxis
-            dataKey="t"
-            type="number"
-            domain={["dataMin", "dataMax"]}
-            scale="time"
-            tickFormatter={(t) => new Date(t).toLocaleDateString()}
-            stroke={chart.axis}
-            fontSize={11}
-          />
-          <YAxis
-            stroke={chart.axis}
-            fontSize={11}
-            tickFormatter={(v) => formatUsd(v)}
-            width={80}
-          />
-          <ReferenceLine y={0} stroke={chart.axis} strokeDasharray="3 3" />
-          <Tooltip
-            contentStyle={tip}
-            labelFormatter={(t) => weekdayOf(t as number)}
-            formatter={(v) => formatUsd(v as number)}
-          />
-          <Line dataKey="pnl" name="Cumulative P/L" stroke={chart.a} dot={false} />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
+    <>
+      <HistoryChart
+        points={points.map((p) => ({ t: p.t, v: p.pnl }))}
+        name="Cumulative P/L"
+        signed
+        rangeLabel={rangeLabel(days)}
+      />
+      <p className="mt-1 text-xs text-faint">
+        Value plus fees and withdrawals, minus deposits and gas, rebuilt from history.
+      </p>
+    </>
   );
 }
 
