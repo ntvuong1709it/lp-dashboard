@@ -1,0 +1,106 @@
+{
+ "data": {
+  "asOf": "Tue, Nov 17, 2026",
+  "rows": [
+   {
+    "gmt": "08:30",
+    "country": "United States",
+    "eventName": "Core Retail Sales",
+    "actual": "&nbsp;",
+    "consensus": "0.4%",
+    "previous": "0.9%",
+    "description": ""
+   },
+   {
+    "gmt": "08:30",
+    "country": "United States",
+    "eventName": "Export Price Index",
+    "actual": "&nbsp;",
+    "consensus": " ",
+    "previous": "11.6%",
+    "description": ""
+   },
+   {
+    "gmt": "08:30",
+    "country": "United States",
+    "eventName": "Export Price Index",
+    "actual": "&nbsp;",
+    "consensus": "0.3%",
+    "previous": "2.2%",
+    "description": ""
+   },
+   {
+    "gmt": "08:30",
+    "country": "United States",
+    "eventName": "Retail Control",
+    "actual": "&nbsp;",
+    "consensus": "0.4%",
+    "previous": "0.1%",
+    "description": ""
+   },
+   {
+    "gmt": "08:30",
+    "country": "United States",
+    "eventName": "Retail Sales",
+    "actual": "&nbsp;",
+    "consensus": "0.1%",
+    "previous": "0.8%",
+    "description": ""
+   },
+   {
+    "gmt": "08:30",
+    "country": "United States",
+    "eventName": "Retail Sales",
+    "actual": "&nbsp;",
+    "consensus": " ",
+    "previous": "6.29%",
+    "description": ""
+   },
+   {
+    "gmt": "09:10",
+    "country": "United States",
+    "eventName": "Fed Waller Speaks",
+    "actual": "&nbsp;",
+    "consensus": " ",
+    "previous": "&nbsp;",
+    "description": ""
+   },
+   {
+    "gmt": "09:15",
+    "country": "United States",
+    "eventName": "Industrial Production",
+    "actual": "&nbsp;",
+    "consensus": "0.0%",
+    "previous": "0.7%",
+    "description": ""
+   },
+   {
+    "gmt": "09:15",
+    "country": "United States",
+    "eventName": "Industrial Production",
+    "actual": "&nbsp;",
+    "consensus": " ",
+    "previous": "2.25%",
+    "description": ""
+   },
+   {
+    "gmt": "11:30",
+    "country": "United States",
+    "eventName": "Atlanta Fed GDPNow",
+    "actual": "&nbsp;",
+    "consensus": "3.5%",
+    "previous": "3.5%",
+    "description": ""
+   },
+   {
+    "gmt": "14:25",
+    "country": "United States",
+    "eventName": "FOMC Member Williams Speaks",
+    "actual": "&nbsp;",
+    "consensus": " ",
+    "previous": "&nbsp;",
+    "description": ""
+   }
+  ]
+ }
+}

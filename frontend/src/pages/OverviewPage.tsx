@@ -9,6 +9,7 @@ import { CoverageCard } from "../components/borrow/CoverageCard";
 import { EarningsChartPanel } from "../components/earnings/EarningsChartPanel";
 import { AttentionStrip } from "../components/overview/AttentionStrip";
 import { PositionRangeCards } from "../components/overview/PositionRangeCards";
+import { NextUpCard } from "../components/market/NextUpCard";
 import { UpdatedAgo } from "../components/UpdatedAgo";
 import { READY_TO_CLAIM_ID, ReadyToClaimPanel } from "../components/Unclaimed";
 import { BarRow, Empty, Panel, Skeleton, StatCard } from "../components/ui";
@@ -83,6 +84,8 @@ export function OverviewPage() {
         loading={open.isLoading}
         error={open.error}
       />
+
+      <NextUpCard />
 
       <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
         <StatCard

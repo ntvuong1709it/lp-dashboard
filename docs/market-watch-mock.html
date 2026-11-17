@@ -1,0 +1,360 @@
+<title>Market Watch Mock</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Same tokens as the other docs/*-mock.html files (the app's slate scale, dark first). Not product code. */
+:root {
+  --bg: #020617; --surface: #0f172a; --surface2: #162033; --border: #1e293b; --border2: #334155;
+  --text: #e2e8f0; --muted: #94a3b8; --faint: #64748b;
+  --sky: #38bdf8; --green: #34d399; --rose: #fb7185; --amber: #f59e0b;
+  --rose-bg: rgba(251,113,133,.13); --amber-bg: rgba(245,158,11,.13); --green-bg: rgba(52,211,153,.13); --sky-bg: rgba(56,189,248,.12);
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --font-display: "Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f4f6f8; --surface: #ffffff; --surface2: #eef1f5; --border: #e2e7ec; --border2: #cfd6de;
+    --text: #1b2430; --muted: #5b6675; --faint: #6b7686;
+    --sky: #2a78d6; --green: #0f7d57; --rose: #c23b36; --amber: #b36b00;
+    --rose-bg: rgba(194,59,54,.10); --amber-bg: rgba(179,107,0,.12); --green-bg: rgba(15,125,87,.11); --sky-bg: rgba(42,120,214,.10);
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f4f6f8; --surface: #ffffff; --surface2: #eef1f5; --border: #e2e7ec; --border2: #cfd6de;
+  --text: #1b2430; --muted: #5b6675; --faint: #6b7686;
+  --sky: #2a78d6; --green: #0f7d57; --rose: #c23b36; --amber: #b36b00;
+  --rose-bg: rgba(194,59,54,.10); --amber-bg: rgba(179,107,0,.12); --green-bg: rgba(15,125,87,.11); --sky-bg: rgba(42,120,214,.10);
+  color-scheme: light;
+}
+:root[data-theme="dark"] { color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-sans); font-size: 14px; line-height: 1.5;
+  margin: 0; padding: 0 16px 48px; -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { font-family: var(--font-display); margin: 0; font-weight: 600; letter-spacing: -.01em; text-wrap: balance; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+button, select { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
+.wrap { max-width: 1120px; margin: 0 auto; }
+
+/* Mock controls (not part of the app) */
+.mockbar { border: 1px dashed var(--border2); border-radius: 8px; margin-top: 12px; padding: 10px 12px; display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; font-size: 12px; color: var(--muted); background: var(--surface2); }
+.mockbar label { display: inline-flex; gap: 6px; align-items: center; }
+.mockbar select { background: var(--surface); color: var(--text); border: 1px solid var(--border2); border-radius: 6px; padding: 4px 8px; }
+.mockbar .tag { text-transform: uppercase; letter-spacing: .06em; font-size: 11px; color: var(--amber); font-weight: 600; }
+
+/* App frame */
+.appbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; padding: 14px 0; border-bottom: 1px solid var(--border); margin-top: 12px; }
+.brand { font-family: var(--font-display); font-weight: 600; font-size: 16px; }
+.nav { display: flex; gap: 2px; overflow-x: auto; min-width: 0; flex: 1 1 320px; }
+.nav button { background: none; border: 0; padding: 6px 10px; border-radius: 6px; color: var(--muted); white-space: nowrap; }
+.nav button:hover { color: var(--text); background: var(--surface); }
+.nav button[aria-current="page"] { color: var(--text); background: var(--surface); box-shadow: inset 0 -2px 0 var(--sky); }
+.nav .new::after { content: "new"; margin-left: 6px; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--sky); background: var(--sky-bg); border-radius: 4px; padding: 1px 5px; }
+
+.page { padding-top: 22px; display: flex; flex-direction: column; gap: 16px; }
+.pagehead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 10px; }
+.pagehead h1 { font-size: 24px; }
+.sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.hint { font-size: 12px; color: var(--faint); }
+.label { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+
+.card { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 16px; min-width: 0; }
+.card h2 { font-size: 15px; }
+.cardhead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 12px; margin-bottom: 12px; }
+.grid { display: grid; gap: 14px; }
+.g3 { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1.3fr); }
+.g21 { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); align-items: start; }
+.stack { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.ghost { opacity: .45; }
+.ghost .card { min-height: 64px; }
+
+.seg { display: inline-flex; border: 1px solid var(--border2); border-radius: 6px; overflow: hidden; }
+.seg button { background: none; border: 0; padding: 3px 10px; font-size: 12px; color: var(--muted); }
+.seg button + button { border-left: 1px solid var(--border2); }
+.seg button[aria-pressed="true"] { background: var(--sky-bg); color: var(--sky); font-weight: 600; }
+
+.chip { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 1px 9px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.chip.ok, .chip.on { background: var(--green-bg); color: var(--green); }
+.chip.warn { background: var(--amber-bg); color: var(--amber); }
+.chip.crit, .chip.off { background: var(--rose-bg); color: var(--rose); }
+.chip.neutral { background: var(--surface2); color: var(--muted); }
+.chip.high { background: var(--rose-bg); color: var(--rose); }
+.chip.med { background: var(--amber-bg); color: var(--amber); }
+.chip.low { background: var(--surface2); color: var(--muted); }
+.cat { font-size: 11px; color: var(--muted); border: 1px solid var(--border2); border-radius: 4px; padding: 0 6px; }
+
+.banner { display: flex; gap: 10px; align-items: flex-start; border-radius: 8px; padding: 10px 14px; border: 1px solid; font-size: 13px; }
+.banner.info { background: var(--sky-bg); border-color: var(--sky); }
+.banner.warn { background: var(--amber-bg); border-color: var(--amber); }
+.banner.crit { background: var(--rose-bg); border-color: var(--rose); }
+.banner .bi { font-weight: 700; width: 18px; flex: none; text-align: center; }
+.banner.info .bi { color: var(--sky); } .banner.warn .bi { color: var(--amber); } .banner.crit .bi { color: var(--rose); }
+.link { background: none; border: 0; padding: 0; color: var(--sky); text-decoration: underline; text-underline-offset: 2px; }
+
+/* Attention strip (existing component, shown for context) */
+.strip { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 10px 14px; font-size: 13px; }
+.strip .c { border: 1px solid; border-radius: 6px; padding: 1px 8px; font-size: 12px; }
+.strip .c.a { color: var(--rose); border-color: var(--rose); background: var(--rose-bg); }
+.strip .c.b { color: var(--sky); border-color: var(--sky); background: var(--sky-bg); }
+
+/* Next-up card on Overview */
+.countdown { font-family: var(--font-mono); font-size: 30px; font-weight: 500; letter-spacing: -.02em; line-height: 1.1; }
+.evt { font-family: var(--font-display); font-size: 17px; font-weight: 600; margin-top: 4px; }
+.mini { width: 100%; border-collapse: collapse; font-size: 12px; }
+.mini th { text-align: left; font-weight: 500; color: var(--muted); padding: 2px 6px 4px 0; }
+.mini td { padding: 3px 6px 3px 0; border-top: 1px solid var(--border); }
+.mini td.r, .mini th.r { text-align: right; }
+.thenline { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 14px; }
+
+/* Calendar */
+.day { margin: 14px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.day:first-child { margin-top: 0; }
+.row { display: grid; grid-template-columns: 74px minmax(0, 1fr) auto; gap: 4px 12px; align-items: start; padding: 9px 0; border-top: 1px solid var(--border); }
+.row .t { font-family: var(--font-mono); font-size: 12px; color: var(--muted); padding-top: 2px; }
+.row .name { font-weight: 500; }
+.row .meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.row .meta b { color: var(--text); font-weight: 500; }
+.row .tags { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.why { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.why i { font-style: normal; color: var(--faint); }
+.news { padding: 9px 0; border-top: 1px solid var(--border); }
+.news:first-of-type { border-top: 0; padding-top: 0; }
+.news .h { font-weight: 500; }
+.news .m { font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; margin-top: 3px; }
+
+.switch { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.switch input { accent-color: var(--sky); width: 16px; height: 16px; }
+.empty { color: var(--muted); font-size: 13px; padding: 6px 0; }
+
+@media (max-width: 860px) {
+  .g3, .g21 { grid-template-columns: minmax(0, 1fr); }
+  .row { grid-template-columns: 62px minmax(0, 1fr); }
+  .row .tags { grid-column: 2; justify-content: flex-start; }
+}
+</style>
+
+<div class="wrap">
+  <div class="mockbar" role="group" aria-label="Mock controls">
+    <span class="tag">Mock</span>
+    <label>Page
+      <select id="view"><option value="overview">Overview (compact card)</option><option value="market" selected>Market watch (full page)</option></select>
+    </label>
+    <label>Your loan
+      <select id="buffer">
+        <option value="comfortable">Comfortable (LTV 35%)</option>
+        <option value="thin" selected>Thin (LTV 52%)</option>
+        <option value="tight">Tight (LTV 66%)</option>
+      </select>
+    </label>
+    <label>Time
+      <select id="phase">
+        <option value="before" selected>Tue 17 Nov, before FOMC</option>
+        <option value="after">Thu 19 Nov 22:00, FOMC just happened</option>
+      </select>
+    </label>
+    <label>Theme
+      <select id="theme"><option value="auto">Auto</option><option value="dark">Dark</option><option value="light">Light</option></select>
+    </label>
+    <span class="hint">Sample data. Dates, numbers and headlines are made up.</span>
+  </div>
+
+  <header class="appbar">
+    <span class="brand">LP Dashboard</span>
+    <nav class="nav" aria-label="Pages" id="nav"></nav>
+  </header>
+
+  <main class="page" id="page"></main>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const state = { view: "market", buffer: "thin", phase: "before", impact: "all", range: 14 };
+
+/* ---- loan: collateral fixed at $20,000, margin call 70%, liquidation 78% ---- */
+const C = 20000, MARGIN = 70, LIQ = 78;
+const LTV0 = { comfortable: 35, thin: 52, tight: 66 };
+const usd = (n) => "$" + Math.round(n).toLocaleString("en-US");
+function loan() {
+  const ltv = LTV0[state.buffer], debt = (ltv / 100) * C;
+  const dropToLiq = (1 - ltv / LIQ) * 100;
+  const level = dropToLiq > 40 ? "ok" : dropToLiq > 25 ? "warn" : "crit";
+  const word = { ok: "Comfortable", warn: "Thin", crit: "Tight" }[level];
+  const rows = [10, 20, 30].map((s) => {
+    const l = ltv / (1 - s / 100);
+    const status = l >= LIQ ? ["crit", "Liquidation"] : l >= MARGIN ? ["crit", "Margin call"] : l >= MARGIN - 8 ? ["warn", "Watch"] : ["ok", "OK"];
+    const add = Math.max(0, debt / (MARGIN / 100) - C * (1 - s / 100));
+    return { s, l, status, add };
+  });
+  return { ltv, debt, dropToLiq, level, word, rows };
+}
+
+/* ---- events ---- */
+const after = () => state.phase === "after";
+function events() {
+  const up = [
+    { day: "Wed 18 Nov", t: "14:30", name: "US retail sales (Oct)", impact: "med", cat: "Macro", meta: "Previous <b>+0.4%</b> · forecast <b>+0.3%</b>" },
+    { day: "Thu 19 Nov", t: "20:00", name: "FOMC rate decision", impact: "high", cat: "Macro", meta: "Previous <b>4.25%</b> · forecast <b>4.00%</b> (cut 0.25)", id: "fomc" },
+    { day: "Thu 19 Nov", t: "20:30", name: "Fed chair press conference", impact: "high", cat: "Macro", id: "press" },
+    { day: "Thu 19 Nov", t: "After close", name: "Nvidia earnings", impact: "high", cat: "Earnings", meta: "EPS forecast <b>$1.05</b> · moves AI stocks and often crypto" },
+    { day: "Fri 20 Nov", t: "16:00", name: "US flash PMI", impact: "low", cat: "Macro" },
+    { day: "Fri 27 Nov", t: "14:30", name: "Core PCE inflation (Oct)", impact: "high", cat: "Macro", meta: "Previous <b>2.9%</b> · forecast <b>2.8%</b>" },
+    { day: "Fri 27 Nov", t: "10:00", name: "BTC and ETH monthly options expiry", impact: "med", cat: "Crypto", meta: "Large expiries can swing price around the hour" },
+  ];
+  const done = [
+    { day: "Tue 17 Nov", t: "14:30", name: "US CPI (Oct)", impact: "high", cat: "Macro", meta: "Actual <b>3.1%</b> · forecast <b>3.0%</b>", tag: ["off", "Risk-off"], why: "Hotter than expected, so fewer rate cuts priced in." },
+    { day: "Mon 16 Nov", t: "After close", name: "Walmart earnings", impact: "med", cat: "Earnings", meta: "EPS <b>$0.62</b> · forecast <b>$0.62</b>", tag: ["neutral", "Neutral"], why: "In line, guidance unchanged." },
+  ];
+  if (after()) {
+    const f = up.filter((e) => e.id === "fomc" || e.id === "press");
+    const rest = up.filter((e) => !f.includes(e) && e.day !== "Wed 18 Nov");
+    f[0] = { ...f[0], meta: "Actual <b>4.25%</b> (held) · forecast <b>4.00%</b>", tag: ["off", "Risk-off"], why: "Fewer cuts than expected; statement kept a cautious tone." };
+    f[1] = { ...f[1], meta: "Said inflation progress is “not yet enough”.", tag: ["off", "Risk-off"], why: "Hawkish tone reinforces the decision." };
+    return { up: rest, done: [...f.reverse(), ...done] };
+  }
+  return { up, done };
+}
+const headlines = () => after()
+  ? [
+      { h: "Fed holds rates, signals no cut before spring", src: "Newswire", age: "35 min", tag: ["off", "Risk-off"], why: "Rates stay high longer." },
+      { h: "Bitcoin slips as traders trim cut bets", src: "Crypto desk", age: "50 min", tag: ["off", "Risk-off"], why: "Crypto reacts to rate expectations." },
+      { h: "Nvidia earnings due after close tonight", src: "Newswire", age: "2 h", tag: ["neutral", "Neutral"], why: "Scheduled, no result yet." },
+    ]
+  : [
+      { h: "Inflation runs hotter than forecast in October", src: "Newswire", age: "5 h", tag: ["off", "Risk-off"], why: "Fewer cuts priced in." },
+      { h: "Spot Bitcoin ETFs log third day of inflows", src: "Crypto desk", age: "9 h", tag: ["on", "Risk-on"], why: "Demand from funds." },
+      { h: "Fed officials split ahead of Thursday decision", src: "Newswire", age: "1 d", tag: ["neutral", "Unclear"], why: "Mixed signals." },
+    ];
+
+/* ---- pieces ---- */
+const chip = (cls, text) => `<span class="chip ${cls}">${text}</span>`;
+const impactChip = (i) => chip(i, { high: "High", med: "Medium", low: "Low" }[i]);
+function stressTable(L) {
+  return `<table class="mini">
+    <thead><tr><th>If prices fall</th><th class="r">LTV</th><th>Status</th><th class="r">Add to stay under ${MARGIN}%</th></tr></thead>
+    <tbody>${L.rows.map((r) => `<tr><td>−${r.s}%</td><td class="r num">${r.l.toFixed(0)}%</td><td>${chip(r.status[0], r.status[1])}</td><td class="r num">${r.add ? usd(r.add) : "nothing"}</td></tr>`).join("")}</tbody>
+  </table>`;
+}
+function loanBlock(L) {
+  return `<div class="label">Your loan buffer</div>
+    <div style="margin-top:6px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">${chip(L.level, L.word)}<span class="num">LTV ${L.ltv}%</span></div>
+    <div class="hint" style="margin-top:6px">Margin call at ${MARGIN}%, liquidation at ${LIQ}%.<br><b class="num" style="color:var(--text)">${L.dropToLiq.toFixed(0)}%</b> price drop to liquidation. Debt ${usd(L.debt)} against ${usd(C)} collateral.</div>`;
+}
+function bannerHtml(L) {
+  if (after()) {
+    const msg = `<b>FOMC held rates; tagged risk-off.</b> ${L.level === "ok" ? `Your loan can absorb a ${L.dropToLiq.toFixed(0)}% drop.` : `Your loan is ${L.word.toLowerCase()}: a ${L.dropToLiq.toFixed(0)}% drop reaches liquidation.`} Nvidia reports tonight.`;
+    return `<div class="banner ${L.level === "ok" ? "info" : L.level}"><span class="bi">!</span><div>${msg}</div></div>`;
+  }
+  const cls = L.level === "ok" ? "info" : L.level;
+  const msg = L.level === "ok"
+    ? `<b>FOMC in 1 day 23 h, then Nvidia earnings.</b> Your loan can absorb a ${L.dropToLiq.toFixed(0)}% drop, so nothing to do.`
+    : `<b>FOMC in 1 day 23 h, then Nvidia earnings.</b> Your loan is ${L.word.toLowerCase()}: a ${L.dropToLiq.toFixed(0)}% drop reaches liquidation. See the table for what a fall would cost you.`;
+  return `<div class="banner ${cls}"><span class="bi">!</span><div>${msg}</div></div>`;
+}
+
+/* ---- Overview (compact) ---- */
+function overview() {
+  const L = loan();
+  const left = after()
+    ? `<div class="label">Just happened</div><div class="evt">FOMC rate decision</div>
+       <div class="hint">Thu 19 Nov · 20:00</div>
+       <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="num">4.25% held</span> ${chip("off", "Risk-off")}</div>
+       <div class="hint" style="margin-top:4px">Forecast was 4.00%. Next: Nvidia earnings tonight.</div>`
+    : `<div class="label">Next high-impact event</div><div class="evt">FOMC rate decision</div>
+       <div class="hint">Thu 19 Nov · 20:00 · forecast 4.00% (cut 0.25)</div>
+       <div class="countdown" style="margin-top:8px">1d 23h</div>`;
+  return `
+    <div class="pagehead"><div><h1>Overview</h1><div class="sub">Everything you provide liquidity to, across wallets and protocols.</div></div><span class="hint">Updated 2 min ago</span></div>
+    <div class="strip"><span class="label" style="margin-right:4px">Needs you</span><span class="c a">Out of range · WETH/USDC #4821</span><span class="c b">Claim now · $142</span></div>
+
+    <section class="card" aria-label="Market watch">
+      <div class="cardhead"><h2>Market watch</h2><button class="link" data-go="market">Open Market watch</button></div>
+      <div class="grid g3">
+        <div>${left}</div>
+        <div>${loanBlock(L)}</div>
+        <div>${stressTable(L)}</div>
+      </div>
+      <div class="thenline"><span>Then: Fed chair press conference Thu 20:30 · Nvidia earnings Thu after close · 3 more in 14 days</span></div>
+    </section>
+
+    <div class="grid ghost" aria-hidden="true">
+      <div class="card">Stat cards: value, P/L, fees, IL, unclaimed, break-even (unchanged)</div>
+      <div class="card">Earnings chart and portfolio value chart (unchanged)</div>
+      <div class="card">Position range cards, interest coverage, allocation, ready to claim (unchanged)</div>
+    </div>`;
+}
+
+/* ---- Market watch (full) ---- */
+function market() {
+  const L = loan(), E = events();
+  const within = (e) => state.impact === "all" || e.impact === "high";
+  const group = (list) => {
+    if (!list.length) return `<div class="empty">Nothing in this window.</div>`;
+    let last = "", out = "";
+    for (const e of list) {
+      if (e.day !== last) { out += `<div class="day">${e.day}</div>`; last = e.day; }
+      out += `<div class="row"><span class="t">${e.t}</span>
+        <div><div class="name">${e.name}</div>${e.meta ? `<div class="meta">${e.meta}</div>` : ""}${e.why ? `<div class="why">${e.why} <i>(AI read, may be wrong)</i></div>` : ""}</div>
+        <div class="tags">${e.tag ? chip(e.tag[0], e.tag[1]) : ""}${impactChip(e.impact)}<span class="cat">${e.cat}</span></div></div>`;
+    }
+    return out;
+  };
+  const upcoming = E.up.filter(within);
+  return `
+    <div class="pagehead"><div><h1>Market watch</h1><div class="sub">Events that can move stocks and crypto, and what they mean for your loan.</div></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <div class="seg" role="group" aria-label="Impact"><button data-impact="all" aria-pressed="${state.impact === "all"}">All impact</button><button data-impact="high" aria-pressed="${state.impact === "high"}">High only</button></div>
+        <div class="seg" role="group" aria-label="Window"><button data-range="7" aria-pressed="${state.range === 7}">7 days</button><button data-range="14" aria-pressed="${state.range === 14}">14 days</button><button data-range="30" aria-pressed="${state.range === 30}">30 days</button></div>
+      </div></div>
+    ${bannerHtml(L)}
+    <div class="grid g21">
+      <div class="stack">
+        <section class="card" aria-label="Upcoming events">
+          <div class="cardhead"><h2>Upcoming</h2><span class="hint">Times in your local time zone</span></div>
+          ${group(upcoming.filter((e) => state.range >= 14 || e.day.includes("Wed") || e.day.includes("Thu") || e.day.includes("Fri 20")))}
+        </section>
+        <section class="card" aria-label="Already happened">
+          <div class="cardhead"><h2>Already happened</h2><span class="hint">Tagged risk-on or risk-off by AI after release</span></div>
+          ${group(E.done.filter(within))}
+        </section>
+      </div>
+      <div class="stack">
+        <section class="card" aria-label="Your loan">
+          <div class="cardhead"><h2>Your loan</h2><button class="link" data-go="borrow">Open Borrow</button></div>
+          ${loanBlock(L)}
+          <div style="margin-top:12px">${stressTable(L)}</div>
+          <div class="hint" style="margin-top:8px">Assumes your collateral moves 1:1 with price, which is the worst case. LP collateral usually falls less.</div>
+        </section>
+        <section class="card" aria-label="Latest headlines">
+          <div class="cardhead"><h2>Latest headlines</h2><span class="hint">Updated 4 min ago</span></div>
+          ${headlines().map((n) => `<div class="news"><div class="h">${n.h}</div><div class="m"><span>${n.src} · ${n.age}</span>${chip(n.tag[0], n.tag[1])}<span>${n.why}</span></div></div>`).join("")}
+        </section>
+      </div>
+    </div>`;
+}
+
+/* ---- render ---- */
+function render() {
+  const items = [["overview", "Overview"], ["borrow", "Borrow"], ["positions", "Positions"], ["pools", "Pools"], ["pnl", "P&L"], ["risk", "Risk"], ["market", "Market watch", "new"], ["addresses", "Addresses"]];
+  $("nav").innerHTML = items.map(([k, label, cls]) => `<button class="${cls || ""}" data-go="${k}" ${state.view === k ? 'aria-current="page"' : ""}>${label}</button>`).join("");
+  $("page").innerHTML = state.view === "overview" ? overview() : state.view === "market" ? market() : `<div class="card empty">This page is unchanged in the mock.</div>`;
+  $("view").value = state.view === "overview" || state.view === "market" ? state.view : $("view").value;
+}
+document.addEventListener("click", (e) => {
+  const go = e.target.closest("[data-go]"); if (go) { state.view = go.dataset.go; render(); return; }
+  const im = e.target.closest("[data-impact]"); if (im) { state.impact = im.dataset.impact; render(); return; }
+  const rg = e.target.closest("[data-range]"); if (rg) { state.range = +rg.dataset.range; render(); }
+});
+$("view").onchange = (e) => { state.view = e.target.value; render(); };
+$("buffer").onchange = (e) => { state.buffer = e.target.value; render(); };
+$("phase").onchange = (e) => { state.phase = e.target.value; render(); };
+$("theme").onchange = (e) => {
+  if (e.target.value === "auto") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", e.target.value);
+};
+render();
+</script>

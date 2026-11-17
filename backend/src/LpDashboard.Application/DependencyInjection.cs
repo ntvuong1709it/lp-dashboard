@@ -31,6 +31,9 @@ public static class DependencyInjection
         services.AddScoped<LpDashboard.Application.Risk.RiskService>();
         services.AddScoped<LpDashboard.Application.Risk.RiskAlertService>();
         services.AddScoped<LpDashboard.Application.Risk.RiskMonitorService>();
+        services.AddSingleton<LpDashboard.Application.Market.MarketCache>();
+        services.AddScoped<LpDashboard.Application.Market.ILoanSource, LpDashboard.Application.Market.BorrowLoanSource>();
+        services.AddScoped<LpDashboard.Application.Market.MarketWatchService>();
         return services;
     }
 }

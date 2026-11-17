@@ -66,6 +66,9 @@ export function Header({ width }: { width: string }) {
           <NavLink to="/risk" className={navClass}>
             Risk
           </NavLink>
+          <NavLink to="/market" className={navClass}>
+            Market
+          </NavLink>
           <NavLink to="/addresses" className={navClass}>
             Addresses
           </NavLink>

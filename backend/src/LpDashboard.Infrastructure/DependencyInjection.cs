@@ -25,6 +25,7 @@ public static class DependencyInjection
         services.AddEvmProviders(configuration);
         services.AddAlerts(configuration);
         services.AddRisk(configuration);
+        services.AddMarket(configuration);
         return services;
     }
 
@@ -144,6 +145,29 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromSeconds(15);
         });
         services.AddSingleton<LpDashboard.Application.Risk.IOnChainFactsSource, LpDashboard.Infrastructure.Risk.EvmOnChainFactsSource>();
+    }
+
+    /// <summary>The Market watch's sources: Nasdaq's public calendars and RSS headlines. None needs a key and each is sent only a date.</summary>
+    private static void AddMarket(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<LpDashboard.Domain.Market.MarketOptions>(configuration.GetSection(LpDashboard.Domain.Market.MarketOptions.SectionName));
+        services.Configure<LpDashboard.Application.Market.MarketSettings>(configuration.GetSection(LpDashboard.Application.Market.MarketSettings.SectionName));
+
+        void Nasdaq(HttpClient client)
+        {
+            client.BaseAddress = new Uri("https://api.nasdaq.com/");
+            client.Timeout = TimeSpan.FromSeconds(15);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (compatible; LpDashboard)");
+            client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+        }
+
+        services.AddHttpClient<LpDashboard.Application.Market.IEconomicCalendarSource, LpDashboard.Infrastructure.Market.NasdaqEconomicCalendarSource>(Nasdaq);
+        services.AddHttpClient<LpDashboard.Application.Market.IEarningsCalendarSource, LpDashboard.Infrastructure.Market.NasdaqEarningsCalendarSource>(Nasdaq);
+        services.AddHttpClient<LpDashboard.Application.Market.IHeadlineSource, LpDashboard.Infrastructure.Market.FeedHeadlineSource>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(15);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (compatible; LpDashboard)");
+        });
     }
 
     private static void AddEvmProviders(this IServiceCollection services, IConfiguration configuration)

@@ -1,0 +1,12 @@
+{
+  "data": {
+    "asOf": "Tue, Nov 17, 2026",
+    "rows": [
+      { "gmt": "08:30", "country": "United States", "eventName": "Core CPI", "actual": "3.1%", "consensus": "3.0%", "previous": "3.0%", "description": "" },
+      { "gmt": "08:30", "country": "United States", "eventName": "CPI", "actual": "&nbsp;", "consensus": "2.9%", "previous": "2.9%", "description": "" },
+      { "gmt": "14:00", "country": "United States", "eventName": "Fed Interest Rate Decision", "actual": "4.25%", "consensus": "4.00%", "previous": "4.25%", "description": "" },
+      { "gmt": "10:00", "country": "United States", "eventName": "Consumer Confidence &amp; Sentiment", "actual": " ", "consensus": " ", "previous": "94.6", "description": "" },
+      { "gmt": "All Day", "country": "United States", "eventName": "Bank Holiday", "actual": "&nbsp;", "consensus": " ", "previous": " ", "description": "" }
+    ]
+  }
+}

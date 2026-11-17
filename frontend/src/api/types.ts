@@ -1002,3 +1002,76 @@ export interface RiskChangeDto {
   description: string;
   isWorse: boolean;
 }
+
+// ---- Market watch ----
+
+export type MarketSourceStatus = "ok" | "stale" | "unavailable";
+
+export interface MarketSourcesDto {
+  calendar: MarketSourceStatus;
+  earnings: MarketSourceStatus;
+  headlines: MarketSourceStatus;
+}
+
+export type MarketImpact = "High" | "Medium";
+export type MarketTag = "RiskOn" | "RiskOff" | "Neutral";
+
+export interface MarketEventDto {
+  id: string;
+  at: string;
+  /** Earnings only: "Before open", "After close" or "Time not set". */
+  timing: string | null;
+  name: string;
+  category: "Macro" | "Earnings";
+  impact: MarketImpact;
+  previous: string | null;
+  forecast: string | null;
+  actual: string | null;
+  tag: MarketTag | null;
+  /** The numbers behind the tag. */
+  reason: string | null;
+}
+
+export interface HeadlineDto {
+  title: string;
+  source: string;
+  url: string;
+  publishedAt: string;
+}
+
+export type MarketBufferLevel = "Comfortable" | "Thin" | "Tight";
+export type MarketStressStatus = "Ok" | "Watch" | "MarginCall" | "Liquidation";
+
+export interface MarketStressRowDto {
+  fallPercent: number;
+  /** LTV percent or health factor after the fall. */
+  value: number;
+  status: MarketStressStatus;
+  addCollateralUsd: number;
+}
+
+export interface MarketLoanStressDto {
+  kind: "Ltv" | "HealthFactor";
+  value: number;
+  dropToLiquidationPercent: number;
+  buffer: MarketBufferLevel;
+  marginCallLtvPercent: number | null;
+  liquidationLtvPercent: number | null;
+  collateralUsd: number;
+  debtUsd: number;
+  rows: MarketStressRowDto[];
+}
+
+export interface MarketLoanDto {
+  loanLabel: string;
+  stress: MarketLoanStressDto;
+}
+
+export interface MarketWatchDto {
+  updatedAt: string;
+  sources: MarketSourcesDto;
+  upcoming: MarketEventDto[];
+  happened: MarketEventDto[];
+  headlines: HeadlineDto[];
+  loan: MarketLoanDto | null;
+}
