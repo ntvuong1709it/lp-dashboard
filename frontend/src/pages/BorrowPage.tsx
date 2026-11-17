@@ -11,7 +11,7 @@ import { Verdict } from "../components/borrow/Verdict";
 import { UpdatedAgo } from "../components/UpdatedAgo";
 import { ErrorText, PageSkeleton, Segmented } from "../components/ui";
 import { DAY_OPTIONS } from "../lib/borrow";
-import { answerFor, type Basis } from "../lib/borrowAnswer";
+import { answerFor, payPartsFor, type Basis } from "../lib/borrowAnswer";
 import { useOwner } from "../lib/owner";
 import { useHideBalances } from "../lib/privacy";
 import { usePersistentState } from "../lib/usePersistentState";
@@ -97,7 +97,7 @@ export function BorrowPage() {
         <>
           <BorrowBanners summary={summary.data} loans={loans.data} />
           <Verdict shown={answers[basis]} now={answers.now} past={answers.past} summary={summary.data} />
-          <MoneyTable a={answers[basis]} days={summary.data.days} />
+          <MoneyTable a={answers[basis]} days={summary.data.days} parts={payPartsFor(summary.data, loans.data, basis)} />
           <div className="grid gap-6 lg:grid-cols-2">
             <RateCompare a={answers[basis]} summary={summary.data} />
             <Room now={answers.now} summary={summary.data} />

@@ -30,6 +30,28 @@ export interface Answer {
   aavePer100: number;
 }
 
+/** Interest per day for one group of loans, e.g. "Manual · Binance" or "Aave". */
+export interface PayPart {
+  key: string;
+  label: string;
+  perDay: number;
+}
+
+/** Splits what you pay into Aave and each manual source, so manual loans can be read on their own. */
+export function payPartsFor(summary: BorrowSummaryDto, loans: LoanDto[], basis: Basis): PayPart[] {
+  const days = Math.max(1, summary.days);
+  const parts = new Map<string, PayPart>();
+  for (const l of loans) {
+    const key = l.kind === "manual" ? `manual:${l.source}` : "aave";
+    const label = l.kind === "manual" ? `Manual · ${l.source}` : "Aave";
+    const perDay = basis === "now" ? l.cost.perDayUsd : l.interestInWindowUsd / days;
+    const part = parts.get(key);
+    if (part) part.perDay += perDay;
+    else parts.set(key, { key, label, perDay });
+  }
+  return [...parts.values()];
+}
+
 export function answerFor(summary: BorrowSummaryDto, loans: LoanDto[], basis: Basis): Answer {
   const c = summary.coverage;
   const days = Math.max(1, summary.days);

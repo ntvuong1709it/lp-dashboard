@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { PERIOD_COLUMNS, type Answer } from "../../lib/borrowAnswer";
+import { PERIOD_COLUMNS, type Answer, type PayPart } from "../../lib/borrowAnswer";
 import { formatPercent, formatUsd, pnlClass } from "../../lib/format";
 import { Panel } from "../ui";
 
@@ -11,11 +11,25 @@ interface Row {
   signed?: boolean;
   tone?: (v: number) => string;
   className?: string;
+  /** A part of the row above it, drawn smaller and indented. */
+  indent?: boolean;
 }
 
 /** What you pay and what comes in, for a day, week, month and year at once. Only LP income is the variable part. */
-export function MoneyTable({ a, days }: { a: Answer; days: number }) {
+export function MoneyTable({ a, days, parts }: { a: Answer; days: number; parts: PayPart[] }) {
   const hasAave = a.aavePerDay > 0;
+  // Only break "You pay" down when there is more than one group to tell apart.
+  const split: Row[] =
+    parts.length > 1
+      ? parts.map((p) => ({
+          key: `pay-${p.key}`,
+          label: p.label,
+          sub: "Part of what you pay",
+          perDay: p.perDay,
+          tone: () => "text-down",
+          indent: true,
+        }))
+      : [];
   const rows: Row[] = [
     {
       key: "pay",
@@ -29,6 +43,7 @@ export function MoneyTable({ a, days }: { a: Answer; days: number }) {
       perDay: a.payPerDay,
       tone: () => "text-down",
     },
+    ...split,
     ...(hasAave
       ? [
           {
@@ -94,14 +109,14 @@ export function MoneyTable({ a, days }: { a: Answer; days: number }) {
           <tbody>
             {rows.map((r) => (
               <tr key={r.key} className={`border-t border-line ${r.className ?? ""}`}>
-                <td className="px-2.5 py-2.5">
-                  <div className={r.className?.includes("font-semibold") ? "" : "font-medium"}>{r.label}</div>
-                  <div className="text-xs font-normal text-muted">{r.sub}</div>
+                <td className={r.indent ? "py-1.5 pl-6 pr-2.5" : "px-2.5 py-2.5"}>
+                  <div className={r.indent ? "text-[13px]" : r.className?.includes("font-semibold") ? "" : "font-medium"}>{r.label}</div>
+                  {!r.indent && <div className="text-xs font-normal text-muted">{r.sub}</div>}
                 </td>
                 {PERIOD_COLUMNS.map((p) => {
                   const v = r.perDay * p.factor;
                   return (
-                    <td key={p.key} className={`px-2.5 py-2.5 text-right num ${r.tone ? r.tone(v) : ""}`}>
+                    <td key={p.key} className={`px-2.5 text-right num ${r.indent ? "py-1.5 text-[13px]" : "py-2.5"} ${r.tone ? r.tone(v) : ""}`}>
                       {formatUsd(v, r.signed)}
                     </td>
                   );
