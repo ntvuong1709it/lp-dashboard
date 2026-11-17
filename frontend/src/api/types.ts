@@ -1037,6 +1037,8 @@ export interface HeadlineDto {
   source: string;
   url: string;
   publishedAt: string;
+  /** The picture the feed attaches to the story, if it has one (https only). */
+  imageUrl: string | null;
 }
 
 export type MarketBufferLevel = "Comfortable" | "Thin" | "Tight";

@@ -68,7 +68,7 @@ public sealed class MarketWatchService(
             upcoming.OrderBy(e => e.At).ToList(),
             happened.OrderByDescending(e => e.At).ToList(),
             (headlineRows ?? []).OrderByDescending(h => h.PublishedAt).Take(MaxHeadlines)
-                .Select(h => new HeadlineDto(h.Title, h.Source, h.Url, h.PublishedAt)).ToList(),
+                .Select(h => new HeadlineDto(h.Title, h.Source, h.Url, h.PublishedAt, h.ImageUrl)).ToList(),
             await loanTask);
     }
 

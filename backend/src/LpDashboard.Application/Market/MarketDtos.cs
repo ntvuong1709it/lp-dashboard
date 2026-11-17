@@ -34,6 +34,6 @@ public sealed record MarketEventDto(
     string? Tag,
     string? Reason);
 
-public sealed record HeadlineDto(string Title, string Source, string Url, DateTimeOffset PublishedAt);
+public sealed record HeadlineDto(string Title, string Source, string Url, DateTimeOffset PublishedAt, string? ImageUrl);
 
 public sealed record LoanStressDto(string LoanLabel, LoanStress Stress);

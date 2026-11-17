@@ -10,7 +10,7 @@ public sealed record RawEconomicEvent(DateOnly Day, string TimeEastern, string C
 /// <param name="MarketCap">Dollar text such as "$1,016,233,530,000", as the source gave it.</param>
 public sealed record RawEarning(DateOnly Day, string Timing, string Symbol, string Company, string? MarketCap, string? EpsForecast);
 
-public sealed record RawHeadline(string Title, string Source, string Url, DateTimeOffset PublishedAt);
+public sealed record RawHeadline(string Title, string Source, string Url, DateTimeOffset PublishedAt, string? ImageUrl = null);
 
 /// <summary>The economic calendar of one day (Nasdaq). Like every source it returns a failure instead of throwing.</summary>
 public interface IEconomicCalendarSource

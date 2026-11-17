@@ -74,8 +74,31 @@ internal sealed class FeedHeadlineSource(HttpClient http, IOptions<MarketSetting
             var link = MarketText.Clean(item.Element("link")?.Value);
             if (title.Length == 0 || link.Length == 0) continue;
             if (!DateTimeOffset.TryParse(item.Element("pubDate")?.Value, out var published)) continue;
-            items.Add(new RawHeadline(title, sourceName, link, published.ToUniversalTime()));
+            items.Add(new RawHeadline(title, sourceName, link, published.ToUniversalTime(), ImageOf(item)));
         }
         return SourceOutcome<IReadOnlyList<RawHeadline>>.Ok(items.OrderByDescending(i => i.PublishedAt).ToList());
     }
+
+    /// <summary>The picture a feed attaches to a story (media:thumbnail, media:content or an image enclosure), https only.</summary>
+    private static string? ImageOf(XElement item)
+    {
+        foreach (var e in item.Elements())
+        {
+            var url = e.Name.LocalName switch
+            {
+                "thumbnail" => e.Attribute("url")?.Value,
+                "content" when IsImage(e) => e.Attribute("url")?.Value,
+                "enclosure" when IsImage(e) => e.Attribute("url")?.Value,
+                _ => null,
+            };
+            url = url?.Trim();
+            if (!string.IsNullOrEmpty(url) && Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps)
+                return uri.AbsoluteUri;
+        }
+        return null;
+    }
+
+    private static bool IsImage(XElement e) =>
+        string.Equals(e.Attribute("medium")?.Value, "image", StringComparison.OrdinalIgnoreCase)
+        || (e.Attribute("type")?.Value ?? "").StartsWith("image/", StringComparison.OrdinalIgnoreCase);
 }

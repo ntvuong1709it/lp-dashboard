@@ -124,6 +124,33 @@ public class MarketSourceParserTests
     }
 
     [Fact]
+    public void Feed_images_are_read_from_media_and_enclosure_tags_and_only_over_https()
+    {
+        const string xml = """
+            <rss xmlns:media="http://search.yahoo.com/mrss/"><channel>
+              <item><title>A</title><link>https://x/a</link><pubDate>Thu, 12 Nov 2026 10:00:00 GMT</pubDate>
+                <media:thumbnail url="https://img.example/a.jpg"/></item>
+              <item><title>B</title><link>https://x/b</link><pubDate>Thu, 12 Nov 2026 09:00:00 GMT</pubDate>
+                <media:content url="https://img.example/b.jpg" medium="image"/></item>
+              <item><title>C</title><link>https://x/c</link><pubDate>Thu, 12 Nov 2026 08:00:00 GMT</pubDate>
+                <enclosure url="https://img.example/c.png" type="image/png" length="1"/></item>
+              <item><title>D</title><link>https://x/d</link><pubDate>Thu, 12 Nov 2026 07:00:00 GMT</pubDate>
+                <media:thumbnail url="http://img.example/d.jpg"/></item>
+              <item><title>E</title><link>https://x/e</link><pubDate>Thu, 12 Nov 2026 06:00:00 GMT</pubDate>
+                <enclosure url="https://img.example/e.mp3" type="audio/mpeg" length="1"/></item>
+            </channel></rss>
+            """;
+
+        var items = FeedHeadlineSource.Parse(xml, "X").Value!;
+
+        Assert.Equal("https://img.example/a.jpg", items.Single(i => i.Title == "A").ImageUrl);
+        Assert.Equal("https://img.example/b.jpg", items.Single(i => i.Title == "B").ImageUrl);
+        Assert.Equal("https://img.example/c.png", items.Single(i => i.Title == "C").ImageUrl);
+        Assert.Null(items.Single(i => i.Title == "D").ImageUrl);
+        Assert.Null(items.Single(i => i.Title == "E").ImageUrl);
+    }
+
+    [Fact]
     public void Malformed_feed_fails() =>
         Assert.False(FeedHeadlineSource.Parse("<rss><channel><item>", "X").Answered);
 }
