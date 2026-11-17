@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { usePortfolioInsights } from "../api/client";
 import type {
   AssetClass,
@@ -110,7 +111,10 @@ export function ExposurePanel() {
             rewards, at today&apos;s prices. A position that is out of range sits
             entirely in one token.
             {e.hasMissingPrices &&
-              " Some holdings have no price and are not counted."}
+              " Some holdings have no price and are not counted."}{" "}
+            <Link to="/market" className="text-accent hover:underline">
+              See what a fall does
+            </Link>
           </p>
         </div>
       )}

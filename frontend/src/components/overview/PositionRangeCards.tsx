@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { usePosition } from "../../api/client";
 import type { PositionDto, RangeDto } from "../../api/types";
-import { isNearEdge, pairLabel } from "../../lib/attention";
+import { UNCLAIMED_ALERT_USD, isNearEdge, pairLabel } from "../../lib/attention";
 import {
   formatFee,
   formatPercent,
@@ -142,6 +142,7 @@ function PositionCard({ p, inverted, wallet }: { p: PositionDto; inverted: boole
   const range = p.range && (inverted ? invertRange(p.range) : p.range);
   const [base, quote] = inverted ? [p.token1, p.token0] : [p.token0, p.token1];
   const say = range && sayStatus(range);
+  const toClaim = p.metrics.uncollectedFeesUsd + p.metrics.pendingRewardsUsd;
 
   // The pool price at the first deposit, in the same units as the range. It comes from the position's events, so the
   // card loads them (cached, and shared with the position drawer).
@@ -186,23 +187,28 @@ function PositionCard({ p, inverted, wallet }: { p: PositionDto; inverted: boole
       ) : (
         <div className="mt-3 text-xs text-faint">No range for this position</div>
       )}
-      <dl className="mt-3 grid grid-cols-3 gap-2 border-t border-line pt-2.5">
+      <dl className="mt-3 grid grid-cols-4 gap-2 border-t border-line pt-2.5">
         <Stat label="Value" value={formatUsd(p.metrics.currentValueUsd)} />
         <Stat
           label="Fee APR"
           value={p.metrics.feeAprPercent != null ? formatPercent(p.metrics.feeAprPercent) : "—"}
         />
         <Stat label="Range" value={formatRangeWidth(range)} />
+        <Stat
+          label="To claim"
+          value={formatUsd(toClaim)}
+          valueClass={toClaim >= UNCLAIMED_ALERT_USD ? "text-accent" : undefined}
+        />
       </dl>
     </button>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value, valueClass = "text-fg" }: { label: string; value: string; valueClass?: string }) {
   return (
     <div className="min-w-0">
-      <dt className="text-[11px] uppercase tracking-wide text-faint">{label}</dt>
-      <dd className="num truncate text-sm font-medium text-fg">{value}</dd>
+      <dt className="truncate text-[11px] uppercase tracking-wide text-faint">{label}</dt>
+      <dd className={`num truncate text-sm font-medium ${valueClass}`}>{value}</dd>
     </div>
   );
 }

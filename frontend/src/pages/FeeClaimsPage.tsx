@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import {
   useBorrowDaily,
   useDailyEarnings,
@@ -15,6 +16,8 @@ import { HeadlineCards } from "../components/earnings/HeadlineCards";
 import { PositionBreakdown } from "../components/earnings/PositionBreakdown";
 import { TokenBreakdown } from "../components/earnings/TokenBreakdown";
 import { EarningsTabs } from "../components/EarningsTabs";
+import { RewardTokensPanel } from "../components/PortfolioInsights";
+import { READY_TO_CLAIM_ID, ReadyToClaimPanel } from "../components/Unclaimed";
 import { UpdatedAgo } from "../components/UpdatedAgo";
 import { Empty, ErrorText, PageSkeleton } from "../components/ui";
 import {
@@ -57,6 +60,17 @@ function EarningsOverview() {
   const claims = useWeeklyClaims(owner);
   // The chart's "All" range can reach back a year; the endpoint caps at 365 days.
   const interest = useBorrowDaily(owner, 365);
+
+  // The Overview's Unclaimed card links here (#ready-to-claim). The router does not scroll to a hash, so do it once the data is in.
+  const { hash } = useLocation();
+  const ready = !daily.isLoading && !open.isLoading;
+  useEffect(() => {
+    if (hash !== `#${READY_TO_CLAIM_ID}` || !ready) return;
+    document.getElementById(READY_TO_CLAIM_ID)?.scrollIntoView({
+      behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      block: "start",
+    });
+  }, [hash, ready]);
 
   const days = daily.data;
   const txs = useMemo(() => claimTxs(claims.data ?? []), [claims.data, hidden]);
@@ -107,8 +121,12 @@ function EarningsOverview() {
         today={view.head.today}
         owner={owner}
       />
+      <div id={READY_TO_CLAIM_ID} className="scroll-mt-40">
+        <ReadyToClaimPanel open={open.data ?? []} loading={open.isLoading} />
+      </div>
       <ClaimHealth stats={view.health} />
       <ClaimLog weeks={claims.data ?? []} flags={view.flags} />
+      <RewardTokensPanel />
     </div>
   );
 }

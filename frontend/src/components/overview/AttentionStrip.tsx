@@ -4,7 +4,6 @@ import { pairLabel, type Alert, type AlertKind } from "../../lib/attention";
 import { formatUsd } from "../../lib/format";
 import { usePositionDrawer } from "../../lib/positionDrawer";
 import { useHideBalances } from "../../lib/privacy";
-import { READY_TO_CLAIM_ID } from "../Unclaimed";
 import { ErrorText, Skeleton } from "../ui";
 
 /** One short text label per kind, each with its own colour, so a chip reads without decoding an icon. */
@@ -15,16 +14,9 @@ const chipStyle: Record<AlertKind, { label: string; className: string }> = {
   prices: { label: "No price", className: "border-line-strong/50 bg-muted/10 text-fg-2" },
 };
 
-function scrollToClaims() {
-  document.getElementById(READY_TO_CLAIM_ID)?.scrollIntoView({
-    behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-    block: "start",
-  });
-}
-
 /**
  * The line at the top of the Overview page: which positions need a decision (out of range, near an edge, unclaimed above
- * the alert level, missing prices), and how much is waiting to be claimed. Each chip opens its position.
+ * the alert level, missing prices). Each chip opens its position. What is waiting to be claimed is on the Unclaimed card.
  */
 export function AttentionStrip({
   alerts,
@@ -53,8 +45,6 @@ export function AttentionStrip({
     );
   }
 
-  const claimable = open.filter((p) => p.metrics.uncollectedFeesUsd + p.metrics.pendingRewardsUsd > 0);
-  const claimTotal = claimable.reduce((s, p) => s + p.metrics.uncollectedFeesUsd + p.metrics.pendingRewardsUsd, 0);
   const count = alerts.length;
   const allInRange = open.every((p) => p.range?.inRange === true);
 
@@ -104,24 +94,6 @@ export function AttentionStrip({
               </li>
             ))}
           </ul>
-        )}
-      </div>
-      <div className="flex items-center gap-3 text-sm">
-        {claimable.length ? (
-          <>
-            <span className="text-fg-2">
-              Ready to claim <span className="num font-semibold text-accent">{formatUsd(claimTotal)}</span>
-              <span className="text-muted">
-                {" "}
-                in {claimable.length} {claimable.length === 1 ? "position" : "positions"}
-              </span>
-            </span>
-            <button type="button" className="font-medium text-accent hover:underline" onClick={scrollToClaims}>
-              See breakdown
-            </button>
-          </>
-        ) : (
-          <span className="text-muted">Nothing to claim right now.</span>
         )}
       </div>
     </section>
