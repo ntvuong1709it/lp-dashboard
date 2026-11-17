@@ -28,6 +28,7 @@ import {
   formatFee,
   formatHours,
   formatPercent,
+  formatPrice,
   formatRangeWidth,
   formatShare,
   formatUsd,
@@ -417,7 +418,8 @@ function PositionsTable({
                       <RangeBar range={range} showLabels />
                       <div className="flex items-center justify-between text-[11px] text-faint">
                         <span>
-                          {quote?.symbol} per {base?.symbol}
+                          {quote?.symbol} per {base?.symbol} ·{" "}
+                          <span className="whitespace-nowrap">now {formatPrice(range.priceCurrent)}</span>
                         </span>
                         <RangeBadge
                           inRange={range.inRange}

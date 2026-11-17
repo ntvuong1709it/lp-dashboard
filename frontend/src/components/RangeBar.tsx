@@ -1,63 +1,112 @@
 import type { RangeDto } from "../api/types";
 import { formatPrice } from "../lib/format";
 
-/** Horizontal bar showing the position range with a marker at the current price. */
+/**
+ * The one range bar used on every page: a blue band for the range, a white tick where the price is now, the lower and
+ * upper price under its ends, and optionally a dot for the entry price and a ring for a price you are testing.
+ */
+export function RangeTrack({
+  lower,
+  upper,
+  current,
+  entry,
+  ring,
+  scale,
+  labels = true,
+  ariaLabel,
+  className = "",
+}: {
+  lower: number;
+  upper: number;
+  current?: number | null;
+  /** Price when the position was opened, drawn as a dot on the bar. */
+  entry?: number | null;
+  /** A price to test (for example after a fall), drawn as a ring. `ringClass` colors its border. */
+  ring?: { value: number; ringClass: string } | null;
+  /** Fixed [min, max] to draw between, when several bars must share one scale. */
+  scale?: [number, number];
+  /** Show the lower and upper price under the ends of the band. */
+  labels?: boolean;
+  ariaLabel?: string;
+  className?: string;
+}) {
+  let min: number;
+  let max: number;
+  if (scale) {
+    [min, max] = scale;
+  } else {
+    const values = [lower, upper, current, entry, ring?.value].filter((v): v is number => v != null);
+    const lo = Math.min(...values);
+    const hi = Math.max(...values);
+    const pad = Math.max(hi - lo, Math.abs(hi) * 1e-9) * 0.15;
+    min = lo - pad;
+    max = hi + pad;
+  }
+  const at = (x: number) => Math.max(0, Math.min(100, ((x - min) / (max - min)) * 100));
+  const left = at(lower);
+
+  return (
+    <div className={`w-full ${labels ? "min-w-48" : "min-w-32"} ${className}`}>
+      <div
+        className="relative h-1.5 rounded-full bg-raised"
+        role="img"
+        aria-label={
+          ariaLabel ??
+          `Range ${formatPrice(lower)} to ${formatPrice(upper)}${current != null ? `. Price now ${formatPrice(current)}` : ""}.`
+        }
+      >
+        <div className="absolute inset-y-0 rounded-full bg-accent-fill/55" style={{ left: `${left}%`, width: `${at(upper) - left}%` }} />
+        {current != null && (
+          <div className="absolute -top-1 h-3.5 w-0.5 rounded-sm bg-fg" style={{ left: `${at(current)}%` }} />
+        )}
+        {entry != null && (
+          <div
+            className="absolute -top-0.5 box-border h-2.5 w-2.5 -translate-x-1/2 rounded-full border-2 border-panel bg-accent"
+            title={`Entry ${formatPrice(entry)}`}
+            style={{ left: `${at(entry)}%` }}
+          />
+        )}
+        {ring && (
+          <div
+            className={`absolute -top-1 box-border h-3.5 w-3.5 -translate-x-1/2 rounded-full border-2 bg-panel ${ring.ringClass}`}
+            style={{ left: `${at(ring.value)}%` }}
+          />
+        )}
+        {labels && (
+          <>
+            <span className="num absolute top-3 -translate-x-1/2 whitespace-nowrap text-[10.5px] text-faint" style={{ left: `${left}%` }}>
+              {formatPrice(lower)}
+            </span>
+            <span className="num absolute top-3 -translate-x-1/2 whitespace-nowrap text-[10.5px] text-faint" style={{ left: `${at(upper)}%` }}>
+              {formatPrice(upper)}
+            </span>
+          </>
+        )}
+      </div>
+      {labels && <div className="h-5" aria-hidden />}
+    </div>
+  );
+}
+
+/** The range bar for a position's range. */
 export function RangeBar({
   range,
   showLabels = false,
   entry,
 }: {
   range: RangeDto;
-  /** true: lower, current and upper price under the bar. "ends": only the lower and upper price. */
-  showLabels?: boolean | "ends";
-  /** Price when the position was opened, drawn as a dot on the bar. */
+  /** Show the lower and upper price under the ends of the bar. */
+  showLabels?: boolean;
   entry?: number | null;
 }) {
-  const { priceLower: lower, priceUpper: upper, priceCurrent: current } = range;
-  const span = Math.max(upper - lower, Math.abs(upper) * 1e-9);
-  const min = Math.min(lower, current ?? lower, entry ?? lower) - span * 0.25;
-  const max = Math.max(upper, current ?? upper, entry ?? upper) + span * 0.25;
-  const pct = (v: number) => ((v - min) / (max - min)) * 100;
-
-  const color =
-    range.inRange == null
-      ? "bg-muted"
-      : range.inRange
-        ? "bg-up-fill/70"
-        : "bg-down-fill/70";
-
   return (
-    <div className={`w-full ${showLabels ? "min-w-48" : "min-w-32"}`}>
-      <div className="relative h-2 rounded bg-raised">
-        <div
-          className={`absolute h-2 rounded ${color}`}
-          style={{
-            left: `${pct(lower)}%`,
-            width: `${pct(upper) - pct(lower)}%`,
-          }}
-        />
-        {entry != null && (
-          <div
-            className="absolute -top-0.5 h-3 w-3 -translate-x-1/2 rounded-full border-2 border-[var(--marker)] bg-accent-fill"
-            title={`Entry ${formatPrice(entry)}`}
-            style={{ left: `${Math.min(100, Math.max(0, pct(entry)))}%` }}
-          />
-        )}
-        {current != null && (
-          <div
-            className="absolute -top-1 h-4 w-0.5 bg-[var(--marker)]"
-            style={{ left: `${Math.min(100, Math.max(0, pct(current)))}%` }}
-          />
-        )}
-      </div>
-      {showLabels && (
-        <div className="mt-1 flex justify-between gap-2 whitespace-nowrap text-[11px] text-muted num">
-          <span>{formatPrice(lower)}</span>
-          {showLabels !== "ends" && <span className="text-fg-2">{formatPrice(current)}</span>}
-          <span>{formatPrice(upper)}</span>
-        </div>
-      )}
-    </div>
+    <RangeTrack
+      lower={range.priceLower}
+      upper={range.priceUpper}
+      current={range.priceCurrent}
+      entry={entry}
+      labels={showLabels}
+    />
   );
 }
 

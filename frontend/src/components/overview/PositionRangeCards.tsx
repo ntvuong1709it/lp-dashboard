@@ -181,7 +181,7 @@ function PositionCard({ p, inverted, wallet }: { p: PositionDto; inverted: boole
             </p>
           )}
           <div className={say ? "" : "mt-3"}>
-            <RangeBar range={range} showLabels="ends" entry={entry} />
+            <RangeBar range={range} showLabels entry={entry} />
           </div>
         </>
       ) : (

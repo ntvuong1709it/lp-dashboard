@@ -2,6 +2,7 @@ import { formatFee, formatPrice } from "../../lib/format";
 import type { FallImpact, FallStatus, PositionFall } from "../../lib/stress";
 import { usePositionDrawer } from "../../lib/positionDrawer";
 import { Chip } from "../borrow/bits";
+import { RangeTrack } from "../RangeBar";
 import { Skeleton } from "../ui";
 
 const CHIP: Record<FallStatus, { label: string; className: string } | null> = {
@@ -30,7 +31,6 @@ function FallRow({ f }: { f: PositionFall }) {
   // The same scale for every fall, so the bar does not jump when the fall changes.
   const min = v ? Math.min(v.lower, v.current * 0.7) * 0.97 : 0;
   const max = v ? v.upper * 1.03 : 1;
-  const at = (x: number) => Math.max(0, Math.min(100, ((x - min) / (max - min)) * 100));
 
   return (
     <li className="min-w-0">
@@ -47,35 +47,15 @@ function FallRow({ f }: { f: PositionFall }) {
           {chip && <Chip className={chip.className}>{chip.label}</Chip>}
         </span>
         {v && (
-          <>
-            <span
-              className="relative mb-6 mt-3 block h-1.5 rounded-full bg-raised"
-              role="img"
-              aria-label={`Range ${formatPrice(v.lower)} to ${formatPrice(v.upper)} ${v.unit}. Price now ${formatPrice(v.current)}, after the fall ${formatPrice(v.after)}.`}
-            >
-              <span
-                className="absolute inset-y-0 rounded-full bg-accent-fill/55"
-                style={{ left: `${at(v.lower)}%`, width: `${at(v.upper) - at(v.lower)}%` }}
-              />
-              <span className="absolute -top-1 h-3.5 w-0.5 rounded-sm bg-fg" style={{ left: `${at(v.current)}%` }} />
-              <span
-                className={`absolute -top-1 box-border h-3.5 w-3.5 -translate-x-1/2 rounded-full border-2 bg-panel ${MARKER_RING[f.status]}`}
-                style={{ left: `${at(v.after)}%` }}
-              />
-              <span
-                className="num absolute top-3 -translate-x-1/2 whitespace-nowrap text-[10.5px] text-faint"
-                style={{ left: `${at(v.lower)}%` }}
-              >
-                {formatPrice(v.lower)}
-              </span>
-              <span
-                className="num absolute top-3 -translate-x-1/2 whitespace-nowrap text-[10.5px] text-faint"
-                style={{ left: `${at(v.upper)}%` }}
-              >
-                {formatPrice(v.upper)}
-              </span>
-            </span>
-          </>
+          <RangeTrack
+            className="mt-3"
+            lower={v.lower}
+            upper={v.upper}
+            current={v.current}
+            ring={{ value: v.after, ringClass: MARKER_RING[f.status] }}
+            scale={[min, max]}
+            ariaLabel={`Range ${formatPrice(v.lower)} to ${formatPrice(v.upper)} ${v.unit}. Price now ${formatPrice(v.current)}, after the fall ${formatPrice(v.after)}.`}
+          />
         )}
       </button>
     </li>
