@@ -226,6 +226,61 @@ public class PremiumSourceTests
         Assert.DoesNotContain("binance", outcome.Failure, StringComparison.OrdinalIgnoreCase);
     }
 
+    // The middle BTC-USD chunk (start 2026-10-24), the oldest USDT-USD chunk (start 2026-10-12) and the klines each answer 200 with
+    // nothing usable while everything else is fine: a hole of days in the chart must not pass as "ok".
+    public static TheoryData<string, string> EmptyChunkCases()
+    {
+        var data = new TheoryData<string, string>();
+        foreach (var chunk in new[] { "btc-middle", "usdt-oldest", "klines" })
+            foreach (var body in new[] { "[]", """{"message":"NotFound"}""" })
+                data.Add(chunk, body);
+        return data;
+    }
+
+    [Theory]
+    [MemberData(nameof(EmptyChunkCases))]
+    public async Task A_chunk_with_nothing_usable_fails_the_source(string chunk, string body)
+    {
+        var handler = new StubHandler(r =>
+        {
+            var path = r.RequestUri!.AbsolutePath;
+            var query = r.RequestUri.Query;
+            var hit = chunk switch
+            {
+                "btc-middle" => path.Contains("/BTC-USD/") && query.Contains("start=2026-10-24"),
+                "usdt-oldest" => path.Contains("/USDT-USD/") && query.Contains("start=2026-10-12"),
+                _ => path.Contains("klines"),
+            };
+            return hit ? Reply(HttpStatusCode.OK, body) : Good(r);
+        });
+
+        var outcome = await Source(handler).GetHoursAsync(Until, CancellationToken.None);
+
+        Assert.False(outcome.Answered);
+    }
+
+    [Theory]
+    [InlineData("fi-FI")]
+    [InlineData("th-TH")]
+    public async Task Request_times_do_not_depend_on_the_server_culture(string culture)
+    {
+        var before = System.Globalization.CultureInfo.CurrentCulture;
+        System.Globalization.CultureInfo.CurrentCulture = new System.Globalization.CultureInfo(culture);
+        try
+        {
+            var handler = new StubHandler(Good);
+
+            await Source(handler).GetHoursAsync(Until, CancellationToken.None);
+
+            Assert.Contains("/products/BTC-USD/candles?granularity=3600&start=2026-11-06T03:00:00Z&end=2026-11-18T14:00:00Z",
+                handler.Requests.Select(r => r.RequestUri!.PathAndQuery));
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentCulture = before;
+        }
+    }
+
     [Fact]
     public async Task Feeds_that_share_no_hour_fail()
     {

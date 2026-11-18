@@ -40,7 +40,9 @@ internal sealed class CoinbaseBinancePremiumSource(IHttpClientFactory clients) :
         {
             var end = end0.AddHours(-CandlesPerChunk * i);
             var start = end.AddHours(-(CandlesPerChunk - 1));
-            return $"granularity=3600&start={start:yyyy-MM-ddTHH:mm:ssZ}&end={end:yyyy-MM-ddTHH:mm:ssZ}";
+            // Invariant on purpose: the ":" in a format string is the culture's time separator and "yyyy" follows its calendar.
+            const string Format = "yyyy-MM-ddTHH:mm:ssZ";
+            return $"granularity=3600&start={start.ToString(Format, CultureInfo.InvariantCulture)}&end={end.ToString(Format, CultureInfo.InvariantCulture)}";
         }
 
         var btcUsd = Enumerable.Range(0, Chunks).Select(i => FetchAsync(coinbase, $"products/BTC-USD/candles?{Range(i)}", ct)).ToList();
@@ -50,10 +52,15 @@ internal sealed class CoinbaseBinancePremiumSource(IHttpClientFactory clients) :
         var answers = await Task.WhenAll([.. btcUsd, .. usdt, klines]);
         if (answers.FirstOrDefault(a => a.Failure is not null) is { } failed) return Fail(failed.Failure!);
 
-        var hours = Join(
-            Merge(btcUsd.Select(t => ParseCoinbase(t.Result.Body!.Value))),
-            ParseBinance(klines.Result.Body!.Value),
-            Merge(usdt.Select(t => ParseCoinbase(t.Result.Body!.Value))));
+        var btcChunks = btcUsd.Select(t => ParseCoinbase(t.Result.Body!.Value)).ToList();
+        var usdtChunks = usdt.Select(t => ParseCoinbase(t.Result.Body!.Value)).ToList();
+        var binanceRows = ParseBinance(klines.Result.Body!.Value);
+
+        // Every request covers a stretch of the 30 days. One that answers with nothing usable (an empty list, an error body)
+        // leaves a hole of days that the other chunks would hide, so it fails the source like a failed request does.
+        if (btcChunks.Any(c => c.Count == 0) || usdtChunks.Any(c => c.Count == 0) || binanceRows.Count == 0) return Fail("unreadable response");
+
+        var hours = Join(Merge(btcChunks), binanceRows, Merge(usdtChunks));
         return hours.Count == 0 ? Fail("no hours") : SourceOutcome<IReadOnlyList<PremiumHour>>.Ok(hours);
     }
 
