@@ -147,7 +147,7 @@ public static class DependencyInjection
         services.AddSingleton<LpDashboard.Application.Risk.IOnChainFactsSource, LpDashboard.Infrastructure.Risk.EvmOnChainFactsSource>();
     }
 
-    /// <summary>The Market watch's sources: Nasdaq's public calendars and RSS headlines. None needs a key and each is sent only a date.</summary>
+    /// <summary>The Market watch's sources: Nasdaq's public calendars, RSS headlines and alternative.me's Fear and Greed index. None needs a key and each is sent only a date or a day count.</summary>
     private static void AddMarket(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<LpDashboard.Domain.Market.MarketOptions>(configuration.GetSection(LpDashboard.Domain.Market.MarketOptions.SectionName));
@@ -165,6 +165,12 @@ public static class DependencyInjection
         services.AddHttpClient<LpDashboard.Application.Market.IEarningsCalendarSource, LpDashboard.Infrastructure.Market.NasdaqEarningsCalendarSource>(Nasdaq);
         services.AddHttpClient<LpDashboard.Application.Market.IHeadlineSource, LpDashboard.Infrastructure.Market.FeedHeadlineSource>(client =>
         {
+            client.Timeout = TimeSpan.FromSeconds(15);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (compatible; LpDashboard)");
+        });
+        services.AddHttpClient<LpDashboard.Application.Market.IFearGreedSource, LpDashboard.Infrastructure.Market.AlternativeMeFearGreedSource>(client =>
+        {
+            client.BaseAddress = new Uri("https://api.alternative.me/");
             client.Timeout = TimeSpan.FromSeconds(15);
             client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (compatible; LpDashboard)");
         });

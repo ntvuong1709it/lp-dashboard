@@ -30,6 +30,9 @@ public sealed class MarketSettings
 
     public int HeadlinesTtlMinutes { get; set; } = 15;
 
+    /// <summary>The Fear and Greed index changes once a day, so an hour is plenty.</summary>
+    public int FearGreedTtlMinutes { get; set; } = 60;
+
     /// <summary>When a refresh fails, data up to this old is still shown and marked stale.</summary>
     public int StaleMaxHours { get; set; } = 24;
 

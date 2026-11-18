@@ -147,6 +147,10 @@ Stop after each step and say what was verified and what was not.
 3. **Market watch page**: types, API hook, route, nav item, page.
 4. **Overview card**.
 
+## 11. Crypto fear & greed (added 2026-11-18)
+
+Market watch also shows the crypto Fear and Greed index: a gauge with yesterday, last week and last month, and a 30-day chart on the page, and a chip on the Overview line. Source: `https://api.alternative.me/fng/?limit=31` (no key, unofficial, only the day count is sent), cached 60 minutes (`Market:FearGreedTtlMinutes`), stale up to `StaleMaxHours`, then "unavailable". The zones (0 to 25, 26 to 46, 47 to 54, 55 to 75, 76 to 100) live in `FearGreedZones` in the Domain layer. It is a mood reading, not a forecast, and never turns the Overview line amber. Design and plan: `docs/superpowers/specs/2026-11-18-fear-greed-design.md`, `docs/superpowers/plans/2026-11-18-fear-greed.md`.
+
 ## 10. Left to the builder
 
 - Exact class names and folder layout (follow `Risk/` as the model).

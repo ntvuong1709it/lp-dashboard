@@ -14,6 +14,7 @@ public sealed class MarketWatchService(
     IEconomicCalendarSource economic,
     IEarningsCalendarSource earnings,
     IHeadlineSource headlines,
+    IFearGreedSource fearGreed,
     ILoanSource loans,
     MarketCache cache,
     IOptions<MarketOptions> options,
@@ -51,11 +52,14 @@ public sealed class MarketWatchService(
         var earnTasks = fetchDays.Select(d => FetchDayAsync("earn", d, today, gate, token => earnings.GetDayAsync(d, token),
             _ => true, ct)).ToList();
         var headlineTask = FetchHeadlinesAsync(ct);
+        var fearGreedTask = FetchFearGreedAsync(ct);
         var loanTask = LoanAsync(owners, zone, o, ct);
 
         var econ = await Task.WhenAll(econTasks);
         var earn = await Task.WhenAll(earnTasks);
         var (headlineRows, headlineState) = await headlineTask;
+        var (fearGreedRows, fearGreedState) = await fearGreedTask;
+        var fearGreedBlock = BuildFearGreed(fearGreedRows, DateOnly.FromDateTime(now.UtcDateTime));
 
         var upcoming = new List<MarketEventDto>();
         var happened = new List<MarketEventDto>();
@@ -64,12 +68,15 @@ public sealed class MarketWatchService(
 
         return new MarketWatchDto(
             now,
-            new MarketSourcesDto(StatusOf(econ), StatusOf(earn), StatusOf(headlineRows, headlineState)),
+            new MarketSourcesDto(
+                StatusOf(econ), StatusOf(earn), StatusOf(headlineRows, headlineState),
+                FearGreedStatus(fearGreedBlock, fearGreedRows, fearGreedState, DateOnly.FromDateTime(now.UtcDateTime))),
             upcoming.OrderBy(e => e.At).ToList(),
             happened.OrderByDescending(e => e.At).ToList(),
             (headlineRows ?? []).OrderByDescending(h => h.PublishedAt).Take(MaxHeadlines)
                 .Select(h => new HeadlineDto(h.Title, h.Source, h.Url, h.PublishedAt, h.ImageUrl)).ToList(),
-            await loanTask);
+            await loanTask,
+            fearGreedBlock);
     }
 
     // ---- calendars
@@ -103,6 +110,46 @@ public sealed class MarketWatchService(
         return await cache.GetOrFetchAsync<IReadOnlyList<RawHeadline>>(
             "headlines", TimeSpan.FromMinutes(s.HeadlinesTtlMinutes), TimeSpan.FromHours(s.StaleMaxHours),
             token => AnswerAsync(headlines.GetLatestAsync, token), ct);
+    }
+
+    private async Task<(IReadOnlyList<RawFearGreedDay>? Rows, CacheState State)> FetchFearGreedAsync(CancellationToken ct)
+    {
+        var s = settings.Value;
+        return await cache.GetOrFetchAsync<IReadOnlyList<RawFearGreedDay>>(
+            "fng", TimeSpan.FromMinutes(s.FearGreedTtlMinutes), TimeSpan.FromHours(s.StaleMaxHours),
+            token => AnswerAsync(fearGreed.GetDaysAsync, token), ct);
+    }
+
+    /// <summary>Readings older than this many days before the UTC date, or later than tomorrow, are not believed (a bad row would become the chart's first point or "today").</summary>
+    private const int FearGreedOldestDays = 45;
+
+    /// <summary>A newest reading older than this many days means the source answers but has stopped updating.</summary>
+    private const int FearGreedStaleAfterDays = 2;
+
+    /// <summary>"ok" only when the fetch is fresh and the newest reading is recent: a source that keeps answering with old numbers is not "ok".</summary>
+    private static string FearGreedStatus(FearGreedDto? block, IReadOnlyList<RawFearGreedDay>? rows, CacheState state, DateOnly utcToday)
+    {
+        if (block is null) return "unavailable";
+        var status = StatusOf(rows, state);
+        return status == "ok" && block.Today.Day < utcToday.AddDays(-FearGreedStaleAfterDays) ? "stale" : status;
+    }
+
+    /// <summary>Oldest first, one reading per day (the first of a day wins). Null when no usable reading is left.</summary>
+    private static FearGreedDto? BuildFearGreed(IReadOnlyList<RawFearGreedDay>? rows, DateOnly utcToday)
+    {
+        if (rows is null) return null;
+        var days = rows
+            .Where(d => d.Value is >= 0 and <= 100)
+            .Where(d => d.Day >= utcToday.AddDays(-FearGreedOldestDays) && d.Day <= utcToday.AddDays(1))
+            .DistinctBy(d => d.Day)
+            .OrderBy(d => d.Day)
+            .Select(d => new FearGreedDayDto(d.Day, d.Value, FearGreedZones.Of(d.Value)))
+            .ToList();
+        if (days.Count == 0) return null;
+
+        var today = days[^1];
+        FearGreedDayDto? Back(int daysBack) => days.FirstOrDefault(d => d.Day == today.Day.AddDays(-daysBack));
+        return new FearGreedDto(FearGreedZones.Bands, days, today, Back(1), Back(7), Back(30));
     }
 
     /// <summary>The source's value, or null when it did not answer or took longer than the source timeout.</summary>

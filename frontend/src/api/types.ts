@@ -1011,6 +1011,36 @@ export interface MarketSourcesDto {
   calendar: MarketSourceStatus;
   earnings: MarketSourceStatus;
   headlines: MarketSourceStatus;
+  fearGreed: MarketSourceStatus;
+}
+
+export type FearGreedZone = "ExtremeFear" | "Fear" | "Neutral" | "Greed" | "ExtremeGreed";
+
+/** Both ends included. The bands cover 0 to 100 without a gap. */
+export interface FearGreedBandDto {
+  zone: FearGreedZone;
+  from: number;
+  to: number;
+}
+
+export interface FearGreedDayDto {
+  /** The UTC day of the reading, as 2026-11-18. */
+  day: string;
+  value: number;
+  zone: FearGreedZone;
+}
+
+/** The crypto Fear and Greed index (0 to 100). */
+export interface FearGreedDto {
+  bands: FearGreedBandDto[];
+  /** Oldest first. */
+  days: FearGreedDayDto[];
+  /** The newest reading; it is the reading of its own day, which may be yesterday where the viewer already is on the next day. */
+  today: FearGreedDayDto;
+  /** 1, 7 and 30 days before `today`; null when that day is missing. */
+  yesterday: FearGreedDayDto | null;
+  lastWeek: FearGreedDayDto | null;
+  lastMonth: FearGreedDayDto | null;
 }
 
 export type MarketImpact = "High" | "Medium";
@@ -1076,4 +1106,6 @@ export interface MarketWatchDto {
   happened: MarketEventDto[];
   headlines: HeadlineDto[];
   loan: MarketLoanDto | null;
+  /** Null exactly when `sources.fearGreed` is "unavailable". */
+  fearGreed: FearGreedDto | null;
 }

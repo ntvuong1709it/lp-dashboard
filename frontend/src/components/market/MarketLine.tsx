@@ -8,6 +8,7 @@ import { useNow } from "../../lib/useNow";
 import { formatUsd } from "../../lib/format";
 import { Chip } from "../borrow/bits";
 import { Skeleton } from "../ui";
+import { FearGreedChip } from "./FearGreedChip";
 
 /** The fall the Overview line answers for. The Market watch page lets you change it. */
 const FALL = 20;
@@ -64,6 +65,7 @@ export function MarketLine() {
             {impact.stops > 0 ? `${impact.stops} of ${impact.total} stop earning` : "All keep earning"}
           </Chip>
         )}
+        {data.fearGreed && <FearGreedChip fearGreed={data.fearGreed} />}
       </div>
       <Link to="/market" className="whitespace-nowrap font-medium text-accent hover:underline">
         Market watch

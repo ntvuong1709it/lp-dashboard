@@ -72,6 +72,21 @@ public class MarketWatchServiceTests
                 : SourceOutcome<IReadOnlyList<RawHeadline>>.Ok(Items.OrderByDescending(i => i.PublishedAt).ToList()));
     }
 
+    private sealed class FakeFearGreed : IFearGreedSource
+    {
+        public List<RawFearGreedDay> Days { get; } = [];
+        public bool Fail { get; set; }
+        public int Calls { get; private set; }
+
+        public Task<SourceOutcome<IReadOnlyList<RawFearGreedDay>>> GetDaysAsync(CancellationToken ct)
+        {
+            Calls++;
+            return Task.FromResult(Fail
+                ? SourceOutcome<IReadOnlyList<RawFearGreedDay>>.Fail("down")
+                : SourceOutcome<IReadOnlyList<RawFearGreedDay>>.Ok(Days.ToList()));
+        }
+    }
+
     private sealed class FakeLoans(IReadOnlyList<LoanDto>? loans = null, bool throws = false) : ILoanSource
     {
         public int Calls { get; private set; }
@@ -90,6 +105,7 @@ public class MarketWatchServiceTests
         public FakeEcon Econ { get; }
         public FakeEarn Earn { get; }
         public FakeHeadlines Headlines { get; } = new();
+        public FakeFearGreed FearGreed { get; } = new();
         public FakeLoans Loans { get; set; } = new();
         public FakeClock Clock { get; } = new(Now);
         public MarketCache Cache { get; }
@@ -103,7 +119,7 @@ public class MarketWatchServiceTests
         }
 
         public Task<MarketWatchDto> GetAsync(int days = 14, IReadOnlyCollection<string>? owners = null) =>
-            new MarketWatchService(Econ, Earn, Headlines, Loans, Cache, Options.Create(new MarketOptions()),
+            new MarketWatchService(Econ, Earn, Headlines, FearGreed, Loans, Cache, Options.Create(new MarketOptions()),
                     Options.Create(Settings), Clock)
                 .GetAsync(days, owners, TimeZoneInfo.Utc, CancellationToken.None);
     }
@@ -326,13 +342,15 @@ public class MarketWatchServiceTests
         rig.Econ.Fail = true;
         rig.Earn.Fail = true;
         rig.Headlines.Fail = true;
+        rig.FearGreed.Fail = true;
 
         var r = await rig.GetAsync();
 
         Assert.Empty(r.Upcoming);
         Assert.Empty(r.Happened);
         Assert.Empty(r.Headlines);
-        Assert.Equal(new MarketSourcesDto("unavailable", "unavailable", "unavailable"), r.Sources);
+        Assert.Null(r.FearGreed);
+        Assert.Equal(new MarketSourcesDto("unavailable", "unavailable", "unavailable", "unavailable"), r.Sources);
     }
 
     [Fact]
@@ -346,6 +364,144 @@ public class MarketWatchServiceTests
 
         Assert.Equal(10, r.Headlines.Count);
         Assert.Equal("h0", r.Headlines[0].Title);
+    }
+
+    // ---- fear and greed (the rig's clock is 2026-11-17 15:00 UTC)
+
+    private static RawFearGreedDay Fg(string day, int value) => new(D(day), value);
+
+    [Fact]
+    public async Task Fear_greed_days_come_oldest_first_with_zones_bands_and_comparisons()
+    {
+        var rig = new Rig();
+        rig.FearGreed.Days.AddRange([Fg("2026-11-16", 12), Fg("2026-11-17", 11), Fg("2026-11-10", 29), Fg("2026-10-18", 59)]);
+
+        var r = await rig.GetAsync();
+
+        var fg = r.FearGreed!;
+        Assert.Equal([D("2026-10-18"), D("2026-11-10"), D("2026-11-16"), D("2026-11-17")], fg.Days.Select(d => d.Day));
+        Assert.Equal([FearGreedZone.Greed, FearGreedZone.Fear, FearGreedZone.ExtremeFear, FearGreedZone.ExtremeFear], fg.Days.Select(d => d.Zone));
+        Assert.Equal(11, fg.Today.Value);
+        Assert.Equal(12, fg.Yesterday!.Value);
+        Assert.Equal(29, fg.LastWeek!.Value);
+        Assert.Equal(59, fg.LastMonth!.Value);
+        Assert.Equal(FearGreedZones.Bands, fg.Bands);
+        Assert.Equal("ok", r.Sources.FearGreed);
+    }
+
+    [Fact]
+    public async Task A_missing_comparison_day_is_null_not_a_neighbour()
+    {
+        var rig = new Rig();
+        rig.FearGreed.Days.AddRange([Fg("2026-11-17", 11), Fg("2026-11-15", 20)]);
+
+        var fg = (await rig.GetAsync()).FearGreed!;
+
+        Assert.Null(fg.Yesterday);
+        Assert.Null(fg.LastWeek);
+        Assert.Null(fg.LastMonth);
+        Assert.Equal(2, fg.Days.Count);
+    }
+
+    [Fact]
+    public async Task Two_rows_for_one_day_collapse_to_the_first()
+    {
+        var rig = new Rig();
+        rig.FearGreed.Days.AddRange([Fg("2026-11-17", 11), Fg("2026-11-17", 99)]);
+
+        var fg = (await rig.GetAsync()).FearGreed!;
+
+        Assert.Equal(11, Assert.Single(fg.Days).Value);
+    }
+
+    [Fact]
+    public async Task Readings_with_an_implausible_date_are_dropped()
+    {
+        var rig = new Rig();
+        rig.FearGreed.Days.AddRange([Fg("1970-01-01", 40), Fg("2030-01-01", 50), Fg("2026-11-17", 11), Fg("2026-11-16", 12)]);
+
+        var r = await rig.GetAsync();
+
+        var fg = r.FearGreed!;
+        Assert.Equal([D("2026-11-16"), D("2026-11-17")], fg.Days.Select(d => d.Day));
+        Assert.Equal(11, fg.Today.Value);
+        Assert.Equal(12, fg.Yesterday!.Value);
+        Assert.Equal("ok", r.Sources.FearGreed);
+    }
+
+    [Theory]
+    [InlineData("2026-11-15", "ok")]    // two days before the rig's 2026-11-17: still today's reading for a viewer behind UTC
+    [InlineData("2026-11-14", "stale")] // three days: the source answers but has stopped updating
+    public async Task A_reading_that_stopped_updating_is_not_reported_as_ok(string latestDay, string expected)
+    {
+        var rig = new Rig();
+        rig.FearGreed.Days.Add(Fg(latestDay, 11));
+
+        var r = await rig.GetAsync();
+
+        Assert.Equal(expected, r.Sources.FearGreed);
+        Assert.NotNull(r.FearGreed);
+    }
+
+    [Fact]
+    public async Task Fear_greed_does_not_need_an_owner()
+    {
+        var rig = new Rig();
+        rig.FearGreed.Days.Add(Fg("2026-11-17", 11));
+
+        var r = await rig.GetAsync(owners: null);
+
+        Assert.NotNull(r.FearGreed);
+        Assert.Null(r.Loan);
+    }
+
+    [Fact]
+    public async Task Fear_greed_is_fetched_once_an_hour()
+    {
+        var rig = new Rig();
+        rig.FearGreed.Days.Add(Fg("2026-11-17", 11));
+
+        await rig.GetAsync();
+        await rig.GetAsync();
+        Assert.Equal(1, rig.FearGreed.Calls);
+
+        rig.Clock.Advance(TimeSpan.FromMinutes(61));
+        await rig.GetAsync();
+        Assert.Equal(2, rig.FearGreed.Calls);
+    }
+
+    [Fact]
+    public async Task A_dead_fear_greed_source_is_unavailable_and_the_rest_still_works()
+    {
+        var rig = new Rig();
+        rig.FearGreed.Fail = true;
+        rig.Headlines.Items.Add(new RawHeadline("Fed holds", "Federal Reserve", "https://x/1", Now.AddHours(-1)));
+
+        var r = await rig.GetAsync();
+
+        Assert.Null(r.FearGreed);
+        Assert.Equal("unavailable", r.Sources.FearGreed);
+        Assert.Equal("ok", r.Sources.Headlines);
+        Assert.Single(r.Headlines);
+    }
+
+    [Fact]
+    public async Task Fear_greed_that_fails_after_working_is_stale_then_unavailable_after_the_stale_limit()
+    {
+        var rig = new Rig();
+        rig.FearGreed.Days.Add(Fg("2026-11-17", 11));
+        Assert.Equal("ok", (await rig.GetAsync()).Sources.FearGreed);
+
+        rig.FearGreed.Fail = true;
+        rig.Clock.Advance(TimeSpan.FromHours(2));
+        var stale = await rig.GetAsync();
+        Assert.Equal("stale", stale.Sources.FearGreed);
+        Assert.Equal(11, stale.FearGreed!.Today.Value);
+
+        rig.Clock.Advance(TimeSpan.FromHours(25));
+        var gone = await rig.GetAsync();
+        Assert.Equal("unavailable", gone.Sources.FearGreed);
+        Assert.Null(gone.FearGreed);
     }
 
     // ---- loan

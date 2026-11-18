@@ -4,6 +4,7 @@ import type { MarketEventDto } from "../api/types";
 import { CalendarStrip } from "../components/market/CalendarStrip";
 import { EventList } from "../components/market/EventList";
 import { FallPanel } from "../components/market/FallPanel";
+import { FearGreedRow } from "../components/market/FearGreedRow";
 import { HeadlinesPanel } from "../components/market/HeadlinesPanel";
 import { LoanAlert } from "../components/market/LoanAlert";
 import { NextUp } from "../components/market/NextUp";
@@ -63,6 +64,7 @@ export function MarketPage() {
         ["calendar", data.sources.calendar],
         ["earnings", data.sources.earnings],
         ["headlines", data.sources.headlines],
+        ["fear and greed index", data.sources.fearGreed],
       ] as const).filter(([, status]) => status !== "ok")
     : [];
 
@@ -119,6 +121,8 @@ export function MarketPage() {
             <NextUp data={data} now={now} />
             <FallPanel data={data} fall={fall} onFall={setFall} />
           </div>
+
+          <FearGreedRow data={data} />
 
           <CalendarStrip
             events={view.all}

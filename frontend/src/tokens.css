@@ -62,6 +62,12 @@
   --band-ratio-bg: #261c4a;
   --band-ratio: #c4b5fd;
   --band-ratio-bar: #8b5cf6;
+  /* The five zones of the Fear & Greed index, extreme fear to extreme greed. Built from the tokens above, so they follow the theme. */
+  --zone-1: var(--down-fill);
+  --zone-2: var(--warn-fill);
+  --zone-3: var(--control);
+  --zone-4: color-mix(in srgb, var(--up-fill) 55%, var(--panel));
+  --zone-5: var(--up-fill);
 }
 
 :root[data-theme="light"] {

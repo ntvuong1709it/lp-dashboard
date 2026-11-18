@@ -24,6 +24,15 @@ public interface IEarningsCalendarSource
     Task<SourceOutcome<IReadOnlyList<RawEarning>>> GetDayAsync(DateOnly day, CancellationToken ct);
 }
 
+/// <summary>One reading of the crypto Fear and Greed index: the UTC day and the value, 0 to 100.</summary>
+public sealed record RawFearGreedDay(DateOnly Day, int Value);
+
+/// <summary>The crypto Fear and Greed index of the last 31 days (alternative.me). A successful answer is never empty and is sorted oldest first.</summary>
+public interface IFearGreedSource
+{
+    Task<SourceOutcome<IReadOnlyList<RawFearGreedDay>>> GetDaysAsync(CancellationToken ct);
+}
+
 /// <summary>Latest items of the configured news feeds, newest first.</summary>
 public interface IHeadlineSource
 {
