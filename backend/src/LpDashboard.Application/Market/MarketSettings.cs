@@ -33,6 +33,18 @@ public sealed class MarketSettings
     /// <summary>The Fear and Greed index changes once a day, so an hour is plenty.</summary>
     public int FearGreedTtlMinutes { get; set; } = 60;
 
+    /// <summary>The hourly Coinbase premium. The newest hour changes while it is open, so a quarter of an hour keeps it current without hammering the exchanges.</summary>
+    public int PremiumTtlMinutes { get; set; } = 15;
+
+    /// <summary>Coinbase's public market data (candles of BTC-USD and USDT-USD).</summary>
+    public string CoinbaseBaseUrl { get; set; } = "https://api.exchange.coinbase.com/";
+
+    /// <summary>
+    /// Binance's public market-data host (candles of BTC-USDT). It is used instead of api.binance.com, which answers HTTP 451
+    /// from US addresses.
+    /// </summary>
+    public string BinanceBaseUrl { get; set; } = "https://data-api.binance.vision/";
+
     /// <summary>When a refresh fails, data up to this old is still shown and marked stale.</summary>
     public int StaleMaxHours { get; set; } = 24;
 

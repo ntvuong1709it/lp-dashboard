@@ -1012,6 +1012,46 @@ export interface MarketSourcesDto {
   earnings: MarketSourceStatus;
   headlines: MarketSourceStatus;
   fearGreed: MarketSourceStatus;
+  premium: MarketSourceStatus;
+}
+
+export type PremiumZone = "SellingHard" | "SellingABit" | "Flat" | "BuyingABit" | "BuyingHard";
+
+/** A zone's range in percent on the gauge. The bands run from -0.30 to +0.30 without a gap. */
+export interface PremiumBandDto {
+  zone: PremiumZone;
+  from: number;
+  to: number;
+}
+
+export interface PremiumReadingDto {
+  /** Rounded to 2 decimals; the zone comes from this rounded value. */
+  percent: number;
+  zone: PremiumZone;
+}
+
+/** The average of one UTC day; today's is of the hours so far. */
+export interface PremiumDayDto {
+  /** The UTC day, as 2026-11-18. */
+  day: string;
+  percent: number;
+  zone: PremiumZone;
+}
+
+/** Coinbase's Bitcoin price against Binance's, both in dollars, in percent. Above zero, US buyers are paying more. */
+export interface PremiumDto {
+  bands: PremiumBandDto[];
+  /** Oldest first, up to 30 UTC days; a day with no data is left out. */
+  days: PremiumDayDto[];
+  /** The average of the last 24 hours (rolling). */
+  today: PremiumReadingDto;
+  /** The last full UTC day; null when under half its hours exist. */
+  yesterday: PremiumReadingDto | null;
+  /** The last 7 days and 30 days; null when too few hours exist. */
+  week: PremiumReadingDto | null;
+  month: PremiumReadingDto | null;
+  /** The newest hour used. */
+  asOf: string;
 }
 
 export type FearGreedZone = "ExtremeFear" | "Fear" | "Neutral" | "Greed" | "ExtremeGreed";
@@ -1108,4 +1148,6 @@ export interface MarketWatchDto {
   loan: MarketLoanDto | null;
   /** Null exactly when `sources.fearGreed` is "unavailable". */
   fearGreed: FearGreedDto | null;
+  /** Null exactly when `sources.premium` is "unavailable". */
+  premium: PremiumDto | null;
 }

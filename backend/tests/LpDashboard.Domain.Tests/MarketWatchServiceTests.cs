@@ -87,6 +87,30 @@ public class MarketWatchServiceTests
         }
     }
 
+    private sealed class FakePremium : IBitcoinPremiumSource
+    {
+        public List<PremiumHour> Hours { get; } = [];
+        public bool Fail { get; set; }
+        public int Calls { get; private set; }
+        public DateTimeOffset? LastUntil { get; private set; }
+
+        /// <summary>One hour for each of the <paramref name="count"/> hours ending at <paramref name="end"/>.</summary>
+        public void Add(int count, decimal percent, DateTimeOffset? end = null)
+        {
+            var last = end ?? Now;
+            for (var i = count - 1; i >= 0; i--) Hours.Add(new PremiumHour(last.AddHours(-i), percent));
+        }
+
+        public Task<SourceOutcome<IReadOnlyList<PremiumHour>>> GetHoursAsync(DateTimeOffset until, CancellationToken ct)
+        {
+            Calls++;
+            LastUntil = until;
+            return Task.FromResult(Fail
+                ? SourceOutcome<IReadOnlyList<PremiumHour>>.Fail("down")
+                : SourceOutcome<IReadOnlyList<PremiumHour>>.Ok(Hours.ToList()));
+        }
+    }
+
     private sealed class FakeLoans(IReadOnlyList<LoanDto>? loans = null, bool throws = false) : ILoanSource
     {
         public int Calls { get; private set; }
@@ -106,6 +130,7 @@ public class MarketWatchServiceTests
         public FakeEarn Earn { get; }
         public FakeHeadlines Headlines { get; } = new();
         public FakeFearGreed FearGreed { get; } = new();
+        public FakePremium Premium { get; } = new();
         public FakeLoans Loans { get; set; } = new();
         public FakeClock Clock { get; } = new(Now);
         public MarketCache Cache { get; }
@@ -119,7 +144,7 @@ public class MarketWatchServiceTests
         }
 
         public Task<MarketWatchDto> GetAsync(int days = 14, IReadOnlyCollection<string>? owners = null) =>
-            new MarketWatchService(Econ, Earn, Headlines, FearGreed, Loans, Cache, Options.Create(new MarketOptions()),
+            new MarketWatchService(Econ, Earn, Headlines, FearGreed, Premium, Loans, Cache, Options.Create(new MarketOptions()),
                     Options.Create(Settings), Clock)
                 .GetAsync(days, owners, TimeZoneInfo.Utc, CancellationToken.None);
     }
@@ -343,6 +368,7 @@ public class MarketWatchServiceTests
         rig.Earn.Fail = true;
         rig.Headlines.Fail = true;
         rig.FearGreed.Fail = true;
+        rig.Premium.Fail = true;
 
         var r = await rig.GetAsync();
 
@@ -350,7 +376,8 @@ public class MarketWatchServiceTests
         Assert.Empty(r.Happened);
         Assert.Empty(r.Headlines);
         Assert.Null(r.FearGreed);
-        Assert.Equal(new MarketSourcesDto("unavailable", "unavailable", "unavailable", "unavailable"), r.Sources);
+        Assert.Null(r.Premium);
+        Assert.Equal(new MarketSourcesDto("unavailable", "unavailable", "unavailable", "unavailable", "unavailable"), r.Sources);
     }
 
     [Fact]
@@ -502,6 +529,112 @@ public class MarketWatchServiceTests
         var gone = await rig.GetAsync();
         Assert.Equal("unavailable", gone.Sources.FearGreed);
         Assert.Null(gone.FearGreed);
+    }
+
+    // ---- the Coinbase premium
+
+    [Fact]
+    public async Task Premium_block_is_built_from_the_hours()
+    {
+        var rig = new Rig();
+        rig.Premium.Add(960, 0.05m); // 40 days
+
+        var r = await rig.GetAsync();
+
+        var p = r.Premium!;
+        Assert.Equal(0.05m, p.Today.Percent);
+        Assert.Equal(PremiumZone.BuyingABit, p.Today.Zone);
+        Assert.Equal(30, p.Days.Count);
+        Assert.Equal(PremiumZones.Bands, p.Bands);
+        Assert.Equal("ok", r.Sources.Premium);
+        Assert.Equal(Now, rig.Premium.LastUntil);
+    }
+
+    [Fact]
+    public async Task Premium_does_not_need_an_owner()
+    {
+        var rig = new Rig();
+        rig.Premium.Add(48, 0.05m);
+
+        var r = await rig.GetAsync(owners: null);
+
+        Assert.NotNull(r.Premium);
+        Assert.Null(r.Loan);
+    }
+
+    [Fact]
+    public async Task Premium_is_fetched_once_per_ttl()
+    {
+        var rig = new Rig();
+        rig.Premium.Add(48, 0.05m);
+
+        await rig.GetAsync();
+        await rig.GetAsync();
+        Assert.Equal(1, rig.Premium.Calls);
+
+        rig.Clock.Advance(TimeSpan.FromMinutes(16));
+        await rig.GetAsync();
+        Assert.Equal(2, rig.Premium.Calls);
+    }
+
+    [Fact]
+    public async Task A_dead_premium_source_is_unavailable_and_the_rest_still_works()
+    {
+        var rig = new Rig();
+        rig.Premium.Fail = true;
+        rig.Headlines.Items.Add(new RawHeadline("Fed holds", "Federal Reserve", "https://x/1", Now.AddHours(-1)));
+
+        var r = await rig.GetAsync();
+
+        Assert.Null(r.Premium);
+        Assert.Equal("unavailable", r.Sources.Premium);
+        Assert.Equal("ok", r.Sources.Headlines);
+        Assert.Single(r.Headlines);
+    }
+
+    [Fact]
+    public async Task Too_few_recent_hours_is_unavailable()
+    {
+        var rig = new Rig();
+        rig.Premium.Add(11, 0.05m); // 11 hours in the last 24, and nothing older
+
+        var r = await rig.GetAsync();
+
+        Assert.Null(r.Premium);
+        Assert.Equal("unavailable", r.Sources.Premium);
+    }
+
+    [Fact]
+    public async Task Premium_that_fails_after_working_is_stale_then_unavailable_after_the_stale_limit()
+    {
+        var rig = new Rig();
+        rig.Premium.Add(48, 0.05m);
+        Assert.Equal("ok", (await rig.GetAsync()).Sources.Premium);
+
+        rig.Premium.Fail = true;
+        rig.Clock.Advance(TimeSpan.FromMinutes(20));
+        var stale = await rig.GetAsync();
+        Assert.Equal("stale", stale.Sources.Premium);
+        Assert.Equal(0.05m, stale.Premium!.Today.Percent);
+
+        rig.Clock.Advance(TimeSpan.FromHours(25));
+        var gone = await rig.GetAsync();
+        Assert.Equal("unavailable", gone.Sources.Premium);
+        Assert.Null(gone.Premium);
+    }
+
+    [Theory]
+    [InlineData(4, "stale")]
+    [InlineData(2, "ok")]
+    public async Task A_source_whose_newest_hour_is_over_3_hours_old_is_stale(int hoursOld, string expected)
+    {
+        var rig = new Rig();
+        rig.Premium.Add(48, 0.05m, end: Now.AddHours(-hoursOld));
+
+        var r = await rig.GetAsync();
+
+        Assert.Equal(expected, r.Sources.Premium);
+        Assert.NotNull(r.Premium);
     }
 
     // ---- loan

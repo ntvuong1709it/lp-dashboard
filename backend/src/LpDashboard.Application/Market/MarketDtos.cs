@@ -6,6 +6,7 @@ namespace LpDashboard.Application.Market;
 /// <param name="Happened">The last few days, newest first.</param>
 /// <param name="Loan">The loan with the worst risk, stressed; null when there is no usable loan or no owner was given.</param>
 /// <param name="FearGreed">The crypto Fear and Greed index; null exactly when its source status is "unavailable".</param>
+/// <param name="Premium">US buying against selling (Coinbase's Bitcoin price against Binance's, in dollars); null exactly when its source status is "unavailable".</param>
 public sealed record MarketWatchDto(
     DateTimeOffset UpdatedAt,
     MarketSourcesDto Sources,
@@ -13,10 +14,11 @@ public sealed record MarketWatchDto(
     IReadOnlyList<MarketEventDto> Happened,
     IReadOnlyList<HeadlineDto> Headlines,
     LoanStressDto? Loan,
-    FearGreedDto? FearGreed);
+    FearGreedDto? FearGreed,
+    PremiumSummary? Premium);
 
 /// <summary>Each value is "ok", "stale" (old or partial data) or "unavailable".</summary>
-public sealed record MarketSourcesDto(string Calendar, string Earnings, string Headlines, string FearGreed);
+public sealed record MarketSourcesDto(string Calendar, string Earnings, string Headlines, string FearGreed, string Premium);
 
 /// <param name="Day">The UTC day of the reading.</param>
 public sealed record FearGreedDayDto(DateOnly Day, int Value, FearGreedZone Zone);

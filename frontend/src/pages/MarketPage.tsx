@@ -8,6 +8,7 @@ import { FearGreedRow } from "../components/market/FearGreedRow";
 import { HeadlinesPanel } from "../components/market/HeadlinesPanel";
 import { LoanAlert } from "../components/market/LoanAlert";
 import { NextUp } from "../components/market/NextUp";
+import { PremiumRow } from "../components/market/PremiumRow";
 import { ErrorText, Panel, Segmented, Skeleton } from "../components/ui";
 import { formatAgo } from "../lib/format";
 import { dayKey, dayLabel, nextHighEvents } from "../lib/market";
@@ -65,6 +66,7 @@ export function MarketPage() {
         ["earnings", data.sources.earnings],
         ["headlines", data.sources.headlines],
         ["fear and greed index", data.sources.fearGreed],
+        ["bitcoin premium", data.sources.premium],
       ] as const).filter(([, status]) => status !== "ok")
     : [];
 
@@ -123,6 +125,8 @@ export function MarketPage() {
           </div>
 
           <FearGreedRow data={data} />
+
+          <PremiumRow data={data} />
 
           <CalendarStrip
             events={view.all}

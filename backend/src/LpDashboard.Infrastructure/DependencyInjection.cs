@@ -147,7 +147,7 @@ public static class DependencyInjection
         services.AddSingleton<LpDashboard.Application.Risk.IOnChainFactsSource, LpDashboard.Infrastructure.Risk.EvmOnChainFactsSource>();
     }
 
-    /// <summary>The Market watch's sources: Nasdaq's public calendars, RSS headlines and alternative.me's Fear and Greed index. None needs a key and each is sent only a date or a day count.</summary>
+    /// <summary>The Market watch's sources: Nasdaq's public calendars, RSS headlines, alternative.me's Fear and Greed index, and Coinbase and Binance's public candles for the Bitcoin premium. None needs a key and each is sent only a date, a day count or a time range.</summary>
     private static void AddMarket(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<LpDashboard.Domain.Market.MarketOptions>(configuration.GetSection(LpDashboard.Domain.Market.MarketOptions.SectionName));
@@ -174,6 +174,19 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromSeconds(15);
             client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (compatible; LpDashboard)");
         });
+
+        // The Coinbase premium reads two exchanges, so it uses two named clients; the base addresses are settings.
+        var market = configuration.GetSection(LpDashboard.Application.Market.MarketSettings.SectionName).Get<LpDashboard.Application.Market.MarketSettings>()
+            ?? new LpDashboard.Application.Market.MarketSettings();
+        void Exchange(HttpClient client, string baseUrl)
+        {
+            client.BaseAddress = new Uri(baseUrl);
+            client.Timeout = TimeSpan.FromSeconds(15);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (compatible; LpDashboard)");
+        }
+        services.AddHttpClient("coinbase-exchange", client => Exchange(client, market.CoinbaseBaseUrl));
+        services.AddHttpClient("binance-data", client => Exchange(client, market.BinanceBaseUrl));
+        services.AddSingleton<LpDashboard.Application.Market.IBitcoinPremiumSource, LpDashboard.Infrastructure.Market.CoinbaseBinancePremiumSource>();
     }
 
     private static void AddEvmProviders(this IServiceCollection services, IConfiguration configuration)

@@ -1,4 +1,5 @@
 using LpDashboard.Application.Risk;
+using LpDashboard.Domain.Market;
 
 namespace LpDashboard.Application.Market;
 
@@ -31,6 +32,16 @@ public sealed record RawFearGreedDay(DateOnly Day, int Value);
 public interface IFearGreedSource
 {
     Task<SourceOutcome<IReadOnlyList<RawFearGreedDay>>> GetDaysAsync(CancellationToken ct);
+}
+
+/// <summary>
+/// The hourly gap between Coinbase's Bitcoin price and Binance's, in dollars, of the 30 days up to <c>until</c> (Coinbase
+/// and Binance public candles). A successful answer is never empty and is sorted oldest first; an hour that any of the three
+/// feeds lacks, or that looks like a glitch, is left out.
+/// </summary>
+public interface IBitcoinPremiumSource
+{
+    Task<SourceOutcome<IReadOnlyList<PremiumHour>>> GetHoursAsync(DateTimeOffset until, CancellationToken ct);
 }
 
 /// <summary>Latest items of the configured news feeds, newest first.</summary>

@@ -9,6 +9,7 @@ import { formatUsd } from "../../lib/format";
 import { Chip } from "../borrow/bits";
 import { Skeleton } from "../ui";
 import { FearGreedChip } from "./FearGreedChip";
+import { PremiumChip } from "./PremiumChip";
 
 /** The fall the Overview line answers for. The Market watch page lets you change it. */
 const FALL = 20;
@@ -66,6 +67,7 @@ export function MarketLine() {
           </Chip>
         )}
         {data.fearGreed && <FearGreedChip fearGreed={data.fearGreed} />}
+        {data.premium && <PremiumChip premium={data.premium} />}
       </div>
       <Link to="/market" className="whitespace-nowrap font-medium text-accent hover:underline">
         Market watch

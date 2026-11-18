@@ -151,6 +151,10 @@ Stop after each step and say what was verified and what was not.
 
 Market watch also shows the crypto Fear and Greed index: a gauge with yesterday, last week and last month, and a 30-day chart on the page, and a chip on the Overview line. Source: `https://api.alternative.me/fng/?limit=31` (no key, unofficial, only the day count is sent), cached 60 minutes (`Market:FearGreedTtlMinutes`), stale up to `StaleMaxHours`, then "unavailable". The zones (0 to 25, 26 to 46, 47 to 54, 55 to 75, 76 to 100) live in `FearGreedZones` in the Domain layer. It is a mood reading, not a forecast, and never turns the Overview line amber. Design and plan: `docs/superpowers/specs/2026-11-18-fear-greed-design.md`, `docs/superpowers/plans/2026-11-18-fear-greed.md`.
 
+## 12. US buying vs selling, the Coinbase premium (added 2026-11-18)
+
+Market watch also shows who is paying more for Bitcoin, US buyers or the rest of the world: a gauge with the last 24 hours, yesterday, a 7-day and a 30-day average, and 30 daily bars on the page, and a chip on the Overview line. The gap is Coinbase BTC-USD against Binance BTC-USDT converted to dollars with Coinbase's USDT-USD price (the raw USDT gap read -0.11% on 2026-11-18 when the real gap was about 0.00%). Sources, no key, only product names and a time range sent: Coinbase `products/{BTC-USD,USDT-USD}/candles` (three 300-candle calls each) and Binance `api/v3/klines` on `data-api.binance.vision` (`api.binance.com` answers 451 from US addresses). Cached 15 minutes (`Market:PremiumTtlMinutes`); stale up to `StaleMaxHours`, then "unavailable"; "stale" also when the newest hour is over 3 hours old. The zones (flat inside +/-0.03%, "a bit" up to +/-0.10%, "hard" beyond) live in `PremiumZones` in the Domain layer and are first guesses: on the first live check all 30 daily values lay between -0.09% and 0.00%. It says who is paying more, never "buy" or "sell", and is not a forecast. Design and plan: `docs/superpowers/specs/2026-11-18-coinbase-premium-design.md`, `docs/superpowers/plans/2026-11-18-coinbase-premium.md`.
+
 ## 10. Left to the builder
 
 - Exact class names and folder layout (follow `Risk/` as the model).

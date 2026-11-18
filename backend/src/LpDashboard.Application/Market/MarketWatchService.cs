@@ -15,6 +15,7 @@ public sealed class MarketWatchService(
     IEarningsCalendarSource earnings,
     IHeadlineSource headlines,
     IFearGreedSource fearGreed,
+    IBitcoinPremiumSource premium,
     ILoanSource loans,
     MarketCache cache,
     IOptions<MarketOptions> options,
@@ -53,6 +54,7 @@ public sealed class MarketWatchService(
             _ => true, ct)).ToList();
         var headlineTask = FetchHeadlinesAsync(ct);
         var fearGreedTask = FetchFearGreedAsync(ct);
+        var premiumTask = FetchPremiumAsync(now, ct);
         var loanTask = LoanAsync(owners, zone, o, ct);
 
         var econ = await Task.WhenAll(econTasks);
@@ -60,6 +62,8 @@ public sealed class MarketWatchService(
         var (headlineRows, headlineState) = await headlineTask;
         var (fearGreedRows, fearGreedState) = await fearGreedTask;
         var fearGreedBlock = BuildFearGreed(fearGreedRows, DateOnly.FromDateTime(now.UtcDateTime));
+        var (premiumRows, premiumState) = await premiumTask;
+        var premiumBlock = premiumRows is null ? null : PremiumSeries.Summarise(premiumRows, now);
 
         var upcoming = new List<MarketEventDto>();
         var happened = new List<MarketEventDto>();
@@ -70,13 +74,15 @@ public sealed class MarketWatchService(
             now,
             new MarketSourcesDto(
                 StatusOf(econ), StatusOf(earn), StatusOf(headlineRows, headlineState),
-                FearGreedStatus(fearGreedBlock, fearGreedRows, fearGreedState, DateOnly.FromDateTime(now.UtcDateTime))),
+                FearGreedStatus(fearGreedBlock, fearGreedRows, fearGreedState, DateOnly.FromDateTime(now.UtcDateTime)),
+                PremiumStatus(premiumBlock, premiumRows, premiumState, now)),
             upcoming.OrderBy(e => e.At).ToList(),
             happened.OrderByDescending(e => e.At).ToList(),
             (headlineRows ?? []).OrderByDescending(h => h.PublishedAt).Take(MaxHeadlines)
                 .Select(h => new HeadlineDto(h.Title, h.Source, h.Url, h.PublishedAt, h.ImageUrl)).ToList(),
             await loanTask,
-            fearGreedBlock);
+            fearGreedBlock,
+            premiumBlock);
     }
 
     // ---- calendars
@@ -118,6 +124,26 @@ public sealed class MarketWatchService(
         return await cache.GetOrFetchAsync<IReadOnlyList<RawFearGreedDay>>(
             "fng", TimeSpan.FromMinutes(s.FearGreedTtlMinutes), TimeSpan.FromHours(s.StaleMaxHours),
             token => AnswerAsync(fearGreed.GetDaysAsync, token), ct);
+    }
+
+    /// <summary>The raw hours are cached; the averages are made for each request, so they move with the clock even when the cache answers.</summary>
+    private async Task<(IReadOnlyList<PremiumHour>? Rows, CacheState State)> FetchPremiumAsync(DateTimeOffset now, CancellationToken ct)
+    {
+        var s = settings.Value;
+        return await cache.GetOrFetchAsync<IReadOnlyList<PremiumHour>>(
+            "premium", TimeSpan.FromMinutes(s.PremiumTtlMinutes), TimeSpan.FromHours(s.StaleMaxHours),
+            token => AnswerAsync(t => premium.GetHoursAsync(now, t), token), ct);
+    }
+
+    /// <summary>A newest hour older than this means the exchanges answer but the candles have stopped coming.</summary>
+    private static readonly TimeSpan PremiumStaleAfter = TimeSpan.FromHours(3);
+
+    /// <summary>"ok" only when the fetch is fresh and the newest hour is recent.</summary>
+    private static string PremiumStatus(PremiumSummary? block, IReadOnlyList<PremiumHour>? rows, CacheState state, DateTimeOffset now)
+    {
+        if (block is null) return "unavailable";
+        var status = StatusOf(rows, state);
+        return status == "ok" && now - block.AsOf > PremiumStaleAfter ? "stale" : status;
     }
 
     /// <summary>Readings older than this many days before the UTC date, or later than tomorrow, are not believed (a bad row would become the chart's first point or "today").</summary>
