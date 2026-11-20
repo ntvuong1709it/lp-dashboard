@@ -73,6 +73,23 @@ export function formatAge(days: number | null | undefined): string {
   return `${Math.floor(days)}d`;
 }
 
+/**
+ * How long ago a position was opened, in words: "2 hours ago", "12 days ago", "3 months ago". Null when the age is
+ * unknown. Rounded down, so it never claims more time than has passed.
+ */
+export function formatOpenedAgo(days: number | null | undefined): string | null {
+  if (days == null || !Number.isFinite(days) || days < 0) return null;
+  const plural = (n: number, unit: string) => `${n} ${unit}${n === 1 ? "" : "s"} ago`;
+  const hours = Math.floor(days * 24);
+  if (hours < 1) return "less than an hour ago";
+  if (hours < 24) return plural(hours, "hour");
+  const whole = Math.floor(days);
+  if (whole < 14) return plural(whole, "day");
+  if (whole < 60) return plural(Math.floor(whole / 7), "week");
+  if (whole < 730) return plural(Math.floor(whole / 30), "month");
+  return plural(Math.floor(whole / 365), "year");
+}
+
 /** "~" when part of a time-in-range figure is estimated rather than measured. */
 export const estimateMark = (t: { estimatedHours: number }) =>
   t.estimatedHours > 0 ? "~" : "";

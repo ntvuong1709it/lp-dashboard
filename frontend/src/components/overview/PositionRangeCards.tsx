@@ -3,7 +3,9 @@ import { usePosition } from "../../api/client";
 import type { PositionDto, RangeDto } from "../../api/types";
 import { UNCLAIMED_ALERT_USD, isNearEdge, pairLabel } from "../../lib/attention";
 import {
+  formatDate,
   formatFee,
+  formatOpenedAgo,
   formatPercent,
   formatPrice,
   formatRangeWidth,
@@ -63,6 +65,7 @@ function sayStatus(range: RangeDto): { lead: string; rest: string; pct: string; 
 /** Hover text with the detail the card leaves out: where the position lives, exact prices, entry and range width. */
 function cardTitle(p: PositionDto, range: RangeDto | null, unit: string, entry: number | null, sinceEntry: number | null) {
   const lines = [`${protocolLabels[p.protocol]} · ${p.chain} · #${p.tokenId}`];
+  if (p.openedAt) lines.push(`Opened ${formatDate(p.openedAt)}`);
   if (range) {
     lines.push(`Range ${formatPrice(range.priceLower)} – ${formatPrice(range.priceUpper)} ${unit}`);
     if (range.priceCurrent != null) lines.push(`Now ${formatPrice(range.priceCurrent)}`);
@@ -143,6 +146,7 @@ function PositionCard({ p, inverted, wallet }: { p: PositionDto; inverted: boole
   const [base, quote] = inverted ? [p.token1, p.token0] : [p.token0, p.token1];
   const say = range && sayStatus(range);
   const toClaim = p.metrics.uncollectedFeesUsd + p.metrics.pendingRewardsUsd;
+  const opened = formatOpenedAgo(p.metrics.ageDays);
 
   // The pool price at the first deposit, in the same units as the range. It comes from the position's events, so the
   // card loads them (cached, and shared with the position drawer).
@@ -171,6 +175,11 @@ function PositionCard({ p, inverted, wallet }: { p: PositionDto; inverted: boole
       <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-faint">
         {wallet && <WalletChip wallet={wallet} />}
         <span>{protocolLabels[p.protocol]}</span>
+        {opened && p.openedAt && (
+          <time dateTime={p.openedAt} className="ml-auto whitespace-nowrap">
+            Opened {opened}
+          </time>
+        )}
       </div>
       {range ? (
         <>
